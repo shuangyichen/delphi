@@ -27,7 +27,8 @@ ClientShares interface_conv(ServerFHE &sfhe, ClientFHE &cfhe, Metadata data, Ima
 
     cout << "    Client Preprocessing: ";
     time_start = chrono::high_resolution_clock::now();
-
+    ///****************************************
+    //*****************************************
     ClientShares client_shares = client_conv_preprocess(&cfhe, &data, image);
     
     time_end = chrono::high_resolution_clock::now();
@@ -36,7 +37,8 @@ ClientShares interface_conv(ServerFHE &sfhe, ClientFHE &cfhe, Metadata data, Ima
     // ------------------------------------------------ 
     cout << "    Server Preprocessing: ";
     time_start = chrono::high_resolution_clock::now();
-
+    ///****************************************
+    //*****************************************
     char**** masks = server_conv_preprocess(&sfhe, &data, filters);
     ServerShares server_shares = server_conv_preprocess_shares(&sfhe, &data, linear_share);
     
@@ -46,7 +48,8 @@ ClientShares interface_conv(ServerFHE &sfhe, ClientFHE &cfhe, Metadata data, Ima
     // ------------------------------------------------ 
     cout << "    Convolution: ";
     time_start = chrono::high_resolution_clock::now();
-    
+    ///****************************************
+    //*****************************************
     server_conv_online(&sfhe, &data, client_shares.input_ct, masks, &server_shares);
     
     time_end = chrono::high_resolution_clock::now();
@@ -60,7 +63,8 @@ ClientShares interface_conv(ServerFHE &sfhe, ClientFHE &cfhe, Metadata data, Ima
     // ------------------------------------------------ 
     cout << "    Post-processing: ";
     time_start = chrono::high_resolution_clock::now();
-
+    ///****************************************
+    //*****************************************
     client_conv_decrypt(&cfhe, &data, &client_shares);
     
     time_end = chrono::high_resolution_clock::now();

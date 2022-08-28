@@ -144,6 +144,50 @@ vector<Plaintext> HE_preprocess_noise(const uint64_t* const* secret_share, const
 }
 
 
+
+vector<Ciphertext> MPHE_preprocess_noise(const uint64_t* const* secret_share, const Metadata &data,
+        BatchEncoder &batch_encoder, Encryptor &encryptor) {
+    // Create uniform distribution
+    random_device rd;
+    mt19937 engine(rd());
+    uniform_int_distribution<u64> dist(0, PLAINTEXT_MODULUS);
+    auto gen = [&dist, &engine](){
+        return dist(engine);
+    };
+    // Sample randomness into vector
+    vector<uv64> noise(data.out_ct, uv64(data.slot_count, 0ULL));
+    for (auto &vec: noise) {
+        generate(begin(vec), end(vec), gen);
+    }
+
+    // Puncture the vector with secret share where an actual convolution result value lives
+    for (int out_c = 0; out_c < data.out_chans; out_c++) {
+        int ct_idx = out_c / (2*data.chans_per_half);
+        int half_idx = (out_c % (2*data.chans_per_half)) / data.chans_per_half;
+        int half_off = out_c % data.chans_per_half;
+        for (int col = 0; col < data.output_h; col++) {
+            for (int row = 0; row < data.output_w; row++) {
+                int noise_idx = half_idx * data.pack_num
+                                + half_off * data.image_size
+                                + col * data.stride_w * data.image_w
+                                + row * data.stride_h;
+                int share_idx = col * data.output_w + row ;
+                noise[ct_idx][noise_idx] = secret_share[out_c][share_idx];
+            }
+        }
+    }
+    
+    // Encrypt all the noise vectors
+    vector<Ciphertext> enc_noise(data.out_ct);
+    for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
+        Plaintext tmp;
+        batch_encoder.encode(noise[ct_idx], tmp);
+        encryptor.encrypt(tmp,enc_noise[ct_idx]);
+    }
+    return enc_noise; 
+}
+
+
 vector<uv64> preprocess_image(Metadata data, const u64* const* image) {
     vector<uv64> ct(data.inp_ct, uv64(data.slot_count, 0));
     int inp_c = 0;
@@ -227,6 +271,18 @@ vector<vector<Ciphertext>> HE_encrypt_rotations(vector<vector<uv64>> &rotations,
             Plaintext tmp;
             batch_encoder.encode(rotations[ct_idx][f], tmp);
             encryptor.encrypt(tmp, enc_rots[ct_idx][f]);
+        } 
+    }
+    return enc_rots;
+}
+
+vector<vector<Plaintext>> HE_encode_rotations(vector<vector<uv64>> &rotations,
+        const Metadata &data, BatchEncoder &batch_encoder) {
+    vector<vector<Plaintext>> enc_rots(rotations.size(),
+                                        vector<Plaintext>(rotations[0].size()));
+    for (int ct_idx = 0; ct_idx < rotations.size(); ct_idx++) {
+        for (int f = 0; f < rotations[0].size(); f++) {
+            batch_encoder.encode(rotations[ct_idx][f], enc_rots[ct_idx][f]);
         } 
     }
     return enc_rots;
@@ -400,6 +456,191 @@ vector<vector<vector<Plaintext>>> HE_preprocess_filters(const u64* const* const*
         } 
     }
     return encoded_masks;
+}
+
+
+
+vector<vector<vector<Ciphertext>>> MPHE_preprocess_filters(const u64* const* const* filters,
+        const Metadata &data, BatchEncoder &batch_encoder, Encryptor &encryptor) {
+    // Mask is convolutions x cts per convolution x mask size
+    vector<vector<vector<uv64>>> masks(
+            data.convs,
+            vector<vector<uv64>>(
+                data.inp_ct,
+                vector<uv64>(data.filter_size, uv64(data.slot_count, 0))));
+    // Since a half in a permutation may have a variable number of rotations we
+    // use this index to track where we are at in the masks tensor
+    int conv_idx = 0;
+    // Build each half permutation as well as it's inward rotations
+    for (int perm = 0; perm < data.half_perms; perm += 2) {
+        // We populate two different half permutations at a time (if we have at
+        // least 2). The second permutation is what you'd get by flipping the
+        // columns of the first
+        for (int half = 0; half < data.inp_halves; half++) {
+            int ct_idx = half / 2;
+            int half_idx = half % 2;
+            int inp_base = half * data.chans_per_half;
+
+            // The output channel the current ct starts from
+            int out_base = (((perm/2) + ct_idx)*2*data.chans_per_half) % data.out_mod;
+            // If we're on the last output half, the first and last halves aren't
+            // in the same ciphertext, and the last half has repeats, then do 
+            // repeated packing and skip the second half
+            bool last_out = ((out_base + data.out_in_last) == data.out_chans)
+                            && data.out_halves != 2;
+            bool half_repeats = last_out && data.last_repeats;
+            // If the half is repeating we do possibly less number of rotations
+            int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
+            // Generate all inward rotations of each half
+            for (int rot = 0; rot < total_rots; rot++) {
+                for (int chan = 0; chan < data.chans_per_half
+                                   && (chan + inp_base) < data.inp_chans; chan++) {
+                    for (int f = 0; f < data.filter_size; f++) {
+                        // Pull the value of this mask
+                        int f_w = f % data.filter_w;
+                        int f_h = f / data.filter_w;
+                        // Set the coefficients of this channel for both
+                        // permutations
+                        u64 val, val2;
+                        int out_idx, out_idx2;
+
+                        // If this is a repeating half we first pad out_chans to
+                        // nearest power of 2 before repeating
+                        if (half_repeats) {
+                            out_idx = neg_mod(chan-rot, data.repeat_chans) + out_base;
+                            // If we're on a padding channel then val should be 0
+                            val = (out_idx < data.out_chans)
+                                ? filters[out_idx][inp_base + chan][f] : 0;
+                            // Second value will always be 0 since the second
+                            // half is empty if we are repeating
+                            val2 = 0;
+                        } else {
+                            int offset = neg_mod(chan-rot, data.chans_per_half);
+                            if (half_idx) {
+                                // If out_halves < 1 we may repeat within a
+                                // ciphertext
+                                // TODO: Add the log optimization for this case
+                                if (data.out_halves > 1)
+                                    out_idx = offset + out_base + data.chans_per_half;
+                                else
+                                    out_idx = offset + out_base;
+                                out_idx2 = offset + out_base;
+                            } else {
+                                out_idx = offset + out_base;
+                                out_idx2 = offset + out_base + data.chans_per_half;
+                            }
+                            val = (out_idx < data.out_chans)
+                                ? filters[out_idx][inp_base+chan][f] : 0;
+                            val2 = (out_idx2 < data.out_chans)
+                                ? filters[out_idx2][inp_base+chan][f] : 0;
+                        }
+                        // Iterate through the whole image and figure out which
+                        // values the filter value touches - this is the same
+                        // as for input packing
+                        for(int curr_h = 0; curr_h < data.image_h; curr_h += data.stride_h) {
+                            for(int curr_w = 0; curr_w < data.image_w; curr_w += data.stride_w) {
+                                // curr_h and curr_w simulate the current top-left position of 
+                                // the filter. This detects whether the filter would fit over
+                                // this section. If it's out-of-bounds we set the mask index to 0
+                                bool zero = ((curr_w+f_w) < data.pad_l) ||
+                                    ((curr_w+f_w) >= (data.image_w+data.pad_l)) ||
+                                    ((curr_h+f_h) < data.pad_t) ||
+                                    ((curr_h+f_h) >= (data.image_h+data.pad_l));
+                                // Calculate which half of ciphertext the output channel 
+                                // falls in and the offest from that half, 
+                                int idx = half_idx * data.pack_num
+                                        + chan * data.image_size
+                                        + curr_h * data.image_h
+                                        + curr_w;
+                                // Add both values to appropiate permutations
+                                masks[conv_idx+rot][ct_idx][f][idx] = zero? 0: val;
+                                if (data.half_perms > 1) {
+                                    masks[conv_idx+data.half_rots+rot][ct_idx][f][idx] = zero? 0: val2;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        conv_idx += 2*data.half_rots;
+    }
+
+    // // Encode all the masks
+    // vector<vector<vector<Plaintext>>> encoded_masks(
+    //         data.convs,
+    //         vector<vector<Plaintext>>(
+    //             data.inp_ct,
+    //             vector<Plaintext>(data.filter_size)));
+    // for (int conv = 0; conv < data.convs; conv++) {
+    //     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //         for (int f = 0; f < data.filter_size; f++) {
+    //             batch_encoder.encode(masks[conv][ct_idx][f],
+    //                                      encoded_masks[conv][ct_idx][f]);
+    //         } 
+    //     } 
+    // }
+
+    //Encrypt all the masks
+    vector<vector<vector<Ciphertext>>> encrypted_masks(
+            data.convs,
+            vector<vector<Ciphertext>>(
+                data.inp_ct,
+                vector<Ciphertext>(data.filter_size)));
+    for (int conv = 0; conv < data.convs; conv++) {
+        for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+            for (int f = 0; f < data.filter_size; f++) {
+                Plaintext tmp;
+                batch_encoder.encode(masks[conv][ct_idx][f],tmp);
+                encryptor.encrypt(tmp,encrypted_masks[conv][ct_idx][f]);
+            } 
+        } 
+    }
+    return encrypted_masks;
+}
+
+vector<vector<Ciphertext>> MPHE_conv(vector<vector<vector<Ciphertext>>> &masks,
+        vector<vector<Ciphertext>> &rotations, const Metadata &data, Evaluator &evaluator,
+        RelinKeys &relin_keys, Ciphertext &zero) {
+    // cout<<*relin_keys.data()[0][0].data().data()<<endl;
+    vector<vector<Ciphertext>> result(data.convs, vector<Ciphertext>(data.inp_ct));
+    // Init the result vector to all 0
+    for (int conv = 0; conv < data.convs; conv++) {
+        for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) 
+            result[conv][ct_idx] = zero;
+    }
+    // Multiply masks and add for each convolution
+    for (int perm = 0; perm < data.half_perms; perm++) {
+        for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+            // The output channel the current ct starts from
+            int out_base = ((perm/2+ct_idx)*2*data.chans_per_half) % data.out_mod;
+            // If we're on the last output half, the first and last halves aren't
+            // in the same ciphertext, and the last half has repeats, then only 
+            // convolve last_rots number of times
+            bool last_out = ((out_base + data.out_in_last) == data.out_chans)
+                            && data.out_halves != 2;
+            bool half_repeats = last_out && data.last_repeats;
+            int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
+            for (int rot = 0; rot < total_rots; rot++) {
+                for (int f = 0; f < data.filter_size; f++) {
+                    // Note that if a mask is zero this will result in a
+                    // 'transparent' ciphertext which SEAL won't allow by default.
+                    // This isn't a problem however since we're adding the result
+                    // with something else, and the size is known beforehand so
+                    // having some elements be 0 doesn't matter
+                    Ciphertext tmp;
+                    evaluator.multiply(rotations[ct_idx][f],
+                                                 masks[perm*data.half_rots+rot][ct_idx][f],
+                                                 tmp);
+                    evaluator.relinearize_inplace(tmp, relin_keys);
+                    multiplications += 1;
+                    evaluator.add_inplace(result[perm*data.half_rots+rot][ct_idx], tmp);
+                    additions += 1;
+                }
+            }
+        }
+    }
+    return result;
 }
 
 vector<vector<Ciphertext>> HE_conv(vector<vector<vector<Plaintext>>> &masks,
@@ -659,6 +900,29 @@ u64** HE_decrypt(vector<Ciphertext> &enc_result, const Metadata &data, Decryptor
     return final_result; 
 }
 
+u64** reshape(vector<vector<u64>> result, const Metadata &data){
+    u64** final_result = new u64*[data.out_chans];
+    // Extract correct values to reshape
+    for (int out_c = 0; out_c < data.out_chans; out_c++) {
+        int ct_idx = out_c / (2*data.chans_per_half);
+        int half_idx = (out_c % (2*data.chans_per_half)) / data.chans_per_half;
+        int half_off = out_c % data.chans_per_half;
+        // Depending on the padding type and stride the output values won't be
+        // lined up so extract them into a temporary channel before placing
+        // them in resultant Image
+        final_result[out_c] = new u64[data.output_h*data.output_w];
+        for (int col = 0; col < data.output_h; col++) {
+            for (int row = 0; row < data.output_w; row++) {
+                int idx = half_idx * data.pack_num
+                        + half_off * data.image_size
+                        + col * data.stride_w * data.image_w
+                        + row * data.stride_h;
+                final_result[out_c][col*data.output_w + row] = result[ct_idx][idx];
+            }
+        }
+    }
+    return final_result; 
+}
 
 /* Populates the Metadata struct */
 Metadata conv_metadata(int slot_count, int image_h, int image_w, int filter_h, int filter_w,

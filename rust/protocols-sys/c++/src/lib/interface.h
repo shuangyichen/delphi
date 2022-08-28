@@ -92,6 +92,24 @@ extern "C" {
         char* zero;
     } ServerFHE;
 
+    typedef struct RootServerMPHE {
+        void* context;
+        void* encoder;
+        void* encryptor;
+        void* evaluator;
+        void* gal_keys;
+        void* relin_keys;
+        char* zero;
+    } RootServerMPHE;
+
+    typedef struct LeafServerMPHE {
+        void* context;
+        void* encoder;
+        void* KeyGenerator;
+        void* encryptor;
+        void* decryptor;
+    } LeafServerMPHE;
+
     typedef struct SerialCT {
         char* inner;
         uint64_t size;
@@ -103,6 +121,25 @@ extern "C" {
         // Opaque ciphertexts to be sent to client
         SerialCT linear_ct;
     } ServerShares;
+
+    typedef struct LeafServerShares {
+        // Opaque vectors of Plaintexts  
+        // Opaque ciphertexts to be sent to client
+        SerialCT weight_ct;
+        SerialCT r_ct;
+        SerialCT s_ct;
+        SerialCT result_pd;
+        char** r_pt;
+    } LeafServerShares;
+
+
+    typedef struct RootServerShares {
+        // Opaque vectors of Plaintexts  
+        // Opaque ciphertexts to be sent to client
+        char*** r_pt;
+        uint64_t** result;
+        SerialCT result_ct;
+    } RootServerShares;
 
     typedef struct ClientShares {
         // Opaque ciphertext sent to server
@@ -135,6 +172,8 @@ extern "C" {
         // Decryption results
         uint64_t* c_share;
     } ClientTriples;
+
+    // typedef vector<SerialCT> vec_ct;
     
     /* Generates new keys and helpers for Client. Returns the helpers and allocates
      * a bytestream for sharing the keys with the server */
@@ -143,6 +182,16 @@ extern "C" {
     /* Generates keys and helpers for Server given a key_share */
     ServerFHE server_keygen(SerialCT key_share); 
 
+    void server_mphe_r2(LeafServerMPHE* lsmphe,SerialCT *send, SerialCT rec);
+    LeafServerMPHE server_mphe_keygen(SerialCT *key_share);
+
+    // RootServerMPHE server_mphe_aggregation_r1(SerialCT key_share, SerialCT *key_share_r2);
+    RootServerMPHE server_mphe_aggregation_r1(SerialCT key_share0, SerialCT key_share1, SerialCT key_share2, SerialCT *key_share_r2);
+    // void server_mphe_aggregation_r1(SerialCT key_share0, SerialCT key_share1, SerialCT key_share2, SerialCT *key_share_r2);
+    // void server_mphe_aggregation_r2(RootServerMPHE* rsmphe,vector<SerialCT> key_share);
+    void server_mphe_aggregation_r2(RootServerMPHE* rsmphe,SerialCT key_share0, SerialCT key_share1, SerialCT key_share2);
+
+    void procedure(RootServerMPHE rsmphe, LeafServerMPHE s0, LeafServerMPHE s1, LeafServerMPHE s2);
     /* Populates the Metadata struct for Conv layer */
     Metadata conv_metadata(void* batch_encoder, int32_t image_h, int32_t image_w,
             int32_t filter_h, int32_t filter_w, int32_t inp_chans, int32_t out_chans, int32_t stride_h,
@@ -166,6 +215,15 @@ extern "C" {
     /* Converts secret shares to opaque SEAL Plaintexts for conv computation */        
     ServerShares server_conv_preprocess_shares(const ServerFHE* sfhe, const Metadata* data,
             const uint64_t* const* linear_share);
+    LeafServerShares server_bc_fc_preprocess(const LeafServerMPHE* lsmphe, const Metadata* data, 
+        const uint64_t* image, const uint64_t* const* matrix, const uint64_t* linear_share);
+    LeafServerShares server_a_fc_preprocess(const RootServerMPHE* rsmphe, const Metadata* data, const uint64_t* vector);
+
+
+    LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const Metadata* data, const uint64_t* const* image, const uint64_t* const* const* filters, const uint64_t*const* linear_share);
+
+    RootServerShares server_a_conv_preprocess(const RootServerMPHE* rsmphe,const Metadata* data, 
+        const uint64_t* const* image);
 
     /* Preprocess and serialize client input vector */
     ClientShares client_fc_preprocess(const ClientFHE* cfhe, const Metadata* data, const uint64_t* vector);
@@ -194,19 +252,25 @@ extern "C" {
     /* Performs convolution on the given input and stores the result in the shares struct */
     void server_conv_online(const ServerFHE* sfhe, const Metadata* data, SerialCT ciphertext,
         char**** masks, ServerShares* shares);
+    void root_server_conv_online(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,RootServerShares* serverAshares);
     
     /* Performs matrix multiplication on the given inputs */
     void server_fc_online(const ServerFHE* sfhe, const Metadata* data, SerialCT ciphertext, 
             char** matrix, ServerShares* shares);
 
+    void root_server_fc_online(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,
+     LeafServerShares* serverAshares, RootServerShares* root_share);
     /* Computes the encrypted client's share of multiplication triple */
     void server_triples_online(const ServerFHE* sfhe, SerialCT client_a, SerialCT client_b, ServerTriples* shares);
 
     /* Decrypt and reshape convolution results */
     void client_conv_decrypt(const ClientFHE *cfhe, const Metadata *data, ClientShares* shares);
-    
+    void root_server_conv_decrypt(const RootServerMPHE *rsmphe, const Metadata *data,RootServerShares* shares, SerialCT pd_a,SerialCT pd_b,SerialCT pd_c);
+    void leaf_server_conv_decrypt(const LeafServerMPHE *lsmphe, const Metadata *data, LeafServerShares* shares);
     /* Decrypts and reshapes fully-connected result */
     void client_fc_decrypt(const ClientFHE *cfhe, const Metadata *data, ClientShares *shares);
+    void leaf_server_fc_decrypt(const LeafServerMPHE *lsmphe, const Metadata *data, LeafServerShares* shares);
+    void root_server_fc_decrypt(const RootServerMPHE *rsmphe, const Metadata *data,RootServerShares* shares, SerialCT pd_a,SerialCT pd_b,SerialCT pd_c);
 
     /* Decrypts the clients multiplication triple share */
     void client_triples_decrypt(const ClientFHE *cfhe, SerialCT c, ClientTriples *shares);
@@ -241,5 +305,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+// typedef vector<SerialCT> vec_ct;
 
 #endif

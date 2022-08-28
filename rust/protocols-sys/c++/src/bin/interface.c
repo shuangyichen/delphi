@@ -348,7 +348,7 @@ void beavers_triples(ClientFHE* cfhe, ServerFHE* sfhe, int num_triples) {
 
 
 int main(int argc, char* argv[]) {
-  SerialCT key_share;
+   SerialCT key_share;
 
   printf("Client Keygen: ");
   float startTime = (float)clock()/CLOCKS_PER_SEC;
@@ -368,18 +368,17 @@ int main(int argc, char* argv[]) {
   timeElapsed = endTime - startTime;
   printf("[%f seconds]\n", timeElapsed);
 
-  //conv(&cfhe, &sfhe, 5, 5, 3, 3, 2, 2, 1, 0);
+//   conv(&cfhe, &sfhe, 5, 5, 3, 3, 2, 2, 1, 1);
   //conv(&cfhe, &sfhe, 32, 32, 3, 3, 16, 16, 1, 0);
   //conv(&cfhe, &sfhe, 16, 16, 3, 3, 32, 32, 1, 1);
   //conv(&cfhe, &sfhe, 8, 8, 3, 3, 64, 64, 1, 1);
   
-  //fc(&cfhe, &sfhe, 25, 10);
+  fc(&cfhe, &sfhe, 25, 10);
   
-  beavers_triples(&cfhe, &sfhe, 100);
+//   beavers_triples(&cfhe, &sfhe, 100);
   
   client_free_keys(&cfhe);
   free_ct(&key_share);
   server_free_keys(&sfhe);
-
   return 1;
 }

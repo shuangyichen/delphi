@@ -333,3 +333,21 @@ fn test_triple_gen() {
         assert_eq!(c, a * b);
     });
 }
+
+#[test]
+fn test_mphe() {
+    // let mut key_vecs: Vec<Vec<std::os::raw::c_char>> = Vec::with_capacity(3); 
+    let mut key_share0 = KeyShare::new();
+    let (mut lsmphe0, mut key_vecs0) = key_share0.mphe_generate();
+    let mut key_share1 = KeyShare::new();
+    let (mut lsmphe1, mut key_vecs1) = key_share1.mphe_generate();
+    let mut key_share2 = KeyShare::new();
+    let (mut lsmphe2, mut key_vecs2) = key_share2.mphe_generate();
+    key_vecs0.extend(key_vecs1);
+    key_vecs0.extend(key_vecs2);
+
+    let mut server_a = KeyShare::new();
+    // let size: usize = key_vecs.len();
+    // println!("{}",size);
+    let rsmphe = server_a.root_mphe_receive_r1(key_vecs0);
+}

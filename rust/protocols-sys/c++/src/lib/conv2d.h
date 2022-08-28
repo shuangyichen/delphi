@@ -41,7 +41,8 @@ Metadata conv_metadata(int slot_count, int image_h, int image_w, int filter_h, i
 
 /* Generate noise to be applied to convolution result */
 vector<Plaintext> HE_preprocess_noise(const u64* const* secret_share, const Metadata &data, BatchEncoder &batch_encoder);
-
+vector<Ciphertext> MPHE_preprocess_noise(const uint64_t* const* secret_share, const Metadata &data,
+        BatchEncoder &batch_encoder, Encryptor &encryptor);
 /* Preprocesses the input image for output packing. Ciphertext is packed in RowMajor
  * order. In this mode simply pack all the input channels as tightly as possible
  * where each channel is padded to the nearest of two */
@@ -57,16 +58,19 @@ template <class T> vector<T> filter_rotations(T &input, const Metadata &data, Ev
 /* Encrypts all the input rotations */
 vector<vector<Ciphertext>> HE_encrypt_rotations(vector<vector<uv64>> &rotations, const Metadata &data, Encryptor &encryptor,
         BatchEncoder &batch_encoder);
+vector<vector<Plaintext>> HE_encode_rotations(vector<vector<uv64>> &rotations,const Metadata &data, BatchEncoder &batch_encoder);
 
 /* Encrypts the given input image */
 vector<Ciphertext> HE_encrypt(vector<uv64> &pt, const Metadata &data, Encryptor &encryptor, BatchEncoder &batch_encoder);
 
 /* Compute the necessary filters for an output packed input */
 vector<vector<vector<Plaintext>>> HE_preprocess_filters(const u64* const* const* filters, const Metadata &data, BatchEncoder &batch_encoder);
+vector<vector<vector<Ciphertext>>> MPHE_preprocess_filters(const u64* const* const* filters,const Metadata &data, BatchEncoder &batch_encoder, Encryptor &encryptor);
 
 /* Performs convolution for an output packed image. Returns the intermediate rotation sets */
-vector<vector<Ciphertext>> HE_conv(vector<vector<vector<Plaintext>>> &masks, vector<vector<Ciphertext>> &rotations,
-        const Metadata &data, Evaluator &evaluator, RelinKeys &relin_keys, Ciphertext &zero);
+vector<vector<Ciphertext>> HE_conv(vector<vector<vector<Plaintext>>> &masks, vector<vector<Ciphertext>> &rotations,const Metadata &data, Evaluator &evaluator, RelinKeys &relin_keys, Ciphertext &zero);
+
+vector<vector<Ciphertext>> MPHE_conv(vector<vector<vector<Ciphertext>>> &masks,vector<vector<Ciphertext>> &rotations, const Metadata &data, Evaluator &evaluator,RelinKeys &relin_keys, Ciphertext &zero); 
 
 /* Rotates and adds an output packed convolution result to produce a final, tight output */
 vector<Ciphertext> HE_output_rotations(vector<vector<Ciphertext>> convs, const Metadata &data, Evaluator &evaluator,
@@ -74,4 +78,6 @@ vector<Ciphertext> HE_output_rotations(vector<vector<Ciphertext>> convs, const M
 
 /* Decrypts and reshapes convolution result */
 u64** HE_decrypt(vector<Ciphertext> &enc_result, const Metadata &data, Decryptor &decryptor, BatchEncoder &batch_encoder);
+u64** reshape(vector<vector<u64>> result, const Metadata &data);
+
 #endif

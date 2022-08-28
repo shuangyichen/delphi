@@ -13,10 +13,11 @@ add_library( DelphiOffline STATIC
 include_directories(${CMAKE_SOURCE_DIR}/src/lib)
 
 include(FetchContent)
+message(STATIC "SEAL found !!!!!!!!")
 FetchContent_Declare(
   seal
-  GIT_REPOSITORY https://github.com/microsoft/SEAL
-  GIT_TAG        v3.6.5
+  GIT_REPOSITORY https://github.com/shuangyichen/SEAL.git
+  GIT_TAG        MPHE1.10
 )
 option(SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT OFF)
 option(SEAL_USE_ZLIB OFF)
@@ -32,16 +33,21 @@ if(UNITTESTS)
     include_directories(${CMAKE_SOURCE_DIR}/src/bin)
     add_executable(unittests ${BIN}/unittests.cpp ${LIB}/im2col.cpp)
     add_executable(benchmark ${BIN}/benchmark.cpp ${LIB}/im2col.cpp)
+    add_executable(testmphe ${BIN}/test_mphe.cpp)
+    add_executable(interface_mphe ${BIN}/interface_mphe.c)
     add_executable(interface ${BIN}/interface.c)
 
     # Unittests make use of Eigen
     find_package (Eigen3 3.3 REQUIRED NO_MODULE)
     target_link_libraries (unittests Eigen3::Eigen)
     target_link_libraries (benchmark Eigen3::Eigen)
+    
 
     target_link_libraries (benchmark DelphiOffline)
     target_link_libraries (unittests DelphiOffline)
     target_link_libraries (interface DelphiOffline)
+    target_link_libraries (interface_mphe DelphiOffline)
+    target_link_libraries (testmphe DelphiOffline)
 endif()
 
 install(TARGETS DelphiOffline DESTINATION .)
