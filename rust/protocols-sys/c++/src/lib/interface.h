@@ -105,7 +105,7 @@ extern "C" {
     typedef struct LeafServerMPHE {
         void* context;
         void* encoder;
-        void* KeyGenerator;
+        void* keygenerator;
         void* encryptor;
         void* decryptor;
     } LeafServerMPHE;

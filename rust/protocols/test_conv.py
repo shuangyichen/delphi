@@ -69,7 +69,7 @@ def build_mini():
 # Build test model
 def build_test():
     img_input = Input(shape=(4, 4, 1))
-    x = img_input                                      
+    x = img_input
     x = Conv2D(3, (3, 3), padding='same')(x)
     x = AveragePooling2D((2, 2), 2, padding='valid')(x)
     x = Activation('relu')(x)

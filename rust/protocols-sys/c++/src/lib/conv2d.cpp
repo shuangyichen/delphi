@@ -266,11 +266,16 @@ vector<vector<Ciphertext>> HE_encrypt_rotations(vector<vector<uv64>> &rotations,
         const Metadata &data, Encryptor &encryptor, BatchEncoder &batch_encoder) {
     vector<vector<Ciphertext>> enc_rots(rotations.size(),
                                         vector<Ciphertext>(rotations[0].size()));
+    vector<vector<Plaintext>> encoded_rots(rotations.size(),
+                                        vector<Plaintext>(rotations[0].size()));
+    // printf("encoding\n");
     for (int ct_idx = 0; ct_idx < rotations.size(); ct_idx++) {
         for (int f = 0; f < rotations[0].size(); f++) {
-            Plaintext tmp;
-            batch_encoder.encode(rotations[ct_idx][f], tmp);
-            encryptor.encrypt(tmp, enc_rots[ct_idx][f]);
+            // Plaintext tmp;
+            batch_encoder.encode(rotations[ct_idx][f], encoded_rots[ct_idx][f]);
+            printf("encoding ...\n");
+            encryptor.encrypt(encoded_rots[ct_idx][f],enc_rots[ct_idx][f]);
+            printf("encrypting\n");
         } 
     }
     return enc_rots;

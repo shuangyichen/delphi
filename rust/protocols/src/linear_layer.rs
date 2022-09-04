@@ -8,7 +8,7 @@ use crypto_primitives::additive_share::Share;
 use io_utils::imux::IMuxSync;
 use neural_network::{
     layers::*,
-    tensors::{Input, Output},
+    tensors::{Input, Output, Kernel},
     Evaluate,
 };
 use protocols_sys::{SealClientCG, SealServerCG, *};
@@ -24,7 +24,7 @@ pub struct LinearProtocol<P: FixedPointParameters> {
 }
 
 pub struct LinearProtocolType;
-
+pub type OfflineLeafServerMsgSend<'a> = OutMessage<'a, Vec<Vec<c_char>>, LinearProtocolType>;
 pub type OfflineServerMsgSend<'a> = OutMessage<'a, Vec<c_char>, LinearProtocolType>;
 pub type OfflineServerMsgRcv = InMessage<Vec<c_char>, LinearProtocolType>;
 pub type OfflineServerKeyRcv = InMessage<Vec<c_char>, LinearProtocolType>;
@@ -42,6 +42,50 @@ where
     <P::Field as PrimeField>::Params: Fp64Parameters,
     P::Field: PrimeField<BigInt = <<P::Field as PrimeField>::Params as FpParameters>::BigInt>,
 {
+    pub fn offline_leaf_server_protocol<'a,R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        input_dims: (usize, usize, usize, usize),
+        output_dims: (usize, usize, usize, usize),
+        lserver_cg: &mut SealLeafServerCG,
+        kernel: &Kernel<u64>,
+        rng: &mut RNG,
+    ) {
+
+        // r
+        println!("processing r");
+        let lserver_share: Input<FixedPoint<P>> = Input::zeros(input_dims);
+        let (r1, r2) = lserver_share.share(rng);
+        //linear share
+        println!("processing s");
+        let mut server_randomness: Output<P::Field> = Output::zeros(output_dims);
+        // TODO
+        for r in &mut server_randomness {
+            *r = P::Field::uniform(rng);
+        }
+        let mut server_randomness_c = Output::zeros(output_dims);
+        server_randomness_c
+            .iter_mut()
+            .zip(&server_randomness)
+            .for_each(|(e1, e2)| *e1 = e2.into_repr().0);
+        println!("generating ct");
+        let (mut weight_ct_vec,mut r_ct_vec, mut s_ct_vec) = lserver_cg.preprocess(kernel, &r2.to_repr(), &server_randomness_c);
+        // let  ct_send = vec![&weight_ct_vec, &r_ct_vec, &s_ct_vec];
+        // weight_ct_vec.append(";");
+        weight_ct_vec.append(&mut r_ct_vec);
+        // weight_ct_vec.append(";");
+        weight_ct_vec.append(&mut s_ct_vec);
+        println!("sending ct");
+
+        let sent_message =OfflineServerMsgSend::new(&weight_ct_vec);
+        crate::bytes::serialize(writer, &sent_message).unwrap();
+        // Ok(())
+    }
+
+    // pub fn online_root_server_protocol
+
+    // pub fn online_leaf_server_protocol
+
     pub fn offline_server_protocol<R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
         reader: &mut IMuxSync<R>,
         writer: &mut IMuxSync<W>,

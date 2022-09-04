@@ -18,7 +18,7 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
     for (int chan = 0; chan < data.inp_chans; chan++) {
         input_a[chan] = (u64*) malloc(sizeof(u64)*data.image_size);
         for (int idx = 0; idx < data.image_size; idx++)
-            input_a[chan][idx] = idx;
+            input_a[chan][idx] = 1;//idx;
     }
 
     for (int chan = 0; chan < data.inp_chans; chan++) {
@@ -41,7 +41,7 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
     for (int chan = 0; chan < data.inp_chans; chan++) {
         input_b[chan] = (u64*) malloc(sizeof(u64)*data.image_size);
         for (int idx = 0; idx < data.image_size; idx++)
-            input_b[chan][idx] = rand() % 10;
+            input_b[chan][idx] = 1;//rand() % 10;
     }
 
     printf("Server B input r: \n");
@@ -63,7 +63,7 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
     for (int chan = 0; chan < data.inp_chans; chan++) {
         input_c[chan] = (u64*) malloc(sizeof(u64)*data.image_size);
         for (int idx = 0; idx < data.image_size; idx++)
-            input_c[chan][idx] = rand() % 10;
+            input_c[chan][idx] = 1;//rand() % 10;
     }
 
     printf("Server C input r: \n");
@@ -270,7 +270,12 @@ int main(int argc, char* argv[]) {
     printf("server aggregating r2 \n");
     server_mphe_aggregation_r2(&rsmphe,key_share0_r2,key_share1_r2,key_share2_r2);
 
-    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 5, 5, 3, 3, 1, 1, 1, 0);
-    MPHE_test_fc(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 25, 10);
+    MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 5, 5, 3, 3, 2, 2, 1, 0);  //ok
+    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 5, 5, 3, 3, 2, 2, 1, 1);//ok
+    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 28, 28, 3, 3, 1, 1, 1, 0); //ok
+    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 28, 28, 3, 3, 1, 1, 1, 1); //ok
+    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 28, 28, 3, 3, 2, 2, 1, 1); //not ok
+    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 22, 22, 3, 3, 3, 3, 1, 1); //not ok
+    // MPHE_test_fc(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 25, 10);
     return 1;
 }

@@ -13,12 +13,16 @@ pub mod client_gen;
 pub mod key_share;
 pub mod server_cg;
 pub mod server_gen;
+pub mod leaf_server_cg;
+pub mod root_server_cg;
 
 pub use client_cg::*;
 pub use client_gen::*;
 pub use key_share::KeyShare;
 pub use server_cg::*;
 pub use server_gen::*;
+pub use leaf_server_cg::*;
+pub use root_server_cg::*;
 
 use std::os::raw::c_char;
 

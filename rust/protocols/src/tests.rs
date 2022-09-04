@@ -6,6 +6,9 @@ use algebra::{
 use crypto_primitives::{additive_share::Share, beavers_mul::FPBeaversMul};
 use io_utils::imux::IMuxSync;
 use protocols_sys::*;
+// use protocols_sys::leaf_server_cg::Conv2D;
+use std::io::Read;
+// use protocols_sys::server_cg::Conv2D;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 use std::net::{TcpListener, TcpStream};
@@ -50,7 +53,7 @@ mod beavers_mul {
     use crate::beavers_mul::BeaversMulProtocol;
     use crypto_primitives::Share;
 
-    #[test]
+    // #[test]
     fn test_beavers_mul() {
         let num_triples = 10000;
         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
@@ -177,7 +180,7 @@ mod gc {
     use super::*;
     use crate::gc::*;
 
-    #[test]
+    // #[test]
     fn test_gc_relu() {
         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
         let mut plain_x_s = Vec::with_capacity(1001);
@@ -317,7 +320,7 @@ mod linear {
     use neural_network::{layers::*, tensors::*, Evaluate};
     use std::io::{BufReader, BufWriter};
 
-    #[test]
+    // #[test]
     fn test_convolution() {
         use neural_network::layers::convolution::*;
 
@@ -376,7 +379,7 @@ mod linear {
         // Evaluate convolution layer on plaintext, so that we can check results later.
         let output = pt_layer.evaluate(&input);
 
-        let server_addr = "127.0.0.1:8001";
+        let server_addr = "127.0.0.1:8005";
         let server_listener = TcpListener::bind(server_addr).unwrap();
 
         let layer_input_dims = layer.input_dimensions();
@@ -386,7 +389,7 @@ mod linear {
             crossbeam::thread::scope(|s| {
                 let server_offline_result = s.spawn(|_| {
                     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
-
+                    // let mut i: i32 = 0;
                     for stream in server_listener.incoming() {
                         let stream = stream.expect("server connection failed!");
                         let mut reader = IMuxSync::new(vec![BufReader::new(&stream)]);
@@ -407,10 +410,11 @@ mod linear {
                             &mut cg_handler,
                             &mut rng,
                         );
+                        // i = i+1;
                     }
                     unreachable!("we should never exit server's loop")
                 });
-
+// 
                 let client_offline_result = s.spawn(|_| {
                     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
 
@@ -561,7 +565,181 @@ mod linear {
         assert!(success);
     }
 
+
     #[test]
+    fn test_mphe_conv(){
+        use neural_network::layers::convolution::*;
+
+        const RANDOMNESS: [u8; 32] = [
+            0x14, 0xe0, 0x8f, 0xbc, 0x89, 0xa7, 0x34, 0x01, 0x45, 0x86, 0x82, 0xb6, 0x51, 0xda,
+            0xf4, 0x76, 0x5d, 0xc9, 0x8d, 0xea, 0x23, 0xf2, 0x90, 0x8f, 0x9d, 0x03, 0xf2, 0x77,
+            0xd3, 0x4a, 0x52, 0xd2,
+        ];
+
+        let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+
+        // let input_dims = (1, 64, 8, 8);
+        // let kernel_dims = (64, 64, 3, 3);
+        let input_dims = (1, 1, 8, 8);
+        let kernel_dims = (1, 1, 3, 3);
+        let stride = 1;
+        let padding = Padding::Same;
+        // Sample a random kernel.
+        let mut kernel = Kernel::zeros(kernel_dims);
+        let mut bias = Kernel::zeros((kernel_dims.0, 1, 1, 1));
+        kernel
+            .iter_mut()
+            .for_each(|ker_i| *ker_i = generate_random_number(&mut rng).1);
+        bias.iter_mut()
+            .for_each(|bias_i| *bias_i = generate_random_number(&mut rng).1);
+
+        let layer_params =
+            Conv2dParams::<TenBitAS, _>::new(padding, stride, kernel.clone(), bias.clone());
+        let output_dims = layer_params.calculate_output_size(input_dims);
+        let pt_layer_params =
+            Conv2dParams::<TenBitExpFP, _>::new(padding, stride, kernel.clone(), bias.clone());
+        let layer_dims = LayerDims {
+            input_dims,
+            output_dims,
+        };
+        let layer = Layer::LL(LinearLayer::Conv2d {
+            dims: layer_dims,
+            params: layer_params,
+        });
+        // let layer_info = (&layer).into();
+        let layer = match layer {
+            Layer::LL(l) => l,
+            Layer::NLL(_) => unreachable!(),
+        };
+        let pt_layer = LinearLayer::Conv2d {
+            dims: layer_dims,
+            params: pt_layer_params,
+        };
+        // Sample a random input.
+        let mut input = Input::zeros(input_dims);
+        input
+            .iter_mut()
+            .for_each(|in_i| *in_i = generate_random_number(&mut rng).1);
+
+        // // Evaluate convolution layer on plaintext, so that we can check results later.
+        let output = pt_layer.evaluate(&input);
+
+        let server_b_addr = "127.0.0.1:8001";
+        let server_c_addr = "127.0.0.1:8002";
+        let serverb_listener = TcpListener::bind(server_b_addr).unwrap();
+        let serverc_listener = TcpListener::bind(server_c_addr).unwrap();
+
+        let layer_input_dims = layer.input_dimensions();
+        let layer_output_dims = layer.output_dimensions();
+        let layer = std::sync::Arc::new(std::sync::Mutex::new(layer));
+        //leafserver write and read
+        // let ((layer_randomizer, client_next_layer_share), server_offline) =
+        // let layer_randomizer=
+            crossbeam::thread::scope(|s| {
+                s.spawn(|_| {
+                    let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+                    let mut lsmphe: LeafServerMPHE = LeafServerMPHE {
+                        context : std::ptr::null_mut(),
+                        encoder : std::ptr::null_mut(),
+                        keygenerator : std::ptr::null_mut(),
+                        encryptor : std::ptr::null_mut(),
+                        decryptor : std::ptr::null_mut(),
+                    };
+                    for stream in serverb_listener.incoming() {
+                        let stream = stream.expect("server connection failed!");
+                        let mut reader = IMuxSync::new(vec![BufReader::new(&stream)]);
+                        let mut writer = IMuxSync::new(vec![BufWriter::new(&stream)]);
+                      
+                        lsmphe = crate::leaf_server_keygen_r1(&mut writer).unwrap();
+
+          
+                        crate::leaf_server_keygen_r2(lsmphe, &mut reader,&mut writer);
+                        let layer = layer.lock().unwrap();
+
+                        // match &layer_info {
+                        //     LayerInfo::LL(_, info) => {
+                        let mut cg_handler = SealLeafServerCG::Conv2D(leaf_server_cg::Conv2D::new(
+                                    &lsmphe,
+                                    &layer,
+                                ));
+                        LinearProtocol::<TenBitExpParams>::offline_leaf_server_protocol(&mut reader,&mut writer,layer_input_dims,layer_output_dims,&mut cg_handler,&layer.kernel_to_repr(),&mut rng);
+
+                        //     }
+                        //     LayerInfo::NLL(..) => unreachable!(),
+                        // }
+                        // let mut cg_handler = SealLeafServerCG::Conv2D(leaf_server_cg::Conv2D::new(
+                        //             &lsmphe,
+                        //             &layer,
+                        //         ));
+
+                        // LinearProtocol::offline_leaf_server_protocol(&mut reader,&mut writer,layer_input_dims,layer_output_dims,&mut cg_handler,&layer.kernel_to_repr(),&mut rng,).unwrap();
+
+                    }
+
+                });
+
+                s.spawn(|_| {
+                    let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+                    // let mut lsmphe: LeafServerMPHE;
+                    let mut lsmphe: LeafServerMPHE = LeafServerMPHE {
+                        context : std::ptr::null_mut(),
+                        encoder : std::ptr::null_mut(),
+                        keygenerator : std::ptr::null_mut(),
+                        encryptor : std::ptr::null_mut(),
+                        decryptor : std::ptr::null_mut(),
+                    };
+                    for stream in serverc_listener.incoming() {
+ 
+
+                        let stream = stream.expect("server connection failed!");
+                        let mut reader = IMuxSync::new(vec![BufReader::new(&stream)]);
+                        let mut writer = IMuxSync::new(vec![BufWriter::new(&stream)]);
+                        
+                        lsmphe = crate::leaf_server_keygen_r1(&mut writer).unwrap();
+                        
+                        crate::leaf_server_keygen_r2(lsmphe, &mut reader,&mut writer);
+                        let layer = layer.lock().unwrap();
+                        let mut cg_handler = SealLeafServerCG::Conv2D(leaf_server_cg::Conv2D::new(
+                                    &lsmphe,
+                                    &layer,
+                                ));
+
+                    }
+                });
+
+                //root server rec and write
+                s.spawn(|_| {
+                    let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+
+                    // root server's connection to server b and c.
+                    let stream_b =
+                        TcpStream::connect(server_b_addr).expect("connecting to server failed");
+                    let stream_c =
+                        TcpStream::connect(server_c_addr).expect("connecting to server failed");
+                    let mut reader1 = IMuxSync::new(vec![stream_b.try_clone().unwrap()]);
+                    let mut writer1 = IMuxSync::new(vec![BufWriter::new(&stream_b)]);//IMuxSync::new(vec![stream_b]);
+                    let mut reader2 = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
+                    let mut writer2 = IMuxSync::new(vec![BufWriter::new(&stream_c)]);//IMuxSync::new(vec![stream_c]);
+                    // crate::hello(&mut writer1);
+                    // crate::hello(&mut writer2);
+                    // println!("hello there!");
+                    let (mut rsmphe, mut lsmphe, rlk_r1 )= crate::root_server_keygen_r1(&mut reader1,&mut reader2,&mut writer1, &mut writer2);
+                    // println!("aggregating finished ");
+                    crate::root_server_keygen_r2(lsmphe, rsmphe, rlk_r1, &mut reader1,&mut reader2);
+
+                    
+                });
+                // (
+                //     client_offline_result.join().unwrap().unwrap(),
+                //     server_offline_result.join().unwrap().unwrap(),
+                // )
+            })
+            .unwrap();
+
+        
+    }
+
+    // #[test]
     fn test_fully_connected() {
         use neural_network::layers::fully_connected::*;
 
@@ -780,3 +958,5 @@ mod linear {
         }
     }
 }
+
+

@@ -8,9 +8,13 @@ pub fn serialize<W: std::io::Write + Send, T: ?Sized>(
 where
     T: serde::Serialize,
 {
-    let bytes: Vec<u8> = bincode::serialize(value)?;
-    let _ = writer.write(&bytes)?;
-    writer.flush()?;
+    // println!("{}",value);
+    let bytes: Vec<u8> = bincode::serialize(value).unwrap();
+    let res:std::os::raw::c_char = bincode::deserialize(&bytes[..]).unwrap();
+    // println!("{}",res);
+    let _ = writer.write(&bytes).expect("sending fail");
+    // writer.flush()?;
+    writer.flush().expect("could not flush");
     Ok(())
 }
 
@@ -20,6 +24,7 @@ where
     R: std::io::Read + Send,
     T: serde::de::DeserializeOwned,
 {
-    let bytes: Vec<u8> = reader.read()?;
+    // let bytes: Vec<u8> = reader.read()?;
+    let bytes: Vec<u8> = reader.read().expect("could not read");
     bincode::deserialize(&bytes[..])
 }

@@ -290,6 +290,7 @@ LeafServerMPHE server_mphe_keygen(SerialCT *key_share) {
     auto context = new SEALContext(parms);
     KeyGenerator *keygen = new KeyGenerator(*context);
     auto sec_key = keygen->secret_key();
+    printf("generate plain key pair  \n");
     // Get serialized versions of the keys
     // PublicKey ser_pub_key;
     // RelinKeys ser_relin_key_r1;
@@ -320,7 +321,7 @@ LeafServerMPHE server_mphe_keygen(SerialCT *key_share) {
     LeafServerMPHE lsmphe;
     lsmphe.context = void_context;
     lsmphe.encoder = encoder;
-    lsmphe.KeyGenerator = keygen;
+    lsmphe.keygenerator = keygen;
     lsmphe.decryptor = decryptor;
     return lsmphe;
 
@@ -329,6 +330,7 @@ LeafServerMPHE server_mphe_keygen(SerialCT *key_share) {
 
 
 void server_mphe_r2(LeafServerMPHE* lsmphe,SerialCT *send, SerialCT rec) {
+    printf("generate relin r2 \n");
     EncryptionParameters parms(scheme_type::bfv);
     parms.set_poly_modulus_degree(POLY_MOD_DEGREE);
     parms.set_coeff_modulus(CoeffModulus::BFVDefault(POLY_MOD_DEGREE));
@@ -344,10 +346,11 @@ void server_mphe_r2(LeafServerMPHE* lsmphe,SerialCT *send, SerialCT rec) {
     (r1_share).load(*context, is);
     // cout<<*r1_share.data()[0][0].data().data()<<endl;
 
-    KeyGenerator *keygen = reinterpret_cast<KeyGenerator*>(lsmphe->KeyGenerator);
+    KeyGenerator *keygen = reinterpret_cast<KeyGenerator*>(lsmphe->keygenerator);
 
     keygen->create_relin_keys_round_two(r2_, r1_share);
     // cout<<*r2_.data()[0][0].data().data()<<endl;
+    printf("generate relin key share r2 \n");
     ostringstream os;
     r2_.save(os);
     (r1_share).save(os);
@@ -451,7 +454,7 @@ RootServerMPHE server_mphe_aggregation_r1(SerialCT key_share0, SerialCT key_shar
     // keygen.gen_common_galois_keys(RotKeys,steps,3,cRotKeys);
     keygen.gen_common_galois_keys(RotKeys,3,*cRotKeys);
 
-    printf("generate common relin key \n");
+    printf("generate common relin key share r1 \n");
     RelinKeys* Relin_key_share_r1 = new RelinKeys();
     keygen.aggregate_relin_keys_round_one(*Relin_key_share_r1, RelinKey_r1,3);
     // cout<<*Relin_key_share_r1.data()[0][0].data().data()<<endl;
@@ -496,7 +499,7 @@ void server_mphe_aggregation_r2(RootServerMPHE* rsmphe,SerialCT key_share0, Seri
     // parms.set_plain_modulus(PLAINTEXT_MODULUS);
     // auto context = new SEALContext(parms);
     KeyGenerator keygen(*context);
-
+    printf("generate common relin key share r2 root \n");
     // Recast the context to void*
     // void* void_context = static_cast<void*>(context);
 
@@ -625,10 +628,13 @@ LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const M
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(lsmphe->encoder);
     
     // Preprocess image
+    printf("Preprocess image\n");
     auto pt = preprocess_image(*data, image);
+    printf("Preprocess image 1\n");
     auto rotated_pt = filter_rotations(pt, *data);
+    printf("Preprocess image 2\n");
     auto ct_rotations = HE_encrypt_rotations(rotated_pt, *data, *encryptor, *encoder);
-
+    printf("Preprocess image 3 \n");
     // Flatten rotations ciphertext
     vector<Ciphertext> ct_flat_rotations;
     for (const auto &ct: ct_rotations)
@@ -637,6 +643,7 @@ LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const M
 
 
     // Preprocess filters
+    printf("Preprocess filters\n");
 
     auto masks_vec = MPHE_preprocess_filters(filters, *data, *encoder,*encryptor);
 
@@ -649,6 +656,7 @@ LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const M
     }
 
     //Preprocess share
+    printf("Preprocess share\n");
     vector<Ciphertext> linear = MPHE_preprocess_noise(linear_share, *data, *encoder,*encryptor);
 
    
