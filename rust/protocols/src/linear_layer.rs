@@ -8,7 +8,7 @@ use crypto_primitives::additive_share::Share;
 use io_utils::imux::IMuxSync;
 use neural_network::{
     layers::*,
-    tensors::{Input, Output},
+    tensors::{Input, Output, Kernel},
     Evaluate,
 };
 use protocols_sys::{SealClientCG, SealServerCG, *};
@@ -18,17 +18,42 @@ use std::{
     marker::PhantomData,
     os::raw::c_char,
 };
+use num_traits::identities::One;
+use rand::Rng;
+use algebra::near_mersenne_64::F;
+use crypto_primitives::FPBeaversMul;
+// fn generate_random_number<R: Rng>(rng: &mut R) -> f64 {
+//     let is_neg: bool = rng.gen();
+//     let mul = if is_neg { -10.0 } else { 10.0 };
+//     let mut float: f64 = 1.0;//rng.gen();
+//     // float += 1.0;
+//     let f = TenBitExpFP::truncate_float(float );//* mul);
+//     let n = TenBitExpFP::from(f);
+//     // println!("f:{}",f);
+//     // println!("n:{}",n);
+//     (f, n)
+// }
+struct TenBitExpParams {}
+impl FixedPointParameters for TenBitExpParams {
+    type Field = F;
+    const MANTISSA_CAPACITY: u8 = 3;
+    const EXPONENT_CAPACITY: u8 = 7;
+}
+
+type TenBitExpFP = FixedPoint<TenBitExpParams>;
+type TenBitBM = FPBeaversMul<TenBitExpParams>;
+type TenBitAS = AdditiveShare<TenBitExpParams>;
 
 pub struct LinearProtocol<P: FixedPointParameters> {
     _share: PhantomData<P>,
 }
 
 pub struct LinearProtocolType;
-
+pub type OfflineLeafServerMsgSend<'a> = OutMessage<'a, Vec<Vec<c_char>>, LinearProtocolType>;
 pub type OfflineServerMsgSend<'a> = OutMessage<'a, Vec<c_char>, LinearProtocolType>;
 pub type OfflineServerMsgRcv = InMessage<Vec<c_char>, LinearProtocolType>;
 pub type OfflineServerKeyRcv = InMessage<Vec<c_char>, LinearProtocolType>;
-
+pub type OfflineRootServerMsgRcv = InMessage<Vec<Vec<c_char>>, LinearProtocolType>;
 pub type OfflineClientMsgSend<'a> = OutMessage<'a, Vec<c_char>, LinearProtocolType>;
 pub type OfflineClientMsgRcv = InMessage<Vec<c_char>, LinearProtocolType>;
 pub type OfflineClientKeySend<'a> = OutMessage<'a, Vec<c_char>, LinearProtocolType>;
@@ -36,12 +61,243 @@ pub type OfflineClientKeySend<'a> = OutMessage<'a, Vec<c_char>, LinearProtocolTy
 pub type MsgSend<'a, P> = OutMessage<'a, Input<AdditiveShare<P>>, LinearProtocolType>;
 pub type MsgRcv<P> = InMessage<Input<AdditiveShare<P>>, LinearProtocolType>;
 
+// struct TenBitExpParams {}
+// impl FixedPointParameters for TenBitExpParams {
+//     type Field = F;
+//     const MANTISSA_CAPACITY: u8 = 3;
+//     const EXPONENT_CAPACITY: u8 = 7;
+// }
+
+// type TenBitExpFP = FixedPoint<TenBitExpParams>;
+// type TenBitBM = FPBeaversMul<TenBitExpParams>;
+// type TenBitAS = AdditiveShare<TenBitExpParams>;
+
+fn generate_random_number<R: Rng>(rng: &mut R) -> (f64, f64) {
+    let is_neg: bool = rng.gen();
+    let mul = if is_neg { -10.0 } else { 10.0 };
+    let mut float: f64 = rng.gen_range(-100.0,100.0);
+    // float += 1.0;
+    let mut float_ = -1.0*float;
+    let f = TenBitExpFP::truncate_float(float);//* mul);
+    let f_ = TenBitExpFP::truncate_float(float_);
+    // let n = TenBitExpFP::from(f);
+    // println!("f:{}",float);
+    // println!("n:{}",n);
+    (f, f_)
+}
+
 impl<P: FixedPointParameters> LinearProtocol<P>
 where
     P: FixedPointParameters,
     <P::Field as PrimeField>::Params: Fp64Parameters,
     P::Field: PrimeField<BigInt = <<P::Field as PrimeField>::Params as FpParameters>::BigInt>,
+    //  Input<crypto_primitives::AdditiveShare<FixedPoint<P>>>: Mul<FixedPoint<TenBitExpParams>>
 {
+    // fn generate_random_number<R: Rng>(rng: &mut R) -> (f64, TenBitExpFP) {
+    //     let is_neg: bool = rng.gen();
+    //     let mul = if is_neg { -10.0 } else { 10.0 };
+    //     let mut float: f64 = 1.0;//rng.gen();
+    //     // float += 1.0;
+    //     let f = TenBitExpFP::truncate_float(float );//* mul);
+    //     let n = TenBitExpFP::from(f);
+    //     // println!("f:{}",f);
+    //     // println!("n:{}",n);
+    //     (f, n)
+    // }
+    pub fn transform(
+        r2 : &Input<AdditiveShare<P>>,
+        input_dims: (usize, usize, usize, usize),
+    )-> Input<P::Field>{
+        let layer_randomness = r2
+            .iter()
+            .map(|r: &AdditiveShare<P>| r.inner.inner)
+            .collect::<Vec<_>>();
+        let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
+            .into_shape(input_dims)
+            .unwrap();
+        layer_randomness.into()
+    }
+
+    pub fn offline_leaf_server_protocol<'a,R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        input_dims: (usize, usize, usize, usize),
+        output_dims: (usize, usize, usize, usize),
+        lserver_cg: &mut SealLeafServerCG,
+        kernel: &Kernel<u64>,
+        rng: &mut RNG,
+    )-> Result<(Input<AdditiveShare<P>>,Output<P::Field>), bincode::Error>  {
+
+        // r
+        // let lserver_share: Input<FixedPoint<P>> = Input::zeros(input_dims);
+        let mut r1_ = Input::zeros(input_dims);
+        let mut r2_ = Input::zeros(input_dims);
+        // let (n1, n2) = generate_random_number(rng);
+        r1_.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(r_1,r_2)|{
+            (*r_1, *r_2) = generate_random_number(rng)
+          });
+
+        
+
+        let mut r1: Input<AdditiveShare<P>>  = Input::zeros(input_dims); 
+        let mut r2: Input<AdditiveShare<P>>  = Input::zeros(input_dims);
+
+        r1.iter_mut()
+          .zip(r1_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+        r2.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+
+       
+
+        let mut server_r: Output<FixedPoint<P>> = Output::zeros(output_dims);
+        server_r.iter_mut()
+        .for_each(|s_r|{
+          *s_r  = FixedPoint::from(generate_random_number(rng).0)
+        });
+
+
+        let mut server_randomness: Output<P::Field> = Output::zeros(output_dims);
+        // let mut server_randomness: Output<AdditiveShare<P>> = Output::zeros(output_dims);
+        server_randomness.iter_mut()
+        .zip(server_r.iter_mut())
+        .for_each(|(s_ra,s_r)|{
+            *s_ra = (*s_r).inner
+        });
+        // TODO
+        // for r in &mut server_randomness {
+        //     // *r = P::Field::uniform(rng);
+        //     // *r = P::Field::one();//P::Field::uniform(rng);
+        // }
+        let mut server_randomness_c = Output::zeros(output_dims);
+        server_randomness_c
+            .iter_mut()
+            .zip(&server_randomness)
+            .for_each(|(e1, e2)| *e1 = e2.into_repr().0);
+
+        // for s in &server_randomness{
+        //     println!("SSSS:{}",*s);
+        // }
+        let (mut weight_ct_vec,mut r_ct_vec, mut s_ct_vec) = lserver_cg.preprocess(kernel, &r1.to_repr(), &server_randomness_c);
+        let  ct_send = vec![weight_ct_vec, r_ct_vec, s_ct_vec];
+
+        // println!("sending ct");
+
+
+        let sent_message =OfflineLeafServerMsgSend::new(&ct_send);
+        // let sent_message =OfflineServerMsgSend::new(&weight_ct_vec);
+        crate::bytes::serialize(writer, &sent_message).unwrap();
+        // Ok(())
+
+        let result_ct: OfflineServerMsgRcv = crate::bytes::deserialize(reader).unwrap();
+        println!("Rcv result ct");
+        let pd = lserver_cg.dis_decrypt(result_ct.msg());
+        println!("Server b c distribute decrypt");
+        let sent_message = OfflineServerMsgSend::new(&pd);
+        crate::bytes::serialize(writer, &sent_message).unwrap();
+
+        // let layer_randomness = r2
+        //     .iter()
+        //     .map(|r: &AdditiveShare<P>| r.inner.inner)
+        //     .collect::<Vec<_>>();
+        // let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
+        //     .into_shape(input_dims)
+        //     .unwrap();
+        // Ok((layer_randomness.into(),server_randomness))
+        Ok((r2,server_randomness))
+    }
+
+
+    pub fn offline_root_server_protocol<'a,R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
+        reader1: &mut IMuxSync<R>,
+        reader2: &mut IMuxSync<R>,
+        writer1: &mut IMuxSync<W>,
+        writer2: &mut IMuxSync<W>,
+        input_dims: (usize, usize, usize, usize),
+        output_dims: (usize, usize, usize, usize),
+        rserver_cg: &mut SealRootServerCG,
+        rng: &mut RNG,
+    ) -> Result<(Input<AdditiveShare<P>>, Output<AdditiveShare<P>>), bincode::Error>{
+        //generating r_a
+        // let lserver_share: Input<FixedPoint<P>> = Input::zeros(input_dims);
+        // let (r1, r2) = lserver_share.share(rng);
+
+        let mut r1_ = Input::zeros(input_dims);
+        let mut r2_ = Input::zeros(input_dims);
+        // let (n1, n2) = generate_random_number(rng);
+        r1_.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(r_1,r_2)|{
+            (*r_1, *r_2) = generate_random_number(rng)
+          });
+
+        
+
+        let mut r1: Input<AdditiveShare<P>>  = Input::zeros(input_dims); 
+        let mut r2: Input<AdditiveShare<P>>  = Input::zeros(input_dims);
+
+        r1.iter_mut()
+          .zip(r1_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+        r2.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+
+
+
+        let mut r_a = rserver_cg.preprocess(&r1.to_repr());
+
+        //online
+        let lserver_share_b: OfflineRootServerMsgRcv = crate::bytes::deserialize(reader1).unwrap();
+        let lserver_share_c: OfflineRootServerMsgRcv = crate::bytes::deserialize(reader2).unwrap();
+        
+        let lserver_share_b_vec  = lserver_share_b.msg();
+        let lserver_share_c_vec  = lserver_share_c.msg();
+        let result_ct = rserver_cg.online_process(lserver_share_b_vec[0].clone(),lserver_share_b_vec[1].clone(),lserver_share_b_vec[2].clone(),lserver_share_c_vec[0].clone(),lserver_share_c_vec[1].clone(),lserver_share_c_vec[2].clone());
+        println!("online evaluation done");
+        rserver_cg.dis_decrypt(result_ct.clone());
+        let sent_message = OfflineServerMsgSend::new(&result_ct);
+        crate::bytes::serialize(writer1, &sent_message).unwrap();
+        crate::bytes::serialize(writer2, &sent_message).unwrap();
+
+        let pd_b: OfflineServerMsgRcv = crate::bytes::deserialize(reader1).unwrap();
+        let pd_c: OfflineServerMsgRcv = crate::bytes::deserialize(reader2).unwrap();
+
+        println!("receive bc pd");
+
+        rserver_cg.final_decrypt(pd_b.msg(), pd_c.msg());
+        println!("aggregating pd");
+        // let mut share_next : Input<AdditiveShare<P>>  = Input::zeros(output_dims);
+        let mut share_next = Input::zeros(output_dims);
+        rserver_cg.postprocess(&mut share_next);
+        assert_eq!(share_next.dim(), output_dims);
+        // let layer_randomness = r2
+        //     .iter()
+        //     .map(|r: &AdditiveShare<P>| r.inner.inner)
+        //     .collect::<Vec<_>>();
+        // let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
+        //     .into_shape(input_dims)
+            // .unwrap();
+        // Ok((layer_randomness.into(), share_next))
+        Ok((r2, share_next))
+
+    }
+
+    // pub fn online_root_server_protocol
+
+    // pub fn online_leaf_server_protocol
+
     pub fn offline_server_protocol<R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
         reader: &mut IMuxSync<R>,
         writer: &mut IMuxSync<W>,
@@ -176,6 +432,31 @@ where
         Ok(())
     }
 
+    pub fn online_server_a_protocol<W: Write + Send>(
+        writer1: &mut IMuxSync<W>,
+        writer2: &mut IMuxSync<W>,
+        x_s: &Input<AdditiveShare<P>>,
+        layer: &LinearLayerInfo<AdditiveShare<P>, FixedPoint<P>>,
+        next_layer_input: &mut Output<AdditiveShare<P>>,
+    ) -> Result<(), bincode::Error> {
+        let start = timer_start!(|| "Linear online protocol");
+        match layer {
+            LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
+                let sent_message = MsgSend::new(x_s);
+                crate::bytes::serialize(writer1, &sent_message)?;
+                crate::bytes::serialize(writer2, &sent_message)?;
+            }
+            _ => {
+                layer.evaluate_naive(x_s, next_layer_input);
+                for elem in next_layer_input.iter_mut() {
+                    elem.inner.signed_reduce_in_place();
+                }
+            }
+        }
+        timer_end!(start);
+        Ok(())
+    }
+
     pub fn online_server_protocol<R: Read + Send>(
         reader: &mut IMuxSync<R>,
         layer: &LinearLayer<AdditiveShare<P>, FixedPoint<P>>,
@@ -200,4 +481,6 @@ where
         timer_end!(start);
         Ok(())
     }
+
+
 }

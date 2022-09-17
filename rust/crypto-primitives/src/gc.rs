@@ -113,6 +113,100 @@ pub fn num_bits(p: u128) -> usize {
     (p.next_power_of_two() * 2).trailing_zeros() as usize
 }
 
+pub fn relu_3<P: FixedPointParameters>(
+    b: &mut CircuitBuilder,
+    n: usize,
+) -> Result<(), CircuitBuilderError>
+where
+    <P::Field as PrimeField>::Params: Fp64Parameters,
+    P::Field: PrimeField<BigInt = <<P::Field as PrimeField>::Params as FpParameters>::BigInt>,
+{
+    let p = u128::from(<<P::Field as PrimeField>::Params>::MODULUS.0);
+    let exponent_size = P::EXPONENT_CAPACITY as usize;
+
+    let p_over_2 = p / 2;
+    // Convert to two's complement
+    let neg_p_over_2 = !p_over_2 + 1;
+    // Convert to two's complement. Equivalent to `let neg_p = -(p as i128) as u128;
+    let neg_p = !p + 1;
+    let q = 2;
+    let num_bits = num_bits(p);
+
+    let moduli = vec![q; num_bits];
+    // Construct constant for addition with neg p
+    let neg_p = b.bin_constant_bundle(neg_p, num_bits)?;
+    let neg_p_over_2_bits = b
+        .constant_bundle(&util::u128_to_bits(neg_p_over_2, num_bits), &moduli)?
+        .into();
+    let zero = b.constant(0, 2)?;
+    let one = b.constant(1, 2)?;
+
+
+    for _ in 0..n {
+        let ra = BinaryBundle::new(b.evaluator_inputs(&moduli));
+        let rc = BinaryBundle::new(b.evaluator_inputs(&moduli));
+        let rc_next = BinaryBundle::new(b.evaluator_inputs(&moduli));
+        let rb = BinaryBundle::new(b.garbler_inputs(&moduli));
+        let rb_next = BinaryBundle::new(b.garbler_inputs(&moduli));
+       
+
+        let res_ = b.bin_addition_no_carry(&ra, &rb)?;
+        let layer_input_ = mod_p_helper(b, &neg_p, &res_).unwrap();
+
+        let res = b.bin_addition_no_carry(&layer_input_, &rc)?;
+
+        let layer_input = mod_p_helper(b, &neg_p, &res).unwrap();
+
+
+        let res = neg_p_over_2_helper(b, neg_p_over_2, &neg_p_over_2_bits, &layer_input)?;
+        // Take the sign bit
+        let zs_is_positive = res.wires().last().unwrap();
+
+        // Compute the relu
+        let mut relu_res = Vec::with_capacity(num_bits);
+        let relu_6_size = exponent_size + 3;
+        // We choose 5 arbitrarily here; the idea is that we won't see values of
+        // greater than 2^8.
+        // We then drop the larger bits
+        for wire in layer_input.wires().iter().take(relu_6_size + 5) {
+            relu_res.push(b.and(&zs_is_positive, wire)?);
+        }
+        let is_seven = b.and_many(&relu_res[(exponent_size + 1)..relu_6_size])?;
+        let some_higher_bit_is_set = b.or_many(&relu_res[relu_6_size..])?;
+
+        let should_be_six = b.or(&some_higher_bit_is_set, &is_seven)?;
+
+        for wire in &mut relu_res[relu_6_size..] {
+            *wire = zero;
+        }
+        let lsb = &mut relu_res[exponent_size];
+        *lsb = mux_single_bit(b, &should_be_six, lsb, &zero)?;
+
+        let middle_bit = &mut relu_res[exponent_size + 1];
+        *middle_bit = mux_single_bit(b, &should_be_six, middle_bit, &one)?;
+
+        let msb = &mut relu_res[exponent_size + 2];
+        *msb = mux_single_bit(b, &should_be_six, msb, &one)?;
+
+        for wire in &mut relu_res[..exponent_size] {
+            *wire = mux_single_bit(b, &should_be_six, wire, &zero)?;
+        }
+
+        relu_res.extend(std::iter::repeat(zero).take(num_bits - relu_6_size - 5));
+
+        let relu_res = BinaryBundle::new(relu_res);
+
+        let res_b = b.bin_addition_no_carry(&relu_res, &rb_next)?;
+        let tmp = mod_p_helper(b, &neg_p, &res_b)?;
+        let res = b.bin_addition_no_carry(&tmp, &rc_next)?;
+        let next_share = mod_p_helper(b, &neg_p, &res)?;
+
+        b.output_bundle(&next_share)?;
+    }
+
+    Ok(())
+}
+
 /// Compute the `ReLU` of `n` over the field `P::Field`.
 pub fn relu<P: FixedPointParameters>(
     b: &mut CircuitBuilder,
@@ -145,6 +239,10 @@ where
         let s1 = BinaryBundle::new(b.evaluator_inputs(&moduli));
         let s2 = BinaryBundle::new(b.garbler_inputs(&moduli));
         let s2_next = BinaryBundle::new(b.garbler_inputs(&moduli));
+
+        // let s1 = BinaryBundle::new(b.garbler_inputs(&moduli));
+        // let s2 = BinaryBundle::new(b.evaluator_inputs(&moduli));
+        // let s2_next = BinaryBundle::new(b.evaluator_inputs(&moduli));
         // Add secret shares as integers
         let res = b.bin_addition_no_carry(&s1, &s2)?;
         // Take the result mod p;

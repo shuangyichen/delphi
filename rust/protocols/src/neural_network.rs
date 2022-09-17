@@ -126,6 +126,21 @@ where
     <P::Field as PrimeField>::Params: Fp64Parameters,
     P::Field: PrimeField<BigInt = <<P::Field as PrimeField>::Params as FpParameters>::BigInt>,
 {
+    // pub fn offline_server_a_protocol
+
+    // pub fn offline_server_b_protocol
+
+    // pub fn offline_server_c_protocol
+
+    // pub fn online_server_a_protocol
+
+    // pub fn online_server_b_protocol
+
+    // pub fn online_server_c_protocol
+
+
+
+
     pub fn offline_server_protocol<R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
         reader: &mut IMuxSync<R>,
         writer: &mut IMuxSync<W>,

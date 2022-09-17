@@ -158,9 +158,11 @@ impl<'a> ClientCG for Conv2D<'a> {
                     let idx = (row * (self.data.output_w as usize) + col) as isize;
                     let linear_val =
                         unsafe { *(*(shares.linear.offset(chan as isize))).offset(idx as isize) };
+                        // println!("{}",linear_val);
                     linear_share[[0, chan, row, col]] = AdditiveShare::new(
                         FixedPoint::with_num_muls(P::Field::from_repr(linear_val.into()), 1),
                     );
+                    // println!("{}",TenBitExpFP::from(linear_share[[0, chan, row, col]]));
                 }
             }
         }

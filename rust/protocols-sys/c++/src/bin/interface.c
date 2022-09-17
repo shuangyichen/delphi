@@ -25,7 +25,7 @@ void conv(ClientFHE* cfhe, ServerFHE* sfhe, int image_h, int image_w, int filter
     for (int chan = 0; chan < data.inp_chans; chan++) {
         input[chan] = (u64*) malloc(sizeof(u64)*data.image_size);
         for (int idx = 0; idx < data.image_size; idx++)
-            input[chan][idx] = idx;
+            input[chan][idx] = 3;//rand() % 10;
     }
 
     for (int chan = 0; chan < data.inp_chans; chan++) {
@@ -58,7 +58,7 @@ void conv(ClientFHE* cfhe, ServerFHE* sfhe, int image_h, int image_w, int filter
         for (int inp_c = 0; inp_c < data.inp_chans; inp_c++) {
             filters[out_c][inp_c] = (u64*) malloc(sizeof(u64)*data.filter_size);
             for (int idx = 0; idx < data.filter_size; idx++)
-                filters[out_c][inp_c][idx] = 1;
+                filters[out_c][inp_c][idx] = 2;
         }
     }
 
@@ -168,7 +168,7 @@ void fc(ClientFHE* cfhe, ServerFHE* sfhe, int vector_len, int matrix_h) {
     for (int ct = 0; ct < matrix_h; ct++) {
         matrix[ct] = (u64*) malloc(sizeof(u64)*vector_len);
         for (int idx = 0; idx < vector_len; idx++)
-            matrix[ct][idx] = ct*vector_len + idx;
+            matrix[ct][idx] = 1;//ct*vector_len + idx;
     }
 
     uint64_t* linear_share = (uint64_t*) malloc(sizeof(uint64_t)*matrix_h);
@@ -368,12 +368,12 @@ int main(int argc, char* argv[]) {
   timeElapsed = endTime - startTime;
   printf("[%f seconds]\n", timeElapsed);
 
-//   conv(&cfhe, &sfhe, 5, 5, 3, 3, 2, 2, 1, 1);
-  //conv(&cfhe, &sfhe, 32, 32, 3, 3, 16, 16, 1, 0);
+//   conv(&cfhe, &sfhe, 18, 18, 3, 3, 3, 3, 1, 0);
+//   conv(&cfhe, &sfhe, 64, 64, 3, 3, 128, 128, 1, 0);
   //conv(&cfhe, &sfhe, 16, 16, 3, 3, 32, 32, 1, 1);
   //conv(&cfhe, &sfhe, 8, 8, 3, 3, 64, 64, 1, 1);
   
-  fc(&cfhe, &sfhe, 25, 10);
+  fc(&cfhe, &sfhe, 3000, 3000);
   
 //   beavers_triples(&cfhe, &sfhe, 100);
   

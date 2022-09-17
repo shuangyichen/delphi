@@ -123,7 +123,7 @@ fn interface<R: Rng + rand::CryptoRng>(
     success
 }
 
-#[test]
+// #[test]
 fn test_convolution() {
     use neural_network::layers::convolution::*;
 
@@ -194,7 +194,7 @@ fn test_convolution() {
     );
 }
 
-#[test]
+// #[test]
 fn test_fully_connected() {
     use neural_network::layers::fully_connected::*;
 
@@ -270,7 +270,7 @@ fn to_u64(x: &Vec<F>) -> Vec<u64> {
     x.iter().map(|e| e.into_repr().0).collect()
 }
 
-#[test]
+// #[test]
 fn test_triple_gen() {
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
 
@@ -343,11 +343,34 @@ fn test_mphe() {
     let (mut lsmphe1, mut key_vecs1) = key_share1.mphe_generate();
     let mut key_share2 = KeyShare::new();
     let (mut lsmphe2, mut key_vecs2) = key_share2.mphe_generate();
-    key_vecs0.extend(key_vecs1);
-    key_vecs0.extend(key_vecs2);
+    // key_vecs0.extend(key_vecs1);
+    // key_vecs0.extend(key_vecs2);
 
     let mut server_a = KeyShare::new();
-    // let size: usize = key_vecs.len();
-    // println!("{}",size);
-    let rsmphe = server_a.root_mphe_receive_r1(key_vecs0);
+    
+    let (mut rsmphe,mut key_r1) = server_a.root_mphe_receive_r1(key_vecs0,key_vecs1,key_vecs2);
+    // let mut ser_a_ct = SerialCT {
+    //     inner: key_r1.as_mut_ptr(),
+    //     size: key_r1.len() as u64,
+    // };
+
+    // unsafe{server_mphe_r2(lsmphe0, &mut self.0,ser_r1_ct)};
+    // let mut mphe = lsmphe0.unwrap();
+    let mphe0 = unsafe {&mut *(&mut lsmphe0 as *mut LeafServerMPHE)};
+    let mphe1 = unsafe {&mut *(&mut lsmphe1 as *mut LeafServerMPHE)};
+    let mphe2 = unsafe {&mut *(&mut lsmphe2 as *mut LeafServerMPHE)};
+    let key_r1_ = key_r1.clone();
+    let key_r1__ = key_r1.clone();
+    let (lsmphe0_,rlk0_r2) = key_share0.leaf_mphe_r2(*mphe0,key_r1);
+    let (lsmphe1_,rlk1_r2) = key_share1.leaf_mphe_r2(*mphe1,key_r1_);
+    let (lsmphe2_,rlk2_r2)= key_share2.leaf_mphe_r2(*mphe2,key_r1__);
+    let root_mphe = unsafe{&mut *(&mut rsmphe as *mut RootServerMPHE)};
+
+    let root_mphe_ = server_a.root_mphe_receive_r2(*root_mphe,rlk0_r2,rlk1_r2,rlk2_r2);
+    // let x = 6;
+    unsafe{procedure(root_mphe_,lsmphe0_,lsmphe1_,lsmphe2_)}
+    // unsafe{procedure(*root_mphe,*mphe0,*mphe1,*mphe2) };
+
+
+
 }

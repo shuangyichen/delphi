@@ -170,7 +170,7 @@ mod tests {
         (f, n)
     }
 
-    #[test]
+    // #[test]
     fn test_triple_gen() {
         let mut gen = InsecureTripleGen::<TenBitExpFP>::new(RANDOMNESS);
         for _ in 0..1000 {
@@ -179,7 +179,7 @@ mod tests {
         }
     }
 
-    #[test]
+    // #[test]
     fn test_share_and_blind() {
         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
         let seed = RANDOMNESS;
@@ -205,7 +205,7 @@ mod tests {
         }
     }
 
-    #[test]
+    // #[test]
     fn test_reconstruct_blinded_inputs() {
         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
         let seed = RANDOMNESS;
@@ -231,7 +231,7 @@ mod tests {
         }
     }
 
-    #[test]
+    // #[test]
     fn test_beavers_mul() {
         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
         let seed = RANDOMNESS;
@@ -263,7 +263,7 @@ mod tests {
         }
     }
 
-    #[test]
+    // #[test]
     fn test_beavers_mul_with_trunc() {
         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
         let seed = RANDOMNESS;

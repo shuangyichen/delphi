@@ -172,6 +172,7 @@ vector<Ciphertext> MPHE_preprocess_noise(const uint64_t* const* secret_share, co
                                 + col * data.stride_w * data.image_w
                                 + row * data.stride_h;
                 int share_idx = col * data.output_w + row ;
+                // noise[ct_idx][noise_idx] = 16;//secret_share[out_c][share_idx];
                 noise[ct_idx][noise_idx] = secret_share[out_c][share_idx];
             }
         }
@@ -204,7 +205,11 @@ vector<uv64> preprocess_image(Metadata data, const u64* const* image) {
                             + half_off * data.image_size
                             + row * data.image_h
                             + col;
+                            // printf("preprocess image");
+                    // cout<<"preprocess image "<<image[inp_c][row*data.image_h + col] <<endl;
                     ct[ct_idx][idx] = image[inp_c][row*data.image_h + col];
+                    // ct[ct_idx][idx] = image[inp_c][row*data.image_h + col];
+                    // cout<<"preprocess image "<<ct[ct_idx][idx] <<endl;
                 }
             }
         }
@@ -266,11 +271,16 @@ vector<vector<Ciphertext>> HE_encrypt_rotations(vector<vector<uv64>> &rotations,
         const Metadata &data, Encryptor &encryptor, BatchEncoder &batch_encoder) {
     vector<vector<Ciphertext>> enc_rots(rotations.size(),
                                         vector<Ciphertext>(rotations[0].size()));
+    vector<vector<Plaintext>> encoded_rots(rotations.size(),
+                                        vector<Plaintext>(rotations[0].size()));
+    // printf("encoding\n");
     for (int ct_idx = 0; ct_idx < rotations.size(); ct_idx++) {
         for (int f = 0; f < rotations[0].size(); f++) {
-            Plaintext tmp;
-            batch_encoder.encode(rotations[ct_idx][f], tmp);
-            encryptor.encrypt(tmp, enc_rots[ct_idx][f]);
+            // Plaintext tmp;
+            batch_encoder.encode(rotations[ct_idx][f], encoded_rots[ct_idx][f]);
+            // printf("encoding ...\n");
+            encryptor.encrypt(encoded_rots[ct_idx][f],enc_rots[ct_idx][f]);
+            // printf("encrypting\n");
         } 
     }
     return enc_rots;
@@ -283,6 +293,7 @@ vector<vector<Plaintext>> HE_encode_rotations(vector<vector<uv64>> &rotations,
     for (int ct_idx = 0; ct_idx < rotations.size(); ct_idx++) {
         for (int f = 0; f < rotations[0].size(); f++) {
             batch_encoder.encode(rotations[ct_idx][f], enc_rots[ct_idx][f]);
+            // printf("encoding ...\n");
         } 
     }
     return enc_rots;
@@ -386,6 +397,7 @@ vector<vector<vector<Plaintext>>> HE_preprocess_filters(const u64* const* const*
                             // If we're on a padding channel then val should be 0
                             val = (out_idx < data.out_chans)
                                 ? filters[out_idx][inp_base + chan][f] : 0;
+                            // cout <<"filter"<<val<<endl;
                             // Second value will always be 0 since the second
                             // half is empty if we are repeating
                             val2 = 0;
@@ -511,6 +523,7 @@ vector<vector<vector<Ciphertext>>> MPHE_preprocess_filters(const u64* const* con
                             // If we're on a padding channel then val should be 0
                             val = (out_idx < data.out_chans)
                                 ? filters[out_idx][inp_base + chan][f] : 0;
+                            // cout <<"filter"<<val<<endl;
                             // Second value will always be 0 since the second
                             // half is empty if we are repeating
                             val2 = 0;

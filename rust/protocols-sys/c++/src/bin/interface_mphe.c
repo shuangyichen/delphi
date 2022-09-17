@@ -18,7 +18,7 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
     for (int chan = 0; chan < data.inp_chans; chan++) {
         input_a[chan] = (u64*) malloc(sizeof(u64)*data.image_size);
         for (int idx = 0; idx < data.image_size; idx++)
-            input_a[chan][idx] = idx;
+            input_a[chan][idx] = 1;//idx;
     }
 
     for (int chan = 0; chan < data.inp_chans; chan++) {
@@ -41,7 +41,7 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
     for (int chan = 0; chan < data.inp_chans; chan++) {
         input_b[chan] = (u64*) malloc(sizeof(u64)*data.image_size);
         for (int idx = 0; idx < data.image_size; idx++)
-            input_b[chan][idx] = rand() % 10;
+            input_b[chan][idx] = 1;//rand() % 10;
     }
 
     printf("Server B input r: \n");
@@ -63,7 +63,7 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
     for (int chan = 0; chan < data.inp_chans; chan++) {
         input_c[chan] = (u64*) malloc(sizeof(u64)*data.image_size);
         for (int idx = 0; idx < data.image_size; idx++)
-            input_c[chan][idx] = rand() % 10;
+            input_c[chan][idx] = 1;//rand() % 10;
     }
 
     printf("Server C input r: \n");
@@ -97,7 +97,7 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
         linear_share_b[chan] = (uint64_t*) malloc(sizeof(uint64_t)*data.output_h*data.output_w);
         for (int idx = 0; idx < data.output_h*data.output_w; idx++) {
             // TODO: Adjust these for testing
-            linear_share_b[chan][idx] = 4;
+            linear_share_b[chan][idx] = 2;
         }
     }
 
@@ -139,15 +139,15 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
     memcpy(lfshares_b.result_pd.inner, sa_share.result_ct.inner, sa_share.result_ct.size);
     memcpy(lfshares_c.result_pd.inner, sa_share.result_ct.inner, sa_share.result_ct.size);
 
-    LeafServerShares lfshares_a;
-    lfshares_a.result_pd.inner = (char*) malloc(sizeof(char)*sa_share.result_ct.size);
-    lfshares_a.result_pd.size = sa_share.result_ct.size;
-    memcpy(lfshares_a.result_pd.inner, sa_share.result_ct.inner, sa_share.result_ct.size);
+    // LeafServerShares lfshares_a;
+    // lfshares_a.result_pd.inner = (char*) malloc(sizeof(char)*sa_share.result_ct.size);
+    // lfshares_a.result_pd.size = sa_share.result_ct.size;
+    // memcpy(lfshares_a.result_pd.inner, sa_share.result_ct.inner, sa_share.result_ct.size);
     printf("Second layer server distribute decrypting \n");
-    leaf_server_conv_decrypt(lsmphe_a,&data,&lfshares_a);
+    LeafServerShares lfshares_a = server_a_conv_dis_decrypt(lsmphe_a,&data,sa_share.result_ct);
     leaf_server_conv_decrypt(lsmphe_b,&data,&lfshares_b);
     leaf_server_conv_decrypt(lsmphe_c,&data,&lfshares_c);
-    root_server_conv_decrypt(rsmphe, &data, &sa_share,lfshares_a.result_pd , lfshares_b.result_pd, lfshares_c.result_pd);
+    root_server_conv_decrypt(rsmphe, &data, &sa_share, &lfshares_a, lfshares_b.result_pd, lfshares_c.result_pd);
 
     printf("RESULT: \n");
     for (int chan = 0; chan < data.out_chans; chan++) {
@@ -222,13 +222,19 @@ void MPHE_test_fc(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServerMP
     lfshares_b.result_pd.inner = (char*) malloc(sizeof(char)*sa_share.result_ct.size);
     lfshares_b.result_pd.size = sa_share.result_ct.size;
     memcpy(lfshares_b.result_pd.inner, sa_share.result_ct.inner, sa_share.result_ct.size);
+    printf("send to server_b ... \n");
     lfshares_c.result_pd.inner = (char*) malloc(sizeof(char)*sa_share.result_ct.size);
     lfshares_c.result_pd.size = sa_share.result_ct.size;
     memcpy(lfshares_c.result_pd.inner, sa_share.result_ct.inner, sa_share.result_ct.size);
-    leaf_server_fc_decrypt(lsmphe_a,&data,&leaf_a_share);
+    printf("send to server_c ... \n");
+    // LeafServerShares leaf_a_share_ = server_a_conv_dis_decrypt(lsmphe_a,&data,sa_share.result_ct);
+    // server_a_fc_dis_decrypt(lsmphe_a,&data,sa_share.result_ct);
+    leaf_server_fc_decrypt(lsmphe_a, &data, &leaf_a_share);
     leaf_server_fc_decrypt(lsmphe_b, &data, &lfshares_b);
+    printf("server_b dis decrypt... \n");
     leaf_server_fc_decrypt(lsmphe_c, &data, &lfshares_c);
-    root_server_fc_decrypt(rsmphe, &data, &sa_share, leaf_a_share.result_pd,lfshares_b.result_pd,lfshares_c.result_pd);
+    printf("server_c dis decrypt... \n");
+    root_server_fc_decrypt(rsmphe, &data, &sa_share, &leaf_a_share,lfshares_b.result_pd,lfshares_c.result_pd);
     printf("result: [");
     for (int idx = 0; idx < matrix_h; idx++) {
         printf("%d, " , sa_share.result[0][idx]);
@@ -248,29 +254,34 @@ int main(int argc, char* argv[]) {
     SerialCT key_share1;
     SerialCT key_share2;
     SerialCT server_aggr;
-    printf("party 0 r1\n");
+    // printf("party 0 r1\n");
     LeafServerMPHE lsmphe0 = server_mphe_keygen(&key_share0);
-    printf("party 1 r1\n");
+    // printf("party 1 r1\n");
     LeafServerMPHE lsmphe1 = server_mphe_keygen(&key_share1);
-    printf("party 2 r1\n");
+    // printf("party 2 r1\n");
     LeafServerMPHE lsmphe2 = server_mphe_keygen(&key_share2);
     // ServerFHE sfhe = server_keygen(key_share); 
-    printf("server aggregating r1 \n");
+    // printf("server aggregating r1 \n");
     RootServerMPHE rsmphe = server_mphe_aggregation_r1(key_share0,key_share1,key_share2,&server_aggr);
     SerialCT key_share0_r2;
     SerialCT key_share1_r2;
     SerialCT key_share2_r2;
-    printf("server 0 r2 \n");
-    server_mphe_r2(&lsmphe0,&key_share0_r2,server_aggr);
-    printf("server 1 r2 \n");
-    server_mphe_r2(&lsmphe1,&key_share1_r2,server_aggr);
-    printf("server 2 r2 \n");
-    server_mphe_r2(&lsmphe2,&key_share2_r2,server_aggr);
+    // printf("server 0 r2 \n");
+    LeafServerMPHE lsmphe0_ = server_mphe_r2(&lsmphe0,&key_share0_r2,server_aggr);
+    // printf("server 1 r2 \n");
+    LeafServerMPHE lsmphe1_ = server_mphe_r2(&lsmphe1,&key_share1_r2,server_aggr);
+    // printf("server 2 r2 \n");
+    LeafServerMPHE lsmphe2_ = server_mphe_r2(&lsmphe2,&key_share2_r2,server_aggr);
     // server_mphe_aggregation_r1(key_share0,key_share1,key_share2,&server_aggr);
-    printf("server aggregating r2 \n");
-    server_mphe_aggregation_r2(&rsmphe,key_share0_r2,key_share1_r2,key_share2_r2);
+    // printf("server aggregating r2 \n");
+    RootServerMPHE rsmphe_ = server_mphe_aggregation_r2(&rsmphe,key_share0_r2,key_share1_r2,key_share2_r2);
 
-    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 5, 5, 3, 3, 1, 1, 1, 0);
-    MPHE_test_fc(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 25, 10);
+    // MPHE_test_conv(&rsmphe_, &lsmphe0_, &lsmphe1_, &lsmphe2_, 18, 18, 3, 3, 2, 2, 1, 0);  //ok
+    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 5, 5, 3, 3, 2, 2, 1, 1);//ok
+    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 28, 28, 3, 3, 1, 1, 1, 0); //ok
+    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 28, 28, 3, 3, 1, 1, 1, 1); //ok
+    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 28, 28, 3, 3, 2, 2, 1, 1); //not ok
+    // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 22, 22, 3, 3, 3, 3, 1, 1); //not ok
+    MPHE_test_fc(&rsmphe_, &lsmphe0_, &lsmphe1_, &lsmphe2_, 3000, 3000);
     return 1;
 }

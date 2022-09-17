@@ -290,6 +290,7 @@ LeafServerMPHE server_mphe_keygen(SerialCT *key_share) {
     auto context = new SEALContext(parms);
     KeyGenerator *keygen = new KeyGenerator(*context);
     auto sec_key = keygen->secret_key();
+    // printf("generate plain key pair  \n");
     // Get serialized versions of the keys
     // PublicKey ser_pub_key;
     // RelinKeys ser_relin_key_r1;
@@ -320,7 +321,7 @@ LeafServerMPHE server_mphe_keygen(SerialCT *key_share) {
     LeafServerMPHE lsmphe;
     lsmphe.context = void_context;
     lsmphe.encoder = encoder;
-    lsmphe.KeyGenerator = keygen;
+    lsmphe.keygenerator = keygen;
     lsmphe.decryptor = decryptor;
     return lsmphe;
 
@@ -328,7 +329,8 @@ LeafServerMPHE server_mphe_keygen(SerialCT *key_share) {
 }
 
 
-void server_mphe_r2(LeafServerMPHE* lsmphe,SerialCT *send, SerialCT rec) {
+LeafServerMPHE server_mphe_r2(LeafServerMPHE* lsmphe,SerialCT *send, SerialCT rec) {
+    printf("generate relin r2 \n");
     EncryptionParameters parms(scheme_type::bfv);
     parms.set_poly_modulus_degree(POLY_MOD_DEGREE);
     parms.set_coeff_modulus(CoeffModulus::BFVDefault(POLY_MOD_DEGREE));
@@ -344,18 +346,24 @@ void server_mphe_r2(LeafServerMPHE* lsmphe,SerialCT *send, SerialCT rec) {
     (r1_share).load(*context, is);
     // cout<<*r1_share.data()[0][0].data().data()<<endl;
 
-    KeyGenerator *keygen = reinterpret_cast<KeyGenerator*>(lsmphe->KeyGenerator);
+    KeyGenerator *keygen = reinterpret_cast<KeyGenerator*>(lsmphe->keygenerator);
 
     keygen->create_relin_keys_round_two(r2_, r1_share);
     // cout<<*r2_.data()[0][0].data().data()<<endl;
+    printf("generate relin key share r2 \n");
     ostringstream os;
     r2_.save(os);
     (r1_share).save(os);
     *send = serialize(os);
     Encryptor *encryptor = new Encryptor(*context, CPK);
-
-
-    lsmphe->encryptor = encryptor;
+    void* void_context = static_cast<void*>(context);
+    LeafServerMPHE lsmphe_;
+    lsmphe_.context = lsmphe->context;
+    lsmphe_.encoder = lsmphe->encoder;
+    // lsmphe_.keygenerator = keygen;
+    lsmphe_.decryptor = lsmphe->decryptor;
+    lsmphe_.encryptor = encryptor;
+    return lsmphe_;
 }
 
 RootServerMPHE server_mphe_aggregation_r1(SerialCT key_share0, SerialCT key_share1, SerialCT key_share2, SerialCT *key_share_r2){
@@ -441,17 +449,15 @@ RootServerMPHE server_mphe_aggregation_r1(SerialCT key_share0, SerialCT key_shar
     RelinKey_r1[1] = relink1;
     RelinKey_r1[2] = relink2;
  
-    printf("generate cpk \n");
+    printf("generate cpk r1\n");
     PublicKey CPK;
     keygen.create_common_public_key(CPK,PKS,3);
 
     GaloisKeys* cRotKeys = new GaloisKeys();
-    printf("generate common rotkey \n");
     // vector<int> steps(1,3);
     // keygen.gen_common_galois_keys(RotKeys,steps,3,cRotKeys);
     keygen.gen_common_galois_keys(RotKeys,3,*cRotKeys);
 
-    printf("generate common relin key \n");
     RelinKeys* Relin_key_share_r1 = new RelinKeys();
     keygen.aggregate_relin_keys_round_one(*Relin_key_share_r1, RelinKey_r1,3);
     // cout<<*Relin_key_share_r1.data()[0][0].data().data()<<endl;
@@ -483,7 +489,7 @@ RootServerMPHE server_mphe_aggregation_r1(SerialCT key_share0, SerialCT key_shar
 }
 
 
-void server_mphe_aggregation_r2(RootServerMPHE* rsmphe,SerialCT key_share0, SerialCT key_share1, SerialCT key_share2){
+RootServerMPHE server_mphe_aggregation_r2(RootServerMPHE* rsmphe,SerialCT key_share0, SerialCT key_share1, SerialCT key_share2){
     // KeyGenerator *keygen = reinterpret_cast<KeyGenerator*>(rsmphe->KeyGenerator);
     // RelinKeys *Relin_key_share_r1 = reinterpret_cast<RelinKeys*>(rsmphe.relin_keys);
     auto context = static_cast<SEALContext*>(rsmphe->context);
@@ -496,7 +502,7 @@ void server_mphe_aggregation_r2(RootServerMPHE* rsmphe,SerialCT key_share0, Seri
     // parms.set_plain_modulus(PLAINTEXT_MODULUS);
     // auto context = new SEALContext(parms);
     KeyGenerator keygen(*context);
-
+    printf("generate common relin key share r2 root \n");
     // Recast the context to void*
     // void* void_context = static_cast<void*>(context);
 
@@ -542,7 +548,7 @@ void server_mphe_aggregation_r2(RootServerMPHE* rsmphe,SerialCT key_share0, Seri
     // RelinKeys rlk;
     // rlk.load(*context,p0);
     // cout<< *rlk.data()[0][0].data().data()<<endl;
-    rsmphe->relin_keys = Relin_key;
+    // rsmphe->relin_keys = Relin_key;
 
     RelinKeys *relin_keys = reinterpret_cast<RelinKeys*>(rsmphe->relin_keys);
     // stringstream data_stream;
@@ -557,7 +563,20 @@ void server_mphe_aggregation_r2(RootServerMPHE* rsmphe,SerialCT key_share0, Seri
     Ciphertext* zero = new Ciphertext();
     encoder->encode(pod_matrix, tmp);
     encryptor->encrypt(tmp, *zero);
-    rsmphe->zero = (char*) zero;
+    // rsmphe->zero = (char*) zero;
+
+
+    RootServerMPHE rsmphe_;
+    rsmphe_.context = rsmphe->context;
+    rsmphe_.encoder = rsmphe->encoder;
+    rsmphe_.encryptor = rsmphe->encryptor;
+    rsmphe_.evaluator = rsmphe->evaluator;
+    rsmphe_.gal_keys = rsmphe->gal_keys;
+    rsmphe_.zero = (char*) zero;
+    rsmphe_.relin_keys = Relin_key;
+
+    return rsmphe_;
+
 }
 
 
@@ -582,6 +601,17 @@ ClientShares client_conv_preprocess(const ClientFHE* cfhe, const Metadata* data,
     auto pt = preprocess_image(*data, image);
     auto rotated_pt = filter_rotations(pt, *data);
     auto ct_rotations = HE_encrypt_rotations(rotated_pt, *data, *encryptor, *encoder);
+    // vector<vector<Ciphertext>> enc_rots(ct_rotations.size(),
+    //                                     vector<Ciphertext>(ct_rotations[0].size()));
+    // for (int ct_idx = 0; ct_idx < ct_rotations.size(); ct_idx++) {
+    //     for (int f = 0; f < ct_rotations[0].size(); f++) {
+
+    //         encryptor->encrypt(ct_rotations[ct_idx][f],enc_rots[ct_idx][f]);
+    //         printf("encrypting\n");
+    //     } 
+    // }
+
+
 
     // Flatten rotations ciphertext
     vector<Ciphertext> ct_flat_rotations;
@@ -624,11 +654,14 @@ LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const M
     Encryptor *encryptor = reinterpret_cast<Encryptor*>(lsmphe->encryptor);
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(lsmphe->encoder);
     
-    // Preprocess image
+ 
     auto pt = preprocess_image(*data, image);
+    // printf("Preprocess image 1\n");
     auto rotated_pt = filter_rotations(pt, *data);
+    // printf("Preprocess image 2\n");
+    //auto ct_rotations = HE_encrypt_rotations(rotated_pt, *data, *encryptor, *encoder);
     auto ct_rotations = HE_encrypt_rotations(rotated_pt, *data, *encryptor, *encoder);
-
+    
     // Flatten rotations ciphertext
     vector<Ciphertext> ct_flat_rotations;
     for (const auto &ct: ct_rotations)
@@ -637,6 +670,7 @@ LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const M
 
 
     // Preprocess filters
+    // printf("Preprocess filters\n");
 
     auto masks_vec = MPHE_preprocess_filters(filters, *data, *encoder,*encryptor);
 
@@ -649,6 +683,7 @@ LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const M
     }
 
     //Preprocess share
+    // printf("Preprocess share\n");
     vector<Ciphertext> linear = MPHE_preprocess_noise(linear_share, *data, *encoder,*encryptor);
 
    
@@ -665,6 +700,7 @@ char**** server_conv_preprocess(const ServerFHE* sfhe, const Metadata* data,
         const u64* const* const* filters) {
     // Recast the needed fhe helpers
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(sfhe->encoder);
+    
 
     // Preprocess filters
     auto masks_vec = HE_preprocess_filters(filters, *data, *encoder);
@@ -687,6 +723,13 @@ ServerShares server_conv_preprocess_shares(const ServerFHE* sfhe, const Metadata
     // Recast the needed fhe helpers
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(sfhe->encoder);
     Encryptor *encryptor = reinterpret_cast<Encryptor*>(sfhe->encryptor);
+
+    printf("server_conv_preprocess_shares");
+    for (int i=0;i<data->out_ct;i++){
+        for (int j=0;j<data->output_h*data->output_w;j++){
+            cout<< linear_share[i][j]<<endl;
+        }
+    }
 
     // Reshape shares
     vector<Plaintext> linear = HE_preprocess_noise(linear_share, *data, *encoder);
@@ -735,7 +778,7 @@ char** server_fc_preprocess(const ServerFHE* sfhe, const Metadata* data, const u
     return enc_matrix_c;
 }
 
-LeafServerShares server_a_fc_preprocess(const RootServerMPHE* rsmphe, const Metadata* data, const u64* vector) {
+RootServerShares server_a_fc_preprocess(const RootServerMPHE* rsmphe, const Metadata* data, const u64* vector) {
     // Recast the needed fhe helpers
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(rsmphe->encoder);
     Encryptor *encryptor = reinterpret_cast<Encryptor*>(rsmphe->encryptor);
@@ -745,8 +788,8 @@ LeafServerShares server_a_fc_preprocess(const RootServerMPHE* rsmphe, const Meta
     char** enc_matrix_c = new char*[1];
     enc_matrix_c[0] = (char*) new Plaintext(enc_vec);
 
-    LeafServerShares shares;
-    shares.r_pt = enc_matrix_c;
+    RootServerShares shares;
+    shares.fc_r_pt = enc_matrix_c;
     return shares;
 }
 
@@ -757,8 +800,11 @@ LeafServerShares server_bc_fc_preprocess(const LeafServerMPHE* lsmphe, const Met
     // Recast the needed fhe helpers
     Encryptor *encryptor = reinterpret_cast<Encryptor*>(lsmphe->encryptor);
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(lsmphe->encoder);
+    printf("loading encryptor  \n");
     
     // Preprocess image
+
+
    
     Plaintext enc_vec = preprocess_vec(*data, *encoder, image);
     std::vector<Ciphertext> ct(1);
@@ -956,6 +1002,113 @@ void root_server_conv_online(const RootServerMPHE* rsmphe, const Metadata* data,
     serverAshares->result_ct = serialize_ct(linear);
 }
 
+
+void test_conv(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,
+     RootServerShares* serverAshares) {
+
+
+
+    //(F_b+F_c)(r_A+r_B+r_C)-s_b-s_c
+    //r_A pt, others: ct
+    // Grab shared pointer to SEALContext
+    auto context = static_cast<SEALContext*>(rsmphe->context);
+
+    Encryptor *encryptor = reinterpret_cast<Encryptor*>(rsmphe->encryptor);
+    Evaluator *evaluator = reinterpret_cast<Evaluator*>(rsmphe->evaluator);
+    BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(rsmphe->encoder);
+    GaloisKeys *gal_keys = reinterpret_cast<GaloisKeys*>(rsmphe->gal_keys);
+    RelinKeys *relin_keys = reinterpret_cast<RelinKeys*>(rsmphe->relin_keys);
+    Ciphertext *zero = reinterpret_cast<Ciphertext*>(rsmphe->zero);
+
+    // Deserialize ciphertexts
+
+    //server b rb, server c rc, server a ra
+    istringstream is_rb;
+    is_rb.rdbuf()->pubsetbuf(serverB_ct_r.inner, serverB_ct_r.size);
+    vector<vector<Ciphertext>> rb_vec(data->inp_ct, vector<Ciphertext>(data->filter_size));
+    istringstream is_rc;
+    is_rc.rdbuf()->pubsetbuf(serverC_ct_r.inner, serverC_ct_r.size);
+    vector<vector<Ciphertext>> rc_vec(data->inp_ct, vector<Ciphertext>(data->filter_size));
+    vector<vector<Plaintext>> ra_vec(data->inp_ct, vector<Plaintext>(data->filter_size));
+    for (int i = 0; i < data->inp_ct; i++) {
+        for (int j = 0; j < rb_vec[0].size(); j++) {
+            rb_vec[i][j].load(*context, is_rb);
+            rc_vec[i][j].load(*context, is_rc);
+            ra_vec[i][j] = *(reinterpret_cast<Plaintext*>(serverAshares->r_pt[i][j]));
+
+            evaluator->add_inplace(rb_vec[i][j],rc_vec[i][j]);
+            evaluator->add_plain_inplace(rb_vec[i][j],ra_vec[i][j]);
+        } 
+    }
+
+
+
+    //server b sb
+    istringstream is_sb;
+    is_sb.rdbuf()->pubsetbuf(serverB_ct_s.inner, serverB_ct_s.size);
+    vector<Ciphertext> ct_sb(data->out_ct);
+    istringstream is_sc;
+    is_sc.rdbuf()->pubsetbuf(serverC_ct_s.inner, serverC_ct_s.size);
+    vector<Ciphertext> ct_sc(data->out_ct);
+    for (int ct_idx = 0; ct_idx < data->out_ct; ct_idx++) {
+        ct_sb[ct_idx].load(*context, is_sb);
+        ct_sc[ct_idx].load(*context, is_sc);
+
+        // evaluator->add_inplace(ct_sb[ct_idx],ct_sc[ct_idx]);
+    }
+
+    uint64_t** linear_share_b = (uint64_t**) malloc(sizeof(uint64_t*)*data->out_chans);
+    for (int chan = 0; chan < data->out_chans; chan++) {
+        linear_share_b[chan] = (uint64_t*) malloc(sizeof(uint64_t)*data->output_h*data->output_w);
+        for (int idx = 0; idx < data->output_h*data->output_w; idx++) {
+            // TODO: Adjust these for testing
+            linear_share_b[chan][idx] = 640;
+        }
+    }
+    vector<Ciphertext> linear = MPHE_preprocess_noise(linear_share_b, *data, *encoder,*encryptor);
+    
+    //output ct_sb
+
+    //server b wb
+    // istringstream is_wb;
+    // is_wb.rdbuf()->pubsetbuf(serverB_ct_w.inner, serverB_ct_w.size);
+    // vector<vector<vector<Ciphertext>>> ct_wb(data->convs, 
+    //         vector<vector<Ciphertext>>(data->inp_ct, 
+    //             vector<Ciphertext>(data->filter_size)));
+    // istringstream is_wc;
+    // is_wc.rdbuf()->pubsetbuf(serverC_ct_w.inner, serverC_ct_w.size);
+    //    vector<vector<vector<Ciphertext>>> ct_wc(data->convs, 
+    //         vector<vector<Ciphertext>>(data->inp_ct, 
+    //             vector<Ciphertext>(data->filter_size)));
+    // for (int i = 0; i < ct_wb.size(); i++) {
+    //     for (int j = 0; j < ct_wb[0].size(); j++) {
+    //         for (int z = 0; z < ct_wb[0][0].size(); z++){
+    //             ct_wb[i][j][z].load(*context, is_wb);
+    //             ct_wc[i][j][z].load(*context, is_wc);
+    //             evaluator->add_inplace(ct_wb[i][j][z],ct_wc[i][j][z]);
+    //         }
+    //     } 
+    // }
+    // //output ct_wb
+
+
+
+
+    // // Evaluation
+    // auto rotation_sets = MPHE_conv(ct_wb, rb_vec, *data, *evaluator, *relin_keys, *zero); 
+    // vector<Ciphertext> linear = HE_output_rotations(rotation_sets, *data, *evaluator, *gal_keys, *zero);
+
+    // // Secret share the result
+    // for (int ct_idx = 0; ct_idx < data->out_ct; ct_idx++) {
+    //     evaluator->sub_inplace(linear[ct_idx], ct_sb[ct_idx]);
+    // }
+
+    // // Serialize the resulting ciphertexts into bytearrays and store in ServerShares
+    serverAshares->result_ct = serialize_ct(linear);
+}
+
+
+
 void server_conv_online(const ServerFHE* sfhe, const Metadata* data, SerialCT ciphertext,
     char**** masks, ServerShares* shares) {
     // Grab shared pointer to SEALContext
@@ -1008,7 +1161,7 @@ void server_conv_online(const ServerFHE* sfhe, const Metadata* data, SerialCT ci
 }
 
 void root_server_fc_online(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,
-     LeafServerShares* serverAshares, RootServerShares* root_share) {
+     RootServerShares* root_share) {
     auto context = static_cast<SEALContext*>(rsmphe->context);
 
     Encryptor *encryptor = reinterpret_cast<Encryptor*>(rsmphe->encryptor);
@@ -1026,7 +1179,7 @@ void root_server_fc_online(const RootServerMPHE* rsmphe, const Metadata* data, S
     is_rc.rdbuf()->pubsetbuf(serverC_ct_r.inner, serverC_ct_r.size);
     Ciphertext r_c;
     r_c.load(*context, is_rc);
-    Plaintext r_a  = *(reinterpret_cast<Plaintext*>(serverAshares->r_pt[0]));
+    Plaintext r_a  = *(reinterpret_cast<Plaintext*>(root_share->fc_r_pt[0]));
     evaluator->add_inplace(r_b,r_c);
     evaluator->add_plain_inplace(r_b,r_a);
 
@@ -1168,7 +1321,43 @@ void leaf_server_conv_decrypt(const LeafServerMPHE *lsmphe, const Metadata *data
     
 }
 
-void root_server_conv_decrypt(const RootServerMPHE *rsmphe, const Metadata *data,RootServerShares* shares, SerialCT pd_a,SerialCT pd_b,SerialCT pd_c){
+LeafServerShares server_a_conv_dis_decrypt(const LeafServerMPHE *lsmphe, const Metadata *data, SerialCT ciphertext){
+    auto context = static_cast<SEALContext*>(lsmphe->context);
+    Decryptor *decryptor = reinterpret_cast<Decryptor*>(lsmphe->decryptor);
+
+    vector<Ciphertext> ct(data->out_ct);
+    vector<Ciphertext> partial_decryption(data->out_ct);
+
+    recast_opaque(ciphertext, ct, context);
+    for (int idx=0;idx<data->out_ct;idx++){
+        decryptor->distributed_decrypt(ct[idx],partial_decryption[idx]);
+    }
+    LeafServerShares shares;
+    shares.result_pd = serialize_ct(partial_decryption);
+    return shares;
+    
+}
+
+LeafServerShares server_a_fc_dis_decrypt(const LeafServerMPHE *lsmphe, const Metadata *data, RootServerShares* shares){
+    auto context = static_cast<SEALContext*>(lsmphe->context);
+    Decryptor *decryptor = reinterpret_cast<Decryptor*>(lsmphe->decryptor);
+
+    vector<Ciphertext> ct(1);
+    vector<Ciphertext> partial_decryption(1);
+
+    recast_opaque(shares->result_ct, ct, context);
+    for (int idx=0;idx<1;idx++){
+        decryptor->distributed_decrypt(ct[idx],partial_decryption[idx]);
+    }
+    LeafServerShares lshares;
+    lshares.result_pd = serialize_ct(partial_decryption);
+    return lshares;
+    
+}
+
+
+
+void root_server_conv_decrypt(const RootServerMPHE *rsmphe, const Metadata *data,RootServerShares* shares, LeafServerShares* lshares,SerialCT pd_b,SerialCT pd_c){
     auto context = static_cast<SEALContext*>(rsmphe->context);
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(rsmphe->encoder);
 
@@ -1181,7 +1370,7 @@ void root_server_conv_decrypt(const RootServerMPHE *rsmphe, const Metadata *data
     vector<vector<u64>> result(data->out_ct);
 
     istringstream is_a;
-    is_a.rdbuf()->pubsetbuf(pd_a.inner, pd_a.size);
+    is_a.rdbuf()->pubsetbuf(lshares->result_pd.inner, lshares->result_pd.size);
 
     istringstream is_b;
     is_b.rdbuf()->pubsetbuf(pd_b.inner, pd_b.size);
@@ -1203,6 +1392,9 @@ void root_server_conv_decrypt(const RootServerMPHE *rsmphe, const Metadata *data
         Plaintext tmp_pt;
         decryptor.aggregate_partial_decryption(ct[i],tmp, tmp_pt,3);
         encoder->decode(tmp_pt, result[i]);
+        // for (int j=0;j<result[i].size();j++){
+        //     cout<< result[i][j]<<endl;
+        // }
     }
     
 
@@ -1229,13 +1421,16 @@ void client_fc_decrypt(const ClientFHE *cfhe, const Metadata *data, ClientShares
 void leaf_server_fc_decrypt(const LeafServerMPHE *lsmphe, const Metadata *data, LeafServerShares* shares){
     auto context = static_cast<SEALContext*>(lsmphe->context);
     Decryptor *decryptor = reinterpret_cast<Decryptor*>(lsmphe->decryptor);
-
+    printf("loading decryptor \n");
     vector<Ciphertext> ct(1);
     vector<Ciphertext> partial_decryption(1);
 
     recast_opaque(shares->result_pd, ct, context);
+    printf("loading result ct \n");
     // for (int idx=0;idx<data->out_ct;idx++){
     decryptor->distributed_decrypt(ct[0],partial_decryption[0]);
+    printf("distributed_decrypt \n");
+    
     // }
 
     shares->result_pd = serialize_ct(partial_decryption);
@@ -1243,7 +1438,7 @@ void leaf_server_fc_decrypt(const LeafServerMPHE *lsmphe, const Metadata *data, 
 }
 
 
-void root_server_fc_decrypt(const RootServerMPHE *rsmphe, const Metadata *data,RootServerShares* shares, SerialCT pd_a,SerialCT pd_b,SerialCT pd_c){
+void root_server_fc_decrypt(const RootServerMPHE *rsmphe, const Metadata *data,RootServerShares* shares, LeafServerShares* lshares,SerialCT pd_b,SerialCT pd_c){
     auto context = static_cast<SEALContext*>(rsmphe->context);
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(rsmphe->encoder);
 
@@ -1254,9 +1449,9 @@ void root_server_fc_decrypt(const RootServerMPHE *rsmphe, const Metadata *data,R
     vector<Ciphertext> ct(1);
     // vector<Plaintext> result(data->out_ct);
     vector<u64> result(1);
-
+    printf("loading \n");
     istringstream is_a;
-    is_a.rdbuf()->pubsetbuf(pd_a.inner, pd_a.size);
+    is_a.rdbuf()->pubsetbuf(lshares->result_pd.inner, lshares->result_pd.size);
 
     istringstream is_b;
     is_b.rdbuf()->pubsetbuf(pd_b.inner, pd_b.size);
@@ -1265,11 +1460,17 @@ void root_server_fc_decrypt(const RootServerMPHE *rsmphe, const Metadata *data,R
     is_c.rdbuf()->pubsetbuf(pd_c.inner, pd_c.size);
 
     recast_opaque(shares->result_ct, ct, context);
-
+    printf("loading  ...\n");
     for (int i=0;i<1;i++){
-        pd_a_vec[i].load(*context, is_a);
+        // pd_a_vec[i].load(*context, is_a);
+        // printf("loading  a ...\n");
+
         pd_b_vec[i].load(*context, is_b);
+        printf("loading  b ...\n");
         pd_c_vec[i].load(*context, is_c);
+        printf("loading  c ...\n");
+        pd_a_vec[i].load(*context, is_a);
+        printf("loading  a ...\n");
 
         vector<Ciphertext> tmp(3);
         tmp[0] = pd_a_vec[i];
@@ -1277,7 +1478,9 @@ void root_server_fc_decrypt(const RootServerMPHE *rsmphe, const Metadata *data,R
         tmp[2] = pd_c_vec[i];
         Plaintext tmp_pt;
         decryptor.aggregate_partial_decryption(ct[i],tmp, tmp_pt,3);
+        printf("decrypting  ...\n");
         encoder->decode(tmp_pt, result);
+        printf("decoding  ...\n");
     }
     // fc_reshape(result,*data);
      shares->result = new u64*[1];
