@@ -151,6 +151,149 @@ pub fn nn_server<R: RngCore + CryptoRng>(
     ));
 }
 
+pub fn nn_server_a<R: RngCore + CryptoRng>(
+    server_a_addr: &str,
+    server_b_addr: &str,
+    server_c_addr: &str,
+    input: Input<TenBitAS>,
+    architecture: &NeuralArchitecture<TenBitAS, TenBitExpFP>,
+    rng: &mut R,
+) {
+    //offline
+    let server_a_state = {
+        let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+        let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+        let mut sa_state = NNProtocol::offline_server_a_protocol(
+            &mut reader_b,
+            &mut writer_b,
+            &mut reader_c,
+            &mut writer_c,
+            &architecture,
+            rng,
+        ).unwrap();
+        NNProtocol::offline_server_a_protocol_r2(
+            &mut reader_b,
+            &mut writer_b,
+            rng,
+            // &mut sa_state.relu_current_layer_output_shares,
+            sa_state.num_relu,  //?
+            &mut sa_state,
+        );
+        let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+        NNProtocol::offline_server_a_protocol_r3(
+            &mut reader_a,
+            sa_state.num_relu,
+            &mut sa_state,
+        );
+        sa_state
+    };
+    //online
+    let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+    let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+    let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+    NNProtocol::online_server_a_protocol(
+        &mut reader_b,
+        &mut writer_b,
+        &mut reader_c,
+        &mut writer_c,
+        &mut reader_a,
+        &mut writer_a,
+        &input,
+        &architecture,
+        &server_a_state,
+    );
+}
+
+pub fn nn_server_b<R: RngCore + CryptoRng>(
+    server_a_addr: &str,
+    server_b_addr: &str,
+    server_c_addr: &str,
+    nn: &NeuralNetwork<TenBitAS, TenBitExpFP>,
+    rng: &mut R,
+) {
+    //offline
+    let server_b_state = {
+        let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
+        let mut sb_state = NNProtocol::offline_server_b_protocol(
+            &mut reader_b,
+            &mut writer_b,
+            &nn,
+            rng,
+        ).unwrap();
+        let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+        let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+        NNProtocol::offline_server_b_protocol_r2(
+            &mut reader_a,
+            &mut writer_a,
+            &mut reader_c,
+            &mut writer_c,
+            rng,
+            sb_state.num_relu,
+            &mut sb_state,
+        );
+        sb_state
+    };
+    //online
+    let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
+    let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+    let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+    NNProtocol::online_server_b_protocol(
+        &mut reader_b,
+        &mut writer_b,
+        &mut reader_c,
+        &mut writer_c,
+        &mut reader_a,
+        &mut writer_a,
+        &nn,
+        &server_b_state,
+        rng,
+    );
+}
+
+pub fn nn_server_c<R: RngCore + CryptoRng>(
+    server_a_addr: &str,
+    server_b_addr: &str,
+    server_c_addr: &str,
+    nn: &NeuralNetwork<TenBitAS, TenBitExpFP>,
+    rng: &mut R,
+) {
+    //offline
+    let server_c_state = {
+        let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
+        let mut sc_state = NNProtocol::offline_server_c_protocol(
+            &mut reader_c,
+            &mut writer_c,
+            &nn,
+            rng,
+        ).unwrap();
+        NNProtocol::offline_server_c_protocol_r2(
+            &mut reader_c,
+            &mut writer_c,
+            rng,
+            sc_state.num_relu,
+            &mut sc_state,
+        );
+        let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+        NNProtocol::offline_server_c_protocol_r3(
+            &mut writer_a,
+            &mut sc_state,
+        );
+        sc_state
+    };
+    let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
+    let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+    NNProtocol::online_server_c_protocol(
+        &mut reader_c,
+        &mut writer_c,
+        &mut reader_a,
+        &mut writer_a,
+        &nn,
+        &server_c_state,
+        rng,
+    );
+}
+
+
 pub fn generate_random_number<R: Rng>(rng: &mut R) -> (f64, TenBitExpFP) {
     let is_neg: bool = rng.gen();
     let mul = if is_neg { -1.0 } else { 1.0 };

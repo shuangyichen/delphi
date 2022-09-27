@@ -668,13 +668,28 @@ LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const M
         ct_flat_rotations.insert(ct_flat_rotations.end(), ct.begin(), ct.end());
 
 
+    //**************************************************************
+    //test
+    // auto masks_vec = HE_preprocess_filters(filters, *data, *encoder);
+    // char**** masks = new char***[masks_vec.size()];
+    // for (int i = 0; i < masks_vec.size(); i++) {
+    //     masks[i] = new char**[masks_vec[0].size()];
+    //     for (int j = 0; j < masks_vec[0].size(); j++) {
+    //         masks[i][j] = new char*[masks_vec[0][0].size()];
+    //         for (int z = 0; z < masks_vec[0][0].size(); z++)
+    //             masks[i][j][z] = (char*) new Plaintext(masks_vec[i][j][z]);
+    //     }
+    // }
+
+    //**************************************************************
 
     // Preprocess filters
     // printf("Preprocess filters\n");
 
     auto masks_vec = MPHE_preprocess_filters(filters, *data, *encoder,*encryptor);
 
-    //Flatten ct of filter
+
+    // Flatten ct of filter
     vector<Ciphertext> ct_flat_filter;
     for (int conv = 0; conv < data->convs; conv++) {
     for (const auto &ct: masks_vec[conv]){
@@ -693,6 +708,7 @@ LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const M
     shares.weight_ct = serialize_ct(ct_flat_filter);//serialize_ct(ct_flat_rotations);
     shares.r_ct = serialize_ct(ct_flat_rotations);
     shares.s_ct = serialize_ct(linear);
+    // shares.masks = masks;
     return shares;
 }
 
@@ -724,12 +740,12 @@ ServerShares server_conv_preprocess_shares(const ServerFHE* sfhe, const Metadata
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(sfhe->encoder);
     Encryptor *encryptor = reinterpret_cast<Encryptor*>(sfhe->encryptor);
 
-    printf("server_conv_preprocess_shares");
-    for (int i=0;i<data->out_ct;i++){
-        for (int j=0;j<data->output_h*data->output_w;j++){
-            cout<< linear_share[i][j]<<endl;
-        }
-    }
+    // printf("server_conv_preprocess_shares");
+    // for (int i=0;i<data->out_ct;i++){
+    //     for (int j=0;j<data->output_h*data->output_w;j++){
+    //         cout<< linear_share[i][j]<<endl;
+    //     }
+    // }
 
     // Reshape shares
     vector<Plaintext> linear = HE_preprocess_noise(linear_share, *data, *encoder);
@@ -926,6 +942,10 @@ void root_server_conv_online(const RootServerMPHE* rsmphe, const Metadata* data,
     RelinKeys *relin_keys = reinterpret_cast<RelinKeys*>(rsmphe->relin_keys);
     Ciphertext *zero = reinterpret_cast<Ciphertext*>(rsmphe->zero);
 
+
+
+    //*******************************************************************************
+    //*******************************************************************************
     // Deserialize ciphertexts
 
     //server b rb, server c rc, server a ra
@@ -991,7 +1011,7 @@ void root_server_conv_online(const RootServerMPHE* rsmphe, const Metadata* data,
 
     // Evaluation
     auto rotation_sets = MPHE_conv(ct_wb, rb_vec, *data, *evaluator, *relin_keys, *zero); 
-    vector<Ciphertext> linear = HE_output_rotations(rotation_sets, *data, *evaluator, *gal_keys, *zero);
+    vector<Ciphertext> linear = MPHE_output_rotations(rotation_sets, *data, *evaluator, *gal_keys, *zero);
 
     // Secret share the result
     for (int ct_idx = 0; ct_idx < data->out_ct; ct_idx++) {
@@ -1000,6 +1020,292 @@ void root_server_conv_online(const RootServerMPHE* rsmphe, const Metadata* data,
 
     // // Serialize the resulting ciphertexts into bytearrays and store in ServerShares
     serverAshares->result_ct = serialize_ct(linear);
+    //*******************************************************************************
+    //*******************************************************************************
+
+
+    //  istringstream is_rb;
+    // is_rb.rdbuf()->pubsetbuf(serverB_ct_r.inner, serverB_ct_r.size);
+    // vector<vector<Ciphertext>> rb_vec(data->inp_ct, vector<Ciphertext>(data->filter_size));
+    // // istringstream is_rc;
+    // // is_rc.rdbuf()->pubsetbuf(serverC_ct_r.inner, serverC_ct_r.size);
+    // // vector<vector<Ciphertext>> rc_vec(data->inp_ct, vector<Ciphertext>(data->filter_size));
+    // // vector<vector<Plaintext>> ra_vec(data->inp_ct, vector<Plaintext>(data->filter_size));
+    // for (int i = 0; i < data->inp_ct; i++) {
+    //     for (int j = 0; j < rb_vec[0].size(); j++) {
+    //         rb_vec[i][j].load(*context, is_rb);
+    //         // rc_vec[i][j].load(*context, is_rc);
+    //         // ra_vec[i][j] = *(reinterpret_cast<Plaintext*>(serverAshares->r_pt[i][j]));
+
+    //         // evaluator->add_inplace(rb_vec[i][j],rc_vec[i][j]);
+    //         // evaluator->add_plain_inplace(rb_vec[i][j],ra_vec[i][j]);
+    //     } 
+    // }
+
+
+
+    // //server b sb
+    // istringstream is_sb;
+    // is_sb.rdbuf()->pubsetbuf(serverB_ct_s.inner, serverB_ct_s.size);
+    // vector<Ciphertext> ct_sb(data->out_ct);
+    // // istringstream is_sc;
+    // // is_sc.rdbuf()->pubsetbuf(serverC_ct_s.inner, serverC_ct_s.size);
+    // // vector<Ciphertext> ct_sc(data->out_ct);
+    // for (int ct_idx = 0; ct_idx < data->out_ct; ct_idx++) {
+    //     ct_sb[ct_idx].load(*context, is_sb);
+    //     // ct_sc[ct_idx].load(*context, is_sc);
+
+    //     // evaluator->add_inplace(ct_sb[ct_idx],ct_sc[ct_idx]);
+    // }
+    // //output ct_sb
+
+
+
+    
+    // //server b wb
+    // istringstream is_wb;
+    // is_wb.rdbuf()->pubsetbuf(serverB_ct_w.inner, serverB_ct_w.size);
+    // vector<vector<vector<Ciphertext>>> ct_wb(data->convs, 
+    //         vector<vector<Ciphertext>>(data->inp_ct, 
+    //             vector<Ciphertext>(data->filter_size)));
+    // // istringstream is_wc;
+    // // is_wc.rdbuf()->pubsetbuf(serverC_ct_w.inner, serverC_ct_w.size);
+    // //    vector<vector<vector<Ciphertext>>> ct_wc(data->convs, 
+    // //         vector<vector<Ciphertext>>(data->inp_ct, 
+    // //             vector<Ciphertext>(data->filter_size)));
+    // for (int i = 0; i < ct_wb.size(); i++) {
+    //     for (int j = 0; j < ct_wb[0].size(); j++) {
+    //         for (int z = 0; z < ct_wb[0][0].size(); z++){
+    //             ct_wb[i][j][z].load(*context, is_wb);
+    //             // ct_wc[i][j][z].load(*context, is_wc);
+    //             // evaluator->add_inplace(ct_wb[i][j][z],ct_wc[i][j][z]);
+    //         }
+    //     } 
+    // }
+    // //output ct_wb
+
+
+
+
+    // // Evaluation
+    // auto rotation_sets = MPHE_conv(ct_wb, rb_vec, *data, *evaluator, *relin_keys, *zero); 
+    // vector<Ciphertext> linear = HE_output_rotations(rotation_sets, *data, *evaluator, *gal_keys, *zero);
+
+    // // Secret share the result
+    // for (int ct_idx = 0; ct_idx < data->out_ct; ct_idx++) {
+    //     evaluator->sub_inplace(linear[ct_idx], ct_sb[ct_idx]);
+    // }
+
+    // // // Serialize the resulting ciphertexts into bytearrays and store in ServerShares
+    // serverAshares->result_ct = serialize_ct(linear);
+
+
+
+    
+
+}
+
+
+
+void root_server_conv_online_test(const RootServerMPHE* rsmphe, const Metadata* data, char**** serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, char**** serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,
+     RootServerShares* serverAshares) {
+
+
+
+    //(F_b+F_c)(r_A+r_B+r_C)-s_b-s_c
+    //r_A pt, others: ct
+    // Grab shared pointer to SEALContext
+    auto context = static_cast<SEALContext*>(rsmphe->context);
+
+    Encryptor *encryptor = reinterpret_cast<Encryptor*>(rsmphe->encryptor);
+    Evaluator *evaluator = reinterpret_cast<Evaluator*>(rsmphe->evaluator);
+    BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(rsmphe->encoder);
+    GaloisKeys *gal_keys = reinterpret_cast<GaloisKeys*>(rsmphe->gal_keys);
+    RelinKeys *relin_keys = reinterpret_cast<RelinKeys*>(rsmphe->relin_keys);
+    Ciphertext *zero = reinterpret_cast<Ciphertext*>(rsmphe->zero);
+
+
+
+    //*******************************************************************************
+    //*******************************************************************************
+    // Deserialize ciphertexts
+
+    //server b rb, server c rc, server a ra
+    // istringstream is_rb;
+    // is_rb.rdbuf()->pubsetbuf(serverB_ct_r.inner, serverB_ct_r.size);
+    // vector<vector<Ciphertext>> rb_vec(data->inp_ct, vector<Ciphertext>(data->filter_size));
+    // istringstream is_rc;
+    // is_rc.rdbuf()->pubsetbuf(serverC_ct_r.inner, serverC_ct_r.size);
+    // vector<vector<Ciphertext>> rc_vec(data->inp_ct, vector<Ciphertext>(data->filter_size));
+    // vector<vector<Plaintext>> ra_vec(data->inp_ct, vector<Plaintext>(data->filter_size));
+    // for (int i = 0; i < data->inp_ct; i++) {
+    //     for (int j = 0; j < rb_vec[0].size(); j++) {
+    //         rb_vec[i][j].load(*context, is_rb);
+    //         rc_vec[i][j].load(*context, is_rc);
+    //         ra_vec[i][j] = *(reinterpret_cast<Plaintext*>(serverAshares->r_pt[i][j]));
+
+    //         evaluator->add_inplace(rb_vec[i][j],rc_vec[i][j]);
+    //         evaluator->add_plain_inplace(rb_vec[i][j],ra_vec[i][j]);
+    //     } 
+    // }
+
+
+
+    // //server b sb
+    // istringstream is_sb;
+    // is_sb.rdbuf()->pubsetbuf(serverB_ct_s.inner, serverB_ct_s.size);
+    // vector<Ciphertext> ct_sb(data->out_ct);
+    // istringstream is_sc;
+    // is_sc.rdbuf()->pubsetbuf(serverC_ct_s.inner, serverC_ct_s.size);
+    // vector<Ciphertext> ct_sc(data->out_ct);
+    // for (int ct_idx = 0; ct_idx < data->out_ct; ct_idx++) {
+    //     ct_sb[ct_idx].load(*context, is_sb);
+    //     ct_sc[ct_idx].load(*context, is_sc);
+
+    //     evaluator->add_inplace(ct_sb[ct_idx],ct_sc[ct_idx]);
+    // }
+    // //output ct_sb
+
+    // //server b wb
+    // istringstream is_wb;
+    // is_wb.rdbuf()->pubsetbuf(serverB_ct_w.inner, serverB_ct_w.size);
+    // vector<vector<vector<Ciphertext>>> ct_wb(data->convs, 
+    //         vector<vector<Ciphertext>>(data->inp_ct, 
+    //             vector<Ciphertext>(data->filter_size)));
+    // istringstream is_wc;
+    // is_wc.rdbuf()->pubsetbuf(serverC_ct_w.inner, serverC_ct_w.size);
+    //    vector<vector<vector<Ciphertext>>> ct_wc(data->convs, 
+    //         vector<vector<Ciphertext>>(data->inp_ct, 
+    //             vector<Ciphertext>(data->filter_size)));
+    // for (int i = 0; i < ct_wb.size(); i++) {
+    //     for (int j = 0; j < ct_wb[0].size(); j++) {
+    //         for (int z = 0; z < ct_wb[0][0].size(); z++){
+    //             ct_wb[i][j][z].load(*context, is_wb);
+    //             ct_wc[i][j][z].load(*context, is_wc);
+    //             evaluator->add_inplace(ct_wb[i][j][z],ct_wc[i][j][z]);
+    //         }
+    //     } 
+    // }
+    // //output ct_wb
+
+
+
+
+    // // Evaluation
+    // auto rotation_sets = MPHE_conv(ct_wb, rb_vec, *data, *evaluator, *relin_keys, *zero); 
+    // vector<Ciphertext> linear = HE_output_rotations(rotation_sets, *data, *evaluator, *gal_keys, *zero);
+
+    // // Secret share the result
+    // for (int ct_idx = 0; ct_idx < data->out_ct; ct_idx++) {
+    //     evaluator->sub_inplace(linear[ct_idx], ct_sb[ct_idx]);
+    // }
+
+    // // // Serialize the resulting ciphertexts into bytearrays and store in ServerShares
+    // serverAshares->result_ct = serialize_ct(linear);
+    //*******************************************************************************
+    //*******************************************************************************
+
+
+     istringstream is_rb;
+    is_rb.rdbuf()->pubsetbuf(serverB_ct_r.inner, serverB_ct_r.size);
+    vector<vector<Ciphertext>> rb_vec(data->inp_ct, vector<Ciphertext>(data->filter_size));
+    // istringstream is_rc;
+    // is_rc.rdbuf()->pubsetbuf(serverC_ct_r.inner, serverC_ct_r.size);
+    // vector<vector<Ciphertext>> rc_vec(data->inp_ct, vector<Ciphertext>(data->filter_size));
+    // vector<vector<Plaintext>> ra_vec(data->inp_ct, vector<Plaintext>(data->filter_size));
+    for (int i = 0; i < data->inp_ct; i++) {
+        for (int j = 0; j < rb_vec[0].size(); j++) {
+            rb_vec[i][j].load(*context, is_rb);
+            // rc_vec[i][j].load(*context, is_rc);
+            // ra_vec[i][j] = *(reinterpret_cast<Plaintext*>(serverAshares->r_pt[i][j]));
+
+            // evaluator->add_inplace(rb_vec[i][j],rc_vec[i][j]);
+            // evaluator->add_plain_inplace(rb_vec[i][j],ra_vec[i][j]);
+        } 
+    }
+
+
+
+    //server b sb
+    istringstream is_sb;
+    is_sb.rdbuf()->pubsetbuf(serverB_ct_s.inner, serverB_ct_s.size);
+    vector<Ciphertext> ct_sb(data->out_ct);
+    // istringstream is_sc;
+    // is_sc.rdbuf()->pubsetbuf(serverC_ct_s.inner, serverC_ct_s.size);
+    // vector<Ciphertext> ct_sc(data->out_ct);
+    for (int ct_idx = 0; ct_idx < data->out_ct; ct_idx++) {
+        ct_sb[ct_idx].load(*context, is_sb);
+        // ct_sc[ct_idx].load(*context, is_sc);
+
+        // evaluator->add_inplace(ct_sb[ct_idx],ct_sc[ct_idx]);
+    }
+    //output ct_sb
+
+
+
+    vector<vector<vector<Plaintext>>> masks_vec(data->convs, 
+            vector<vector<Plaintext>>(data->inp_ct, 
+                vector<Plaintext>(data->filter_size)));
+    for (int i = 0; i < masks_vec.size(); i++) {
+        for (int j = 0; j < masks_vec[0].size(); j++) {
+            for (int z = 0; z < masks_vec[0][0].size(); z++)
+                masks_vec[i][j][z] = *(reinterpret_cast<Plaintext*>(serverB_ct_w[i][j][z]));
+        } 
+    }
+    //server b wb
+    // istringstream is_wb;
+    // is_wb.rdbuf()->pubsetbuf(serverB_ct_w.inner, serverB_ct_w.size);
+    // vector<vector<vector<Ciphertext>>> ct_wb(data->convs, 
+    //         vector<vector<Ciphertext>>(data->inp_ct, 
+    //             vector<Ciphertext>(data->filter_size)));
+    // // istringstream is_wc;
+    // // is_wc.rdbuf()->pubsetbuf(serverC_ct_w.inner, serverC_ct_w.size);
+    // //    vector<vector<vector<Ciphertext>>> ct_wc(data->convs, 
+    // //         vector<vector<Ciphertext>>(data->inp_ct, 
+    // //             vector<Ciphertext>(data->filter_size)));
+    // for (int i = 0; i < ct_wb.size(); i++) {
+    //     for (int j = 0; j < ct_wb[0].size(); j++) {
+    //         for (int z = 0; z < ct_wb[0][0].size(); z++){
+    //             ct_wb[i][j][z].load(*context, is_wb);
+    //             // ct_wc[i][j][z].load(*context, is_wc);
+    //             // evaluator->add_inplace(ct_wb[i][j][z],ct_wc[i][j][z]);
+    //         }
+    //     } 
+    // }
+    //output ct_wb
+
+
+
+
+    // Evaluation
+    auto rotation_sets = HE_conv(masks_vec, rb_vec, *data, *evaluator, *relin_keys, *zero); 
+    vector<Ciphertext> linear = HE_output_rotations(rotation_sets, *data, *evaluator, *gal_keys, *zero);
+
+    // Secret share the result
+    // for (int ct_idx = 0; ct_idx < data->out_ct; ct_idx++) {
+    //     evaluator->sub_inplace(linear[ct_idx], ct_sb[ct_idx]);
+    // }
+
+
+
+    // uint64_t** linear_share_b = (uint64_t**) malloc(sizeof(uint64_t*)*data->out_chans);
+    // for (int chan = 0; chan < data->out_chans; chan++) {
+    //     linear_share_b[chan] = (uint64_t*) malloc(sizeof(uint64_t)*data->output_h*data->output_w);
+    //     for (int idx = 0; idx < data->output_h*data->output_w; idx++) {
+    //         // TODO: Adjust these for testing
+    //         linear_share_b[chan][idx] = 1000;
+    //     }
+    // }
+    // vector<Ciphertext> linear_ = MPHE_preprocess_noise(linear_share_b, *data, *encoder,*encryptor);
+
+    // // Serialize the resulting ciphertexts into bytearrays and store in ServerShares
+    // serverAshares->result_ct = serialize_ct(rotation_sets[0]);
+    serverAshares->result_ct = serialize_ct(linear);
+
+
+
+    
+
 }
 
 
@@ -1460,7 +1766,6 @@ void root_server_fc_decrypt(const RootServerMPHE *rsmphe, const Metadata *data,R
     is_c.rdbuf()->pubsetbuf(pd_c.inner, pd_c.size);
 
     recast_opaque(shares->result_ct, ct, context);
-    printf("loading  ...\n");
     for (int i=0;i<1;i++){
         // pd_a_vec[i].load(*context, is_a);
         // printf("loading  a ...\n");

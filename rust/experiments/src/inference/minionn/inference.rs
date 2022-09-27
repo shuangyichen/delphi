@@ -12,10 +12,26 @@ const RANDOMNESS: [u8; 32] = [
 
 fn get_args() -> ArgMatches<'static> {
     App::new("minionn-inference")
+        // .arg(
+        //     Arg::with_name("weights")
+        //         .short("w")
+        //         .long("weights")
+        //         .takes_value(true)
+        //         .help("Path to weights")
+        //         .required(true),
+        // )
         .arg(
-            Arg::with_name("weights")
+            Arg::with_name("weights_b")
                 .short("w")
-                .long("weights")
+                .long("weights_b")
+                .takes_value(true)
+                .help("Path to weights")
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("weights_c")
+                .short("w")
+                .long("weights_c")
                 .takes_value(true)
                 .help("Path to weights")
                 .required(true),
@@ -32,17 +48,53 @@ fn get_args() -> ArgMatches<'static> {
 }
 
 fn main() {
+    // let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+    // let args = get_args();
+    // let weights = args.value_of("weights").unwrap();
+    // let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
+    // // let split_layer = args.value_of("split_layer").unwrap().parse().unwrap();
+
+    // // Build network
+    // let mut network = construct_minionn(None, 1, layers, &mut rng);
+    // let architecture = (&network).into();
+
+    // // Load network weights
+    // network.from_numpy(&weights).unwrap();
+
+    // // Open image and class
+    // let mut buf = vec![];
+    // std::fs::File::open(Path::new("class.npy"))
+    //     .unwrap()
+    //     .read_to_end(&mut buf)
+    //     .unwrap();
+    // let class: i64 = NpyData::from_bytes(&buf).unwrap().to_vec()[0];
+
+    // buf = vec![];
+    // std::fs::File::open(Path::new("image.npy"))
+    //     .unwrap()
+    //     .read_to_end(&mut buf)
+    //     .unwrap();
+    // let image_vec: Vec<f64> = NpyData::from_bytes(&buf).unwrap().to_vec();
+    // let image = Array4::from_shape_vec((1, 3, 32, 32), image_vec).unwrap();
+
+    // experiments::inference::inference::run(network, architecture, image, class);
+
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
     let args = get_args();
-    let weights = args.value_of("weights").unwrap();
+    let weights_b = args.value_of("weights_b").unwrap();
+    let weights_c = args.value_of("weights_c").unwrap();
     let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
+    // let split_layer = args.value_of("split_layer").unwrap().parse().unwrap();
 
     // Build network
-    let mut network = construct_minionn(None, 1, layers, &mut rng);
-    let architecture = (&network).into();
+    let mut network_b = construct_minionn(None, 1, layers, &mut rng);
+    let architecture = (&network_b).into();
 
     // Load network weights
-    network.from_numpy(&weights).unwrap();
+    network_b.from_numpy(&weights_b).unwrap();
+
+    let mut network_c = construct_minionn(None, 1, layers, &mut rng);
+    network_c.from_numpy(&weights_c).unwrap();
 
     // Open image and class
     let mut buf = vec![];
@@ -58,7 +110,8 @@ fn main() {
         .read_to_end(&mut buf)
         .unwrap();
     let image_vec: Vec<f64> = NpyData::from_bytes(&buf).unwrap().to_vec();
-    let image = Array4::from_shape_vec((1, 3, 32, 32), image_vec).unwrap();
+    let mut image = Array4::from_shape_vec((1, 3, 32, 32), image_vec).unwrap();
 
-    experiments::inference::inference::run(network, architecture, image, class);
+    // experiments::inference::inference::run(network, architecture, image, class);
+    experiments::inference::inference::run_second(network_b, network_c,architecture, &mut image);
 }

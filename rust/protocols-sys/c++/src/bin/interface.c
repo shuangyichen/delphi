@@ -368,12 +368,13 @@ int main(int argc, char* argv[]) {
   timeElapsed = endTime - startTime;
   printf("[%f seconds]\n", timeElapsed);
 
-//   conv(&cfhe, &sfhe, 18, 18, 3, 3, 3, 3, 1, 0);
+conv(&cfhe, &sfhe, 22, 22, 3, 3, 3, 3, 1, 0);
+//   conv(&cfhe, &sfhe, 23, 23, 3, 3, 2, 2, 1, 0);
 //   conv(&cfhe, &sfhe, 64, 64, 3, 3, 128, 128, 1, 0);
   //conv(&cfhe, &sfhe, 16, 16, 3, 3, 32, 32, 1, 1);
   //conv(&cfhe, &sfhe, 8, 8, 3, 3, 64, 64, 1, 1);
   
-  fc(&cfhe, &sfhe, 3000, 3000);
+//   fc(&cfhe, &sfhe, 3000, 3000);
   
 //   beavers_triples(&cfhe, &sfhe, 100);
   

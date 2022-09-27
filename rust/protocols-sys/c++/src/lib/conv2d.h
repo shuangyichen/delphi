@@ -75,7 +75,9 @@ vector<vector<Ciphertext>> MPHE_conv(vector<vector<vector<Ciphertext>>> &masks,v
 /* Rotates and adds an output packed convolution result to produce a final, tight output */
 vector<Ciphertext> HE_output_rotations(vector<vector<Ciphertext>> convs, const Metadata &data, Evaluator &evaluator,
         GaloisKeys &gal_keys, Ciphertext &zero);
-
+vector<Ciphertext> MPHE_output_rotations(vector<vector<Ciphertext>> convs,
+        const Metadata &data, Evaluator &evaluator, GaloisKeys &gal_keys,
+        Ciphertext &zero);
 /* Decrypts and reshapes convolution result */
 u64** HE_decrypt(vector<Ciphertext> &enc_result, const Metadata &data, Decryptor &decryptor, BatchEncoder &batch_encoder);
 u64** reshape(vector<vector<u64>> result, const Metadata &data);

@@ -121,8 +121,8 @@ where
     pub fn offline_server_a_protocol_2<R: Read + Send>(
         reader: &mut IMuxSync<R>,
         number_of_relus: usize,
-        server_a_state: &mut ServerAState,
-    ){
+        // server_a_state: &mut ServerAState,
+    )->Vec<Wire>{
         let mut rc_next_wires = Vec::with_capacity(number_of_relus);
 
         // let num_chunks = (number_of_relus as f64 / 8192.0).ceil() as usize;
@@ -131,17 +131,52 @@ where
         //     println!("i num chunks {}", i);
         let in_msg: ServerLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         let r_wire_chunks = in_msg.msg();
-        println!("in msg length {}", r_wire_chunks.iter().count());
+        // println!/"in msg length {}", r_wire_chunks.iter().count());
         // if i < (num_chunks - 1) {
         //     assert_eq!(gc_chunks.len(), 8192);
         // }
         rc_next_wires.extend(r_wire_chunks);
         // }
 
-        server_a_state.server_c_randomizer_labels = Some(rc_next_wires);
+        rc_next_wires
+        // server_a_state.server_c_randomizer_labels = Some(rc_next_wires);
         // println!("Server A receives labels from server C");
 
     }
+
+
+    // pub fn offline_server_a_protocol_2<R: Read + Send>(
+    //     reader: &mut IMuxSync<R>,
+    //     number_of_relus: usize,
+    //     server_a_state:  &ServerAState,
+    // )->Result<ServerAState, bincode::Error>{
+    //     let mut rc_next_wires = Vec::with_capacity(number_of_relus);
+
+    //     // let num_chunks = (number_of_relus as f64 / 8192.0).ceil() as usize;
+    //     // println!("num chunks {}", num_chunks);
+    //     // for i in 0..num_chunks {
+    //     //     println!("i num chunks {}", i);
+    //     let in_msg: ServerLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
+    //     let r_wire_chunks = in_msg.msg();
+    //     // println!/"in msg length {}", r_wire_chunks.iter().count());
+    //     // if i < (num_chunks - 1) {
+    //     //     assert_eq!(gc_chunks.len(), 8192);
+    //     // }
+    //     rc_next_wires.extend(r_wire_chunks);
+    //     // }
+
+    //     // server_a_state.server_c_randomizer_labels = Some(rc_next_wires);
+    //     // println!("Server A receives labels from server C");
+    //     Ok(ServerAState{
+    //         gc_s:server_a_state.gc_s,
+    //         server_b_randomizer_labels:server_a_state.server_b_randomizer_labels,
+    //         server_c_randomizer_labels:Some(rc_next_wires),
+    //         ra_labels:server_a_state.ra_labels,//labels,
+    //         rb_garbler_wires:None,
+    //     })
+
+    // }
+
 
     pub fn offline_server_c_protocol_2<W: Write +Send>(
         writer: &mut IMuxSync<W>,
@@ -584,12 +619,12 @@ where
 
     pub fn online_server_a_protocol<'a, R: Read + Send>(
         reader: &mut IMuxSync<R>,
-        server_a_state: &mut ServerAState,
-    ){
+        // server_a_state: &mut ServerAState,
+    )->Vec<Vec<Wire>>{
         let in_msg: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         let mut rb_garbler_wires = in_msg.msg();
-        server_a_state.rb_garbler_wires = Some(rb_garbler_wires);
-
+        // server_a_state.rb_garbler_wires = Some(rb_garbler_wires);
+        rb_garbler_wires
         // println!("Receiving rb labels");
     }
 
@@ -655,8 +690,8 @@ where
         number_of_relus: usize,
         shares: &[AdditiveShare<P>],
         rng: &mut RNG,
-        server_c_state: &mut ServerCState<P>,
-    ){
+        // server_c_state: &mut ServerCState<P>,
+    )->Vec<Wire>{
         let p = u128::from(u64::from(P::Field::characteristic()));
         let field_size = (p.next_power_of_two() * 2).trailing_zeros() as usize;
         let mut rc_labels: Vec<Wire>= Vec::with_capacity(number_of_relus); 
@@ -688,8 +723,9 @@ where
             } //else {
             //     rc_labels.push(Vec::new());
             // }
-            server_c_state.rc_labels = Some(rc_labels);
-        println!("Server C receive rc labels via OT");
+        //     server_c_state.rc_labels = Some(rc_labels);
+        // println!("Server C receive rc labels via OT");
+        rc_labels
     }
        
 

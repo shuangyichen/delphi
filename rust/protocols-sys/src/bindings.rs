@@ -741,7 +741,7 @@ fn bindgen_test_layout_ServerFHE() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct RootServerMPHE {
+pub struct RootServerMPHe {
     pub context:    *mut ::std::os::raw::c_void,
     pub encoder:    *mut ::std::os::raw::c_void,
     pub encryptor:  *mut ::std::os::raw::c_void,
@@ -751,88 +751,89 @@ pub struct RootServerMPHE {
     pub zero:       *mut ::std::os::raw::c_char,
 }
 #[test]
-fn bindgen_test_layout_RootServerMPHE() {
+fn bindgen_test_layout_RootServerMPHe() {
     assert_eq!(
-        ::std::mem::size_of::<RootServerMPHE>(),
+        ::std::mem::size_of::<RootServerMPHe>(),
         56usize,
-        concat!("Size of: ", stringify!(RootServerMPHE))
+        concat!("Size of: ", stringify!(RootServerMPHe))
     );
     assert_eq!(
-        ::std::mem::align_of::<RootServerMPHE>(),
+        ::std::mem::align_of::<RootServerMPHe>(),
         8usize,
-        concat!("Alignment of ", stringify!(RootServerMPHE))
+        concat!("Alignment of ", stringify!(RootServerMPHe))
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).context as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).context as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHE),
+            stringify!(RootServerMPHe),
             "::",
             stringify!(context)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).encoder as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).encoder as *const _ as usize },
         8usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHE),
+            stringify!(RootServerMPHe),
             "::",
             stringify!(encoder)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).encryptor as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).encryptor as *const _ as usize },
         16usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHE),
+            stringify!(RootServerMPHe),
             "::",
             stringify!(encryptor)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).evaluator as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).evaluator as *const _ as usize },
         24usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHE),
+            stringify!(RootServerMPHe),
             "::",
             stringify!(evaluator)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).gal_keys as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).gal_keys as *const _ as usize },
         32usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHE),
+            stringify!(RootServerMPHe),
             "::",
             stringify!(gal_keys)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).relin_keys as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).relin_keys as *const _ as usize },
         40usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHE),
+            stringify!(RootServerMPHe),
             "::",
             stringify!(relin_keys)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).zero as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).zero as *const _ as usize },
         48usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHE),
+            stringify!(RootServerMPHe),
             "::",
             stringify!(zero)
         )
     );
 }
+pub type RootServerMPHE = RootServerMPHe;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct LeafServerMPHE {
@@ -991,12 +992,13 @@ pub struct LeafServerShares {
     pub s_ct:      SerialCT,
     pub result_pd: SerialCT,
     pub r_pt:      *mut *mut ::std::os::raw::c_char,
+    pub masks:     *mut *mut *mut *mut ::std::os::raw::c_char,
 }
 #[test]
 fn bindgen_test_layout_LeafServerShares() {
     assert_eq!(
         ::std::mem::size_of::<LeafServerShares>(),
-        72usize,
+        80usize,
         concat!("Size of: ", stringify!(LeafServerShares))
     );
     assert_eq!(
@@ -1052,6 +1054,16 @@ fn bindgen_test_layout_LeafServerShares() {
             stringify!(LeafServerShares),
             "::",
             stringify!(r_pt)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<LeafServerShares>())).masks as *const _ as usize },
+        72usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(LeafServerShares),
+            "::",
+            stringify!(masks)
         )
     );
 }
@@ -1510,6 +1522,19 @@ extern "C" {
         serverB_ct_r: SerialCT,
         serverB_ct_s: SerialCT,
         serverC_ct_w: SerialCT,
+        serverC_ct_r: SerialCT,
+        serverC_ct_s: SerialCT,
+        serverAshares: *mut RootServerShares,
+    );
+}
+extern "C" {
+    pub fn root_server_conv_online_test(
+        rsmphe: *const RootServerMPHE,
+        data: *const Metadata,
+        serverB_ct_w: *mut *mut *mut *mut ::std::os::raw::c_char,
+        serverB_ct_r: SerialCT,
+        serverB_ct_s: SerialCT,
+        serverC_ct_w: *mut *mut *mut *mut ::std::os::raw::c_char,
         serverC_ct_r: SerialCT,
         serverC_ct_s: SerialCT,
         serverAshares: *mut RootServerShares,

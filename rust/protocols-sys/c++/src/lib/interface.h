@@ -11,7 +11,7 @@
 #include <stdbool.h>
 
 const uint64_t PLAINTEXT_MODULUS = 2061584302081;
-const uint64_t POLY_MOD_DEGREE = 8192;    
+const uint64_t POLY_MOD_DEGREE = 8192;//8192;    
 const int numThreads = 4;
 
 
@@ -92,7 +92,7 @@ extern "C" {
         char* zero;
     } ServerFHE;
 
-    typedef struct RootServerMPHE {
+    typedef struct RootServerMPHe {
         void* context;
         void* encoder;
         void* encryptor;
@@ -130,6 +130,7 @@ extern "C" {
         SerialCT s_ct;
         SerialCT result_pd;
         char** r_pt;
+        char**** masks;
     } LeafServerShares;
 
 
@@ -254,6 +255,8 @@ extern "C" {
     void server_conv_online(const ServerFHE* sfhe, const Metadata* data, SerialCT ciphertext,
         char**** masks, ServerShares* shares);
     void root_server_conv_online(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,RootServerShares* serverAshares);
+    void root_server_conv_online_test(const RootServerMPHE* rsmphe, const Metadata* data, char**** serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, char**** serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,
+     RootServerShares* serverAshares);
     void test_conv(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,
      RootServerShares* serverAshares);
     /* Performs matrix multiplication on the given inputs */

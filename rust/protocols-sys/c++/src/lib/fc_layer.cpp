@@ -255,10 +255,23 @@ Ciphertext mphe_fc_online(Ciphertext& ct, vector<Ciphertext>& enc_mat,
     Ciphertext result = zero;
     // For each matrix ciphertext, rotate the input vector once and multiply +
     // add
-    for(int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //  for(int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //     Ciphertext tmp;
+    //     evaluator.rotate_rows(ct, ct_idx, gal_keys, tmp);
+    //     evaluator.multiply_inplace(tmp, enc_mat[ct_idx]);
+    //     evaluator.relinearize_inplace(tmp, relin_keys);
+    //     evaluator.add_inplace(result, tmp);
+    // }
+    Ciphertext tmp1;
+    evaluator.rotate_rows(ct, 0, gal_keys,tmp1);
+    evaluator.multiply_inplace(tmp1, enc_mat[0]);
+    evaluator.relinearize_inplace(tmp1, relin_keys);
+    evaluator.add_inplace(result, tmp1);
+    for(int ct_idx = 1; ct_idx < data.inp_ct; ct_idx++) {
         Ciphertext tmp;
-        evaluator.rotate_rows(ct, ct_idx, gal_keys, tmp);
-        evaluator.multiply_inplace(tmp, enc_mat[ct_idx]);
+        evaluator.rotate_rows_inplace(ct, 1, gal_keys);
+        // evaluator.multiply_inplace(tmp, enc_mat[ct_idx]);
+        evaluator.multiply(ct, enc_mat[ct_idx],tmp);
         evaluator.relinearize_inplace(tmp, relin_keys);
         evaluator.add_inplace(result, tmp);
     }
@@ -269,7 +282,29 @@ Ciphertext mphe_fc_online(Ciphertext& ct, vector<Ciphertext>& enc_mat,
         if (rot == data.slot_count/2) {
             evaluator.rotate_columns(result, gal_keys, tmp);
         } else {
+            if (abs(rot)>1024){
+            tmp = result;
+            cout<< "fc  "<<rot<< endl;
+            int steps;
+            int num_rot;
+            if (rot > 0){
+                steps = 1024;
+                num_rot = rot/1024;
+            }
+            else{
+                steps = -1024;
+                num_rot = (-rot)/1024;
+            }
+           
+            
+            for (int i=0; i < num_rot; i++){
+                 evaluator.rotate_rows_inplace(tmp, steps, gal_keys);
+            }
+            // evaluator.rotate_rows(result, rot, gal_keys, tmp);
+        }
+        else{
             evaluator.rotate_rows(result, rot, gal_keys, tmp);
+        }
         }
         evaluator.add_inplace(result, tmp);
     }

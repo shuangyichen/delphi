@@ -331,296 +331,302 @@ mod gc {
 
     // #[test]
     fn test_gc_relu_three_servers() {
-        let mut rng = ChaChaRng::from_seed(RANDOMNESS);
-        let mut plain_x_s = Vec::with_capacity(1001);
-        let mut plain_results = Vec::with_capacity(1001);
+        // let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+        // let mut plain_x_s = Vec::with_capacity(1001);
+        // let mut plain_results = Vec::with_capacity(1001);
 
-        // Shares for server
-        let mut server_a_x_s = Vec::with_capacity(1001);
-        let mut randomizer_a = Vec::with_capacity(1001);
-        // let mut randomizer_b = Vec::with_capacity(1001);
-        // let mut randomizer_c = Vec::with_capacity(1001);
-
-        // Shares for client
+        // // Shares for server
         // let mut server_a_x_s = Vec::with_capacity(1001);
-        let mut server_b_x_s = Vec::with_capacity(1001);
-        let mut server_c_x_s = Vec::with_capacity(1001);
-        let mut server_a_results = Vec::with_capacity(1001);
+        // let mut randomizer_a = Vec::with_capacity(1001);
+        // // let mut randomizer_b = Vec::with_capacity(1001);
+        // // let mut randomizer_c = Vec::with_capacity(1001);
 
-        for _ in 0..1000 {
-            let (f1, n1) = generate_random_number(&mut rng);
-            plain_x_s.push(n1);
-            let f2 = if f1 < 0.0 {
-                0.0
-            } else if f1 > 6.0 {
-                6.0
-            } else {
-                f1
-            };
-            let n2 = TenBitExpFP::from(f2);
-            plain_results.push(n2);
+        // // Shares for client
+        // // let mut server_a_x_s = Vec::with_capacity(1001);
+        // let mut server_b_x_s = Vec::with_capacity(1001);
+        // let mut server_c_x_s = Vec::with_capacity(1001);
+        // let mut server_a_results = Vec::with_capacity(1001);
 
-            let (s11, s12) = n1.share(&mut rng);
-            let (s121, s122) = s12.inner.share(&mut rng);
-            let (_, s22) = n2.share(&mut rng);
-            server_a_x_s.push(s11);
-            server_b_x_s.push(s121);
-            server_c_x_s.push(s122);
-            let tmp = s122.combine(&s121);
-            assert_eq!(s11.combine(&AdditiveShare::from(tmp)), n1);
+        // for _ in 0..1000 {
+        //     let (f1, n1) = generate_random_number(&mut rng);
+        //     plain_x_s.push(n1);
+        //     let f2 = if f1 < 0.0 {
+        //         0.0
+        //     } else if f1 > 6.0 {
+        //         6.0
+        //     } else {
+        //         f1
+        //     };
+        //     let n2 = TenBitExpFP::from(f2);
+        //     plain_results.push(n2);
 
-            // let (s221, s222) = (-s22).inner.share(&mut rng);
-            // let (s2221, s2222) = (s222).inner.share(&mut rng);
+        //     let (s11, s12) = n1.share(&mut rng);
+        //     let (s121, s122) = s12.inner.share(&mut rng);
+        //     let (_, s22) = n2.share(&mut rng);
+        //     server_a_x_s.push(s11);
+        //     server_b_x_s.push(s121);
+        //     server_c_x_s.push(s122);
+        //     let tmp = s122.combine(&s121);
+        //     assert_eq!(s11.combine(&AdditiveShare::from(tmp)), n1);
+
+        //     // let (s221, s222) = (-s22).inner.share(&mut rng);
+        //     // let (s2221, s2222) = (s222).inner.share(&mut rng);
 
 
-            randomizer_a.push(-s22.inner.inner);
-            // randomizer_a.push(AdditiveShare::from(-s22));
-            // randomizer_b.push(s2221);
-            // randomizer_c.push(AdditiveShare::from(s2222));
-            server_a_results.push(s22);
-        }
+        //     randomizer_a.push(-s22.inner.inner);
+        //     // randomizer_a.push(AdditiveShare::from(-s22));
+        //     // randomizer_b.push(s2221);
+        //     // randomizer_c.push(AdditiveShare::from(s2222));
+        //     server_a_results.push(s22);
+        // }
 
-        let server_a_addr = "127.0.0.1:8003";
-        let server_b_addr = "127.0.0.1:8001";
-        let server_c_addr = "127.0.0.1:8002";
-        let num_relus = 1000;
-        let servera_listener = TcpListener::bind(server_a_addr).unwrap();
-        let serverc_listener = TcpListener::bind(server_c_addr).unwrap();
+        // let server_a_addr = "127.0.0.1:8003";
+        // let server_b_addr = "127.0.0.1:8001";
+        // let server_c_addr = "127.0.0.1:8002";
+        // let num_relus = 1000;
+        // let servera_listener = TcpListener::bind(server_a_addr).unwrap();
+        // let serverc_listener = TcpListener::bind(server_c_addr).unwrap();
 
-        let (mut server_a_offline, server_b_offline, mut server_c_offline) = 
-        crossbeam::thread::scope(|s| {
-            //server a 
-            let server_a_offline = 
-            s.spawn(|_| {
-                let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+        // let (mut server_a_offline, server_b_offline, mut server_c_offline) = 
+        // crossbeam::thread::scope(|s| {
+        //     //server a 
+        //     let server_a_offline = 
+        //     s.spawn(|_| {
+        //         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
 
-                for stream in servera_listener.incoming() {
-                    let stream = stream.expect("server connection failed!");
-                    let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
-                    let mut write_stream = IMuxSync::new(vec![stream]);
-                    return ReluProtocol::<TenBitExpParams>::offline_server_a_protocol(
-                        &mut read_stream,
-                        &mut write_stream,
-                        num_relus,
-                        &server_a_x_s,
-                        &mut rng,
-                    );
-                }
-                unreachable!("we should never exit server's loop")
-            });
+        //         for stream in servera_listener.incoming() {
+        //             let stream = stream.expect("server connection failed!");
+        //             let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
+        //             let mut write_stream = IMuxSync::new(vec![stream]);
+        //             return ReluProtocol::<TenBitExpParams>::offline_server_a_protocol(
+        //                 &mut read_stream,
+        //                 &mut write_stream,
+        //                 num_relus,
+        //                 &server_a_x_s,
+        //                 &mut rng,
+        //             );
+        //         }
+        //         unreachable!("we should never exit server's loop")
+        //     });
 
-            //server c
-            let server_c_offline = 
-            s.spawn(|_| {
-                let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+        //     //server c
+        //     let server_c_offline = 
+        //     s.spawn(|_| {
+        //         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
 
-                for stream in serverc_listener.incoming() {
-                    let stream = stream.expect("server connection failed!");
-                    let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
-                    let mut write_stream = IMuxSync::new(vec![stream]);
-                    return ReluProtocol::<TenBitExpParams>::offline_server_c_protocol(
-                        &mut read_stream,
-                        &mut write_stream,
-                        num_relus,
-                        &mut rng,
-                    );
-                }
-                unreachable!("we should never exit server's loop")
-            });
+        //         for stream in serverc_listener.incoming() {
+        //             let stream = stream.expect("server connection failed!");
+        //             let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
+        //             let mut write_stream = IMuxSync::new(vec![stream]);
+        //             return ReluProtocol::<TenBitExpParams>::offline_server_c_protocol(
+        //                 &mut read_stream,
+        //                 &mut write_stream,
+        //                 num_relus,
+        //                 &mut rng,
+        //             );
+        //         }
+        //         unreachable!("we should never exit server's loop")
+        //     });
 
-            //server b
-            let server_b_offline = 
-            s.spawn(|_| {
-                let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+        //     //server b
+        //     let server_b_offline = 
+        //     s.spawn(|_| {
+        //         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
 
-                // client's connection to server.
-                let stream_a = TcpStream::connect(server_a_addr).expect("connecting to server failed");
-                let stream_c = TcpStream::connect(server_c_addr).expect("connecting to server failed");
-                let mut read_stream_a = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
-                let mut write_stream_a = IMuxSync::new(vec![stream_a]);
-                let mut read_stream_c = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
-                let mut write_stream_c = IMuxSync::new(vec![stream_c]);
-                return ReluProtocol::<TenBitExpParams>::offline_server_b_protocol(
-                        &mut read_stream_a,
-                        &mut write_stream_a,
-                        &mut read_stream_c,
-                        &mut write_stream_c,
-                        num_relus,
-                        &mut rng,
-                    );
+        //         // client's connection to server.
+        //         let stream_a = TcpStream::connect(server_a_addr).expect("connecting to server failed");
+        //         let stream_c = TcpStream::connect(server_c_addr).expect("connecting to server failed");
+        //         let mut read_stream_a = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
+        //         let mut write_stream_a = IMuxSync::new(vec![stream_a]);
+        //         let mut read_stream_c = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
+        //         let mut write_stream_c = IMuxSync::new(vec![stream_c]);
+        //         return ReluProtocol::<TenBitExpParams>::offline_server_b_protocol(
+        //                 &mut read_stream_a,
+        //                 &mut write_stream_a,
+        //                 &mut read_stream_c,
+        //                 &mut write_stream_c,
+        //                 num_relus,
+        //                 &mut rng,
+        //             );
 
                 
 
-                // return ReluProtocol::offline_server_a_protocol(
-                //     &mut read_stream,
-                //     &mut write_stream,
-                //     num_relus,
-                //     &client_x_s,
-                //     &mut rng,
-                // );
-            });
-            (
-                server_a_offline.join().unwrap().unwrap(),
-                server_b_offline.join().unwrap().unwrap(),
-                server_c_offline.join().unwrap().unwrap(),
-            )
-        })
-        .unwrap();
-
-
-        // Server C sending labels of rc_next to server A
-        crossbeam::thread::scope(|s| {
-
-            //Server A
-            s.spawn(|_| {
-                for stream in servera_listener.incoming() {
-                    let stream = stream.expect("server connection failed!");
-                    let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
-                    let mut write_stream = IMuxSync::new(vec![stream]);
-                    return ReluProtocol::<TenBitExpParams>::offline_server_a_protocol_2(
-                        &mut read_stream,
-                        num_relus,
-                        &mut server_a_offline,
-                    );
-                }
-                unreachable!("we should never exit server's loop")
-            });
-
-            //server C
-            s.spawn(|_| {
-                let stream_a = TcpStream::connect(server_a_addr).expect("connecting to server failed");
-                let mut read_stream_a = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
-                let mut write_stream_a = IMuxSync::new(vec![stream_a]);
-                // let rc_next_labels = &server_c_offline.server_c_randomizer_labels;
-                return ReluProtocol::<TenBitExpParams>::offline_server_c_protocol_2(
-                    &mut write_stream_a,
-                    &server_c_offline.server_c_randomizer_labels,
-                );
-            });
-
-        });
+        //         // return ReluProtocol::offline_server_a_protocol(
+        //         //     &mut read_stream,
+        //         //     &mut write_stream,
+        //         //     num_relus,
+        //         //     &client_x_s,
+        //         //     &mut rng,
+        //         // );
+        //     });
+        //     (
+        //         server_a_offline.join().unwrap().unwrap(),
+        //         server_b_offline.join().unwrap().unwrap(),
+        //         server_c_offline.join().unwrap().unwrap(),
+        //     )
+        // })
         // .unwrap();
 
 
+        // // Server C sending labels of rc_next to server A
+        // let (mut server_a_offline_) =
+        // crossbeam::thread::scope(|s| {
 
-        //Online processing
-        crossbeam::thread::scope(|s| {
-            //Server A
-            s.spawn(|_| {
-                // let mut rng = ChaChaRng::from_seed(RANDOMNESS);
-                for stream in servera_listener.incoming() {
-                    let stream = stream.expect("server connection failed!");
-                    let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
-                    let mut write_stream = IMuxSync::new(vec![stream]);
-                    return ReluProtocol::<TenBitExpParams>::online_server_a_protocol(
-                        &mut read_stream,
-                        &mut server_a_offline,
-                    );
-                }
+        //     //Server A
+        //     let server_a_offline_ = 
+        //     s.spawn(|_| {
+        //         for stream in servera_listener.incoming() {
+        //             let stream = stream.expect("server connection failed!");
+        //             let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
+        //             let mut write_stream = IMuxSync::new(vec![stream]);
+        //             return ReluProtocol::<TenBitExpParams>::offline_server_a_protocol_2(
+        //                 &mut read_stream,
+        //                 num_relus,
+        //                 server_a_offline,
+        //             );
+        //         }
+        //         unreachable!("we should never exit server's loop")
+        //     });
+
+        //     //server C
+        //     s.spawn(|_| {
+        //         let stream_a = TcpStream::connect(server_a_addr).expect("connecting to server failed");
+        //         let mut read_stream_a = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
+        //         let mut write_stream_a = IMuxSync::new(vec![stream_a]);
+        //         // let rc_next_labels = &server_c_offline.server_c_randomizer_labels;
+        //         return ReluProtocol::<TenBitExpParams>::offline_server_c_protocol_2(
+        //             &mut write_stream_a,
+        //             &server_c_offline.server_c_randomizer_labels,
+        //         );
+        //     });
+        //     (
+        //         server_a_offline_.join().unwrap(),
+                
+        //     )
+
+        // }).unwrap();
+        // // .unwrap();
+
+
+
+        // //Online processing
+        // crossbeam::thread::scope(|s| {
+        //     //Server A
+        //     s.spawn(|_| {
+        //         // let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+        //         for stream in servera_listener.incoming() {
+        //             let stream = stream.expect("server connection failed!");
+        //             let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
+        //             let mut write_stream = IMuxSync::new(vec![stream]);
+        //             return ReluProtocol::<TenBitExpParams>::online_server_a_protocol(
+        //                 &mut read_stream,
+        //                 &mut server_a_offline_,
+        //             );
+        //         }
             
-            });
+        //     });
 
-            //server B
-            s.spawn(|_| {
-                let mut rng = ChaChaRng::from_seed(RANDOMNESS);
-                let stream_a = TcpStream::connect(server_a_addr).expect("connecting to server failed");
-                let stream_c = TcpStream::connect(server_c_addr).expect("connecting to server failed");
-                let mut read_stream_a = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
-                let mut write_stream_a = IMuxSync::new(vec![stream_a]);
-                let mut read_stream_c = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
-                let mut write_stream_c = IMuxSync::new(vec![stream_c]);
-                return ReluProtocol::<TenBitExpParams>::online_server_b_protocol(
-                    &mut write_stream_a,
-                    &mut read_stream_c,
-                    &mut write_stream_c,
-                    &server_b_x_s,
-                    &server_b_offline.encoders,
-                    &server_b_offline.rc_labels,
-                    num_relus,
-                    &mut rng,
-                );
+        //     //server B
+        //     s.spawn(|_| {
+        //         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+        //         let stream_a = TcpStream::connect(server_a_addr).expect("connecting to server failed");
+        //         let stream_c = TcpStream::connect(server_c_addr).expect("connecting to server failed");
+        //         let mut read_stream_a = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
+        //         let mut write_stream_a = IMuxSync::new(vec![stream_a]);
+        //         let mut read_stream_c = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
+        //         let mut write_stream_c = IMuxSync::new(vec![stream_c]);
+        //         return ReluProtocol::<TenBitExpParams>::online_server_b_protocol(
+        //             &mut write_stream_a,
+        //             &mut read_stream_c,
+        //             &mut write_stream_c,
+        //             &server_b_x_s,
+        //             &server_b_offline.encoders,
+        //             &server_b_offline.rc_labels,
+        //             num_relus,
+        //             &mut rng,
+        //         );
 
 
-            });
+        //     });
 
-            s.spawn(|_| {
-                let mut rng = ChaChaRng::from_seed(RANDOMNESS);
-                for stream in serverc_listener.incoming() {
-                    let stream = stream.expect("server connection failed!");
-                    let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
-                    let mut write_stream = IMuxSync::new(vec![stream]);
-                    return ReluProtocol::<TenBitExpParams>::online_server_c_protocol(
-                        &mut write_stream,
-                        &mut read_stream,
-                        num_relus,
-                        &server_c_x_s,
-                        &mut rng,
-                        &mut server_c_offline,
-                    );
-                }
+        //     s.spawn(|_| {
+        //         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+        //         for stream in serverc_listener.incoming() {
+        //             let stream = stream.expect("server connection failed!");
+        //             let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
+        //             let mut write_stream = IMuxSync::new(vec![stream]);
+        //             return ReluProtocol::<TenBitExpParams>::online_server_c_protocol(
+        //                 &mut write_stream,
+        //                 &mut read_stream,
+        //                 num_relus,
+        //                 &server_c_x_s,
+        //                 &mut rng,
+        //                 &mut server_c_offline,
+        //             );
+        //         }
 
-            }
-            );
-        });
+        //     }
+        //     );
+        // });
 
-        //Final eval
-        let server_a_online = crossbeam::thread::scope(|s| {
-            //Server A
-            let result = s.spawn(|_| {
-                // let mut rng = ChaChaRng::from_seed(RANDOMNESS);
-                for stream in servera_listener.incoming() {
-                    let stream = stream.expect("server connection failed!");
-                    let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
-                    let mut write_stream = IMuxSync::new(vec![stream]);
-                    let mut rb_garbler_wires = server_a_offline.rb_garbler_wires.unwrap();
-                    return ReluProtocol::<TenBitExpParams>::eval_server_a_protocol(
-                        &mut read_stream,
-                        &mut rb_garbler_wires,
-                        &server_a_offline.ra_labels,
-                        &server_a_offline.server_b_randomizer_labels,
-                        &(server_a_offline.server_c_randomizer_labels.unwrap()),
-                        &server_a_offline.gc_s,
-                        &randomizer_a,
-                        num_relus,
-                    );
-                }
-                unreachable!("we should never reach here")
+        // //Final eval
+        // let server_a_online = crossbeam::thread::scope(|s| {
+        //     //Server A
+        //     let result = s.spawn(|_| {
+        //         // let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+        //         for stream in servera_listener.incoming() {
+        //             let stream = stream.expect("server connection failed!");
+        //             let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
+        //             let mut write_stream = IMuxSync::new(vec![stream]);
+        //             let mut rb_garbler_wires = server_a_offline_.rb_garbler_wires.unwrap();
+        //             return ReluProtocol::<TenBitExpParams>::eval_server_a_protocol(
+        //                 &mut read_stream,
+        //                 &mut rb_garbler_wires,
+        //                 &server_a_offline_.ra_labels,
+        //                 &server_a_offline_.server_b_randomizer_labels,
+        //                 &(server_a_offline_.server_c_randomizer_labels.unwrap()),
+        //                 &server_a_offline_.gc_s,
+        //                 &randomizer_a,
+        //                 num_relus,
+        //             );
+        //         }
+        //         unreachable!("we should never reach here")
             
-            });
+        //     });
 
 
-            s.spawn(|_| {
-                let stream_a = TcpStream::connect(server_a_addr).expect("connecting to server failed");
-                // let mut read_stream_a = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
-                let mut write_stream_a = IMuxSync::new(vec![stream_a]);
-                    return ReluProtocol::<TenBitExpParams>::eval_server_c_protocol(
-                        &mut write_stream_a,
-                        &server_c_offline.rc_labels,
-                    );
+        //     s.spawn(|_| {
+        //         let stream_a = TcpStream::connect(server_a_addr).expect("connecting to server failed");
+        //         // let mut read_stream_a = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
+        //         let mut write_stream_a = IMuxSync::new(vec![stream_a]);
+        //             return ReluProtocol::<TenBitExpParams>::eval_server_c_protocol(
+        //                 &mut write_stream_a,
+        //                 &server_c_offline.rc_labels,
+        //             );
 
-            }
-            );
+        //     }
+        //     );
 
-            result.join().unwrap().unwrap()
-        }).unwrap();
+        //     result.join().unwrap().unwrap()
+        // }).unwrap();
 
-        for i in 0..1000{
+        // for i in 0..1000{
 
-            //server_a_online = x'-ra'-rb'-rc'
-            //
-            let server_b_randomizer = server_b_offline.output_randomizers[i];
-            let server_c_randomizer = server_c_offline.output_randomizers[i];
-            let server_share_bc =
-                TenBitExpFP::randomize_local_share(&server_a_online[i], &server_b_randomizer);
-            let server_share =
-                TenBitExpFP::randomize_local_share(&server_share_bc, &server_c_randomizer);
-            let r_a = server_a_results[i];
-            // let fx = TenBitExpFP::randomize_local_share(&server_share, &r_a);
-            let result = plain_results[i];
-            // let r_a = server_a_results[i];
-            assert_eq!(server_share.combine(&r_a), result);
+        //     //server_a_online = x'-ra'-rb'-rc'
+        //     //
+        //     let server_b_randomizer = server_b_offline.output_randomizers[i];
+        //     let server_c_randomizer = server_c_offline.output_randomizers[i];
+        //     let server_share_bc =
+        //         TenBitExpFP::randomize_local_share(&server_a_online[i], &server_b_randomizer);
+        //     let server_share =
+        //         TenBitExpFP::randomize_local_share(&server_share_bc, &server_c_randomizer);
+        //     let r_a = server_a_results[i];
+        //     // let fx = TenBitExpFP::randomize_local_share(&server_share, &r_a);
+        //     let result = plain_results[i];
+        //     // let r_a = server_a_results[i];
+        //     assert_eq!(server_share.combine(&r_a), result);
 
-        }
+        // }
 
 
 
@@ -1262,7 +1268,7 @@ mod linear {
 }
 
 
-    #[test]
+    // #[test]
     fn test_mphe_fc(){
 
         use neural_network::layers::fully_connected::*;
@@ -1326,8 +1332,8 @@ mod linear {
         let output = pt_layer.evaluate(&input);
         println!("Setup finished");
 
-        let server_b_addr = "127.0.0.1:8001";
-        let server_c_addr = "127.0.0.1:8002";
+        let server_b_addr = "127.0.0.1:8003";
+        let server_c_addr = "127.0.0.1:8004";
         let serverb_listener = TcpListener::bind(server_b_addr).unwrap();
         let serverc_listener = TcpListener::bind(server_c_addr).unwrap();
 
@@ -1589,7 +1595,7 @@ mod linear {
 
     }
 
-    #[test]
+    // #[test]
     fn test_fully_connected() {
         use neural_network::layers::fully_connected::*;
 
