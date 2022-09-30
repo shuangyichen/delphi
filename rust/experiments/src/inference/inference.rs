@@ -17,6 +17,19 @@ const RANDOMNESS: [u8; 32] = [
     0x5d, 0xc9, 0x8d, 0xea, 0x23, 0xf2, 0x90, 0x8f, 0x9d, 0x03, 0xf2, 0x77, 0xd3, 0x4a, 0x52, 0xd2,
 ];
 
+pub fn image_transform(
+    image: &mut Array4<f64>,
+)->Input<TenBitAS>{
+    let image_shape: (usize, usize, usize,usize) = (image.shape()[0],image.shape()[1],image.shape()[2],image.shape()[3]);
+    let mut input: Input<TenBitAS>  = Input::zeros(image_shape); 
+    input.iter_mut()
+          .zip(image.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+    input
+}
+
 pub fn softmax(x: &Input<TenBitExpFP>) -> Input<TenBitExpFP> {
     let mut max: TenBitExpFP = x[[0, 0, 0, 0]];
     x.iter().for_each(|e| {

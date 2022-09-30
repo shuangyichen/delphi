@@ -96,5 +96,17 @@ path = "src/latency/gc/client.rs"
 name = "gc-server"
 path = "src/latency/gc/server.rs"
 
+[[bin]]
+name = "minionn-server-a"
+path = "src/inference/minionn/server_a.rs"
+
+[[bin]]
+name = "minionn-server-b"
+path = "src/inference/minionn/server_b.rs"
+
+[[bin]]
+name = "minionn-server-c"
+path = "src/inference/minionn/server_c.rs"
+
 [features]
 timer = ["protocols/timer"]
