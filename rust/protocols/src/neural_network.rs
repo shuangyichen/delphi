@@ -219,6 +219,7 @@ where
         for (i, layer) in neural_network_architecture.layers.iter().enumerate() {
             match layer {
                 LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
+                    println!("ReLU");
                     relu_layers.push(i);
                     let (b, c, h, w) = dims.input_dimensions();
                     num_relu += b * c * h * w;
@@ -233,6 +234,7 @@ where
                         LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
                             let mut cg_handler = match &linear_layer_info {
                                 LinearLayerInfo::Conv2d { .. } => {
+                                    println!("Conv2d");
                                     SealRootServerCG::Conv2D(root_server_cg::Conv2D::new(
                                         &rsmphe,
                                         &lsmphe,
@@ -242,6 +244,7 @@ where
                                     ))
                                 }
                                 LinearLayerInfo::FullyConnected => {
+                                    println!("FullyConnected");
                                     SealRootServerCG::FullyConnected(root_server_cg::FullyConnected::new(
                                         &rsmphe,
                                         &lsmphe,
@@ -1279,6 +1282,116 @@ where
         crate::bytes::serialize(writer, &sent_message)?;
         timer_end!(start_time);
         Ok(())
+    }
+
+
+    pub fn online_root_server_protocol<R: Read + Send, W: Write + Send + Send>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
+        state: &ServerState<P>,
+    ) -> Result<Input<AdditiveShare<P>>, bincode::Error> {
+        let (first_layer_in_dims, first_layer_out_dims) = {
+            let layer = neural_network.layers.first().unwrap();
+            assert!(
+                layer.is_linear(),
+                "first layer of the network should always be linear."
+            );
+            (layer.input_dimensions(), layer.output_dimensions())
+        };
+
+        let mut num_consumed_relus = 0;
+        let mut num_consumed_triples = 0;
+
+        let mut next_layer_input = Output::zeros(first_layer_out_dims);
+        let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
+        let start_time = timer_start!(|| "Server online phase");
+        for (i, layer) in neural_network.layers.iter().enumerate() {
+            match layer {
+                Layer::NLL(NonLinearLayer::ReLU(dims)) => {
+                    let start_time = timer_start!(|| "ReLU layer");
+                    // Have the server encode the current input, via the garbled circuit,
+                    // and then send the labels over to the other party.
+                    let layer_size = next_layer_input.len();
+                    assert_eq!(dims.input_dimensions(), next_layer_input.dim());
+                    let layer_encoders =
+                        &state.relu_encoders[num_consumed_relus..(num_consumed_relus + layer_size)];
+                    ReluProtocol::online_server_protocol(
+                        writer,
+                        &next_layer_input.as_slice().unwrap(),
+                        layer_encoders,
+                    )?;
+                    let relu_output_randomizers = state.relu_output_randomizers
+                        [num_consumed_relus..(num_consumed_relus + layer_size)]
+                        .to_vec();
+                    num_consumed_relus += layer_size;
+                    next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
+                        .into_shape(dims.output_dimensions())
+                        .expect("shape should be correct")
+                        .into();
+                    timer_end!(start_time);
+                }
+                Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {
+                    let start_time = timer_start!(|| "Approx layer");
+                    let layer_size = next_layer_input.len();
+                    assert_eq!(dims.input_dimensions(), next_layer_input.dim());
+                    let triples = &state.approx_state
+                        [num_consumed_triples..(num_consumed_triples + layer_size)];
+                    num_consumed_triples += layer_size;
+                    let shares_of_eval =
+                        QuadApproxProtocol::online_server_protocol::<FPBeaversMul<P>, _, _>(
+                            SERVER, // party_index: 2
+                            reader,
+                            writer,
+                            &poly,
+                            next_layer_input.as_slice().unwrap(),
+                            triples,
+                        )?;
+                    let shares_of_eval: Vec<_> =
+                        shares_of_eval.into_iter().map(|s| s.inner.inner).collect();
+                    next_layer_derandomizer = ndarray::Array1::from_iter(shares_of_eval)
+                        .into_shape(dims.output_dimensions())
+                        .expect("shape should be correct")
+                        .into();
+                    timer_end!(start_time);
+                }
+                Layer::LL(layer) => {
+                    let start_time = timer_start!(|| "Linear layer");
+                    // Input for the next layer.
+                    let layer_randomizer = state.linear_state.get(&i).unwrap();
+                    // The idea here is that the previous layer was linear.
+                    // Hence the input we're receiving from the client is
+                    if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
+                        next_layer_derandomizer
+                            .iter_mut()
+                            .zip(&next_layer_input)
+                            .for_each(|(l_r, inp)| {
+                                *l_r += &inp.inner.inner;
+                            });
+                    }
+                    next_layer_input = Output::zeros(layer.output_dimensions());
+                    LinearProtocol::online_server_protocol(
+                        reader,
+                        &layer,
+                        layer_randomizer,
+                        &next_layer_derandomizer,
+                        &mut next_layer_input,
+                    )?;
+                    next_layer_derandomizer = Output::zeros(layer.output_dimensions());
+                    // Since linear operations involve multiplications
+                    // by fixed-point constants, we want to truncate here to
+                    // ensure that we don't overflow.
+                    for share in next_layer_input.iter_mut() {
+                        share.inner.signed_reduce_in_place();
+                    }
+                    timer_end!(start_time);
+                }
+            }
+        }
+        // let sent_message = MsgSend::new(&next_layer_input);
+        // crate::bytes::serialize(writer, &sent_message)?;
+        timer_end!(start_time);
+        Ok(next_layer_input)
     }
 
     /// Outputs shares for the next round's input.

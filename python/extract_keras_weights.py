@@ -188,6 +188,102 @@ def serialize_weights_additive_share(model, save_path):
     np.save(os.path.join(save_path,"model2.npy"), network2_weights.astype(np.float64))
 
 
+def serialize_weights_aplit_additive_share(model, save_path,split):
+    # """Serialize Keras model into flattened numpy array in correct shape for Pytorch in Rust"""
+    # All the weights need to be flattened into a single array for rust interopt
+    network_weights = np.array([])
+    network1_weights = np.array([])
+    network2_weights = np.array([])
+
+    for i, layer in enumerate(model.layers):
+        if i<split:
+            if "conv2d" in layer.name:
+            A, b = layer.get_weights()
+            # Keras stores the filter as the first two dimensions and the
+            # channels as the 3rd and 4th. PyTorch does the opposite so flip
+            # everything around
+            _, _, inp_c, out_c = A.shape
+            py_tensor = [[A[:, :, i, o] for i in range(inp_c)] for o in range(out_c)]
+            A = np.array(py_tensor)
+
+
+            elif "dense" in layer.name:
+                A, b = layer.get_weights()
+                A = A.T
+                # Get the shape of last layer output to transform the FC
+                # weights correctly since we don't flatten input to FC in Delphi
+                inp_chans = 1
+                for prev_i in range(i, 0, -1):
+                    layer_name = model.layers[prev_i].name
+                    if ("global" in layer_name):
+                        inp_chans = model.layers[prev_i].output_shape[1]
+                        break
+                    if ("conv2d" in layer_name) or ("average_pooling2d" in layer_name) or prev_i == 0:
+                        inp_chans = model.layers[prev_i].output_shape[3]
+                        break
+                # Remap to PyTorch shape
+                fc_h, fc_w = A.shape
+                channel_cols = [np.hstack([A[:, [i]] for i in range(chan, fc_w, inp_chans)])
+                                for chan in range(inp_chans)]
+                A = np.hstack(channel_cols)
+                # print/(A.shape)
+            else:
+                continue
+            layer_weights = np.concatenate((A.flatten(), b.flatten()))
+            network_weights = np.concatenate((network_weights, layer_weights))
+        # np.save(os.path.join(save_path,"model.npy"), network_weights.astype(np.float64))
+
+        else:
+            if "conv2d" in layer.name:
+                A, b = layer.get_weights()
+                # Keras stores the filter as the first two dimensions and the
+                # channels as the 3rd and 4th. PyTorch does the opposite so flip
+                # everything around
+                _, _, inp_c, out_c = A.shape
+                py_tensor = [[A[:, :, i, o] for i in range(inp_c)] for o in range(out_c)]
+                A = np.array(py_tensor)
+                a_shape = A.shape
+                b_shape = b.shape
+                A1 = np.random.random(a_shape)
+                A2 = A-A1
+                b1 = np.random.random(b_shape)
+                b2 = b-b1
+            elif "dense" in layer.name:
+                A, b = layer.get_weights()
+                A = A.T
+                # Get the shape of last layer output to transform the FC
+                # weights correctly since we don't flatten input to FC in Delphi
+                inp_chans = 1
+                for prev_i in range(i, 0, -1):
+                    layer_name = model.layers[prev_i].name
+                    if ("global" in layer_name):
+                        inp_chans = model.layers[prev_i].output_shape[1]
+                        break
+                    if ("conv2d" in layer_name) or ("average_pooling2d" in layer_name) or prev_i == 0:
+                        inp_chans = model.layers[prev_i].output_shape[3]
+                        break
+                # Remap to PyTorch shape
+                fc_h, fc_w = A.shape
+                channel_cols = [np.hstack([A[:, [i]] for i in range(chan, fc_w, inp_chans)])
+                                for chan in range(inp_chans)]
+                A = np.hstack(channel_cols)
+                a_shape = A.shape
+                b_shape = b.shape
+                A1 = np.random.random(a_shape)
+                A2 = A-A1
+                b1 = np.random.random(b_shape)
+                b2 = b-b1
+            else:
+                continue
+            layer1_weights = np.concatenate((A1.flatten(), b1.flatten()))
+            network1_weights = np.concatenate((network1_weights, layer1_weights))
+            layer2_weights = np.concatenate((A2.flatten(), b2.flatten()))
+            network2_weights = np.concatenate((network2_weights, layer2_weights))
+    np.save(os.path.join(save_path,"model1.npy"), network_weights.astype(np.float64))
+    np.save(os.path.join(save_path,"model21.npy"), network1_weights.astype(np.float64))
+    np.save(os.path.join(save_path,"model22.npy"), network2_weights.astype(np.float64))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('model', type=int, help='<REQUIRED> Use Minionn (0) or Resnet32 (1)')
@@ -228,4 +324,5 @@ if __name__ == "__main__":
     
     # Serialize weights for Rust
     # serialize_weights(model, save_path)
-    serialize_weights_additive_share(model, save_path)
+    # serialize_weights_additive_share(model, save_path)
+    serialize_weights_additive_share(model, save_path,2)
