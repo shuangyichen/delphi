@@ -163,7 +163,7 @@ pub fn nn_server_a<R: RngCore + CryptoRng>(
     let server_a_state = {
         let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
         let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-        let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+        // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
         let mut sa_state = NNProtocol::offline_server_a_protocol(
             &mut reader_b,
             &mut writer_b,
@@ -174,36 +174,37 @@ pub fn nn_server_a<R: RngCore + CryptoRng>(
         ).unwrap();
         // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
         NNProtocol::offline_server_a_protocol_r2(
-            &mut reader_a,
-            &mut writer_a,
+            &mut reader_b,
+            &mut writer_b,
             rng,
             // &mut sa_state.relu_current_layer_output_shares,
             sa_state.num_relu,  //?
             &mut sa_state,
         );
-        let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+        let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
         NNProtocol::offline_server_a_protocol_r3(
-            &mut reader_a,
+            &mut reader_c,
             sa_state.num_relu,
             &mut sa_state,
         );
         sa_state
     };
+    println!("Offline finished");
     //online
-    let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
-    let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-    let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
-    NNProtocol::online_server_a_protocol(
-        &mut reader_b,
-        &mut writer_b,
-        &mut reader_c,
-        &mut writer_c,
-        &mut reader_a,
-        &mut writer_a,
-        &input,
-        &architecture,
-        &server_a_state,
-    );
+    // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+    // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+    // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+    // NNProtocol::online_server_a_protocol(
+    //     &mut reader_b,
+    //     &mut writer_b,
+    //     &mut reader_c,
+    //     &mut writer_c,
+    //     &mut reader_a,
+    //     &mut writer_a,
+    //     &input,
+    //     &architecture,
+    //     &server_a_state,
+    // );
 }
 
 pub fn nn_server_b<R: RngCore + CryptoRng>(
@@ -224,11 +225,11 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
             &nn,
             rng,
         ).unwrap();
-        let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+        // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
         let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
         NNProtocol::offline_server_b_protocol_r2(
-            &mut reader_a,
-            &mut writer_a,
+            &mut reader_b,
+            &mut writer_b,
             &mut reader_c,
             &mut writer_c,
             rng,
@@ -237,21 +238,22 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
         );
         sb_state
     };
+    println!("Offline finished");
     //online
-    let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
-    let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
-    let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-    NNProtocol::online_server_b_protocol(
-        &mut reader_b,
-        &mut writer_b,
-        &mut reader_c,
-        &mut writer_c,
-        &mut reader_a,
-        &mut writer_a,
-        &nn,
-        &server_b_state,
-        rng,
-    );
+    // let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
+    // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+    // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+    // NNProtocol::online_server_b_protocol(
+    //     &mut reader_b,
+    //     &mut writer_b,
+    //     &mut reader_c,
+    //     &mut writer_c,
+    //     &mut reader_a,
+    //     &mut writer_a,
+    //     &nn,
+    //     &server_b_state,
+    //     rng,
+    // );
 }
 
 pub fn nn_server_c<R: RngCore + CryptoRng>(
@@ -278,24 +280,25 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
             sc_state.num_relu,
             &mut sc_state,
         );
-        let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+        // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
         NNProtocol::offline_server_c_protocol_r3(
-            &mut writer_a,
+            &mut writer_c,
             &mut sc_state,
         );
         sc_state
     };
-    let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
-    let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
-    NNProtocol::online_server_c_protocol(
-        &mut reader_c,
-        &mut writer_c,
-        &mut reader_a,
-        &mut writer_a,
-        &nn,
-        &server_c_state,
-        rng,
-    );
+    println!("Offline finished");
+    // let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
+    // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+    // NNProtocol::online_server_c_protocol(
+    //     &mut reader_c,
+    //     &mut writer_c,
+    //     &mut reader_a,
+    //     &mut writer_a,
+    //     &nn,
+    //     &server_c_state,
+    //     rng,
+    // );
 }
 
 
