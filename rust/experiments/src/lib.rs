@@ -272,7 +272,7 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
             &nn,
             rng,
         ).unwrap();
-        // let (mut reader_c_, mut writer_c_) = server_connect(server_c_addr);
+        let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
         NNProtocol::offline_server_c_protocol_r2(
             &mut reader_c,
             &mut writer_c,
