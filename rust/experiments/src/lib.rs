@@ -216,8 +216,8 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
     //offline
     let server_b_state = {
         let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
-        let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
-        let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+        // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+        // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
         let mut sb_state = NNProtocol::offline_server_b_protocol(
             &mut reader_b,
             &mut writer_b,
