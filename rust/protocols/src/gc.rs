@@ -130,6 +130,7 @@ where
         // for i in 0..num_chunks {
         //     println!("i num chunks {}", i);
         let in_msg: ServerLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
+        println!("Server A receive");
         let r_wire_chunks = in_msg.msg();
         // println!/"in msg length {}", r_wire_chunks.iter().count());
         // if i < (num_chunks - 1) {
