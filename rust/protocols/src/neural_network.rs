@@ -658,8 +658,8 @@ where
         // let next_layer_input = input;
         
         for (i, layer) in architecture.layers.iter().enumerate() {
-            thread::sleep(time::Duration::from_millis(1000));
-            let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+            thread::sleep(time::Duration::from_millis(2000));
+            // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
             // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
             match layer {
                 LayerInfo::NLL(dims, nll_info) => {
@@ -812,16 +812,21 @@ where
                 // let mut write_stream_c = IMuxSync::new(vec![stream_c]);
                 let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
                 let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+                let layer_size = next_layer_input.len();
+                let layer_encoders =
+                        &state.relu_encoder.as_ref().unwrap()[num_consumed_relus..(num_consumed_relus + layer_size)];
+                let rc_01_labels = &state.rc_01_labels.as_ref().unwrap()[num_consumed_relus..(num_consumed_relus + layer_size)];
                 ReluProtocol::<P>::online_server_b_protocol(
                                 &mut writer_b,
                                 &mut reader_c,
                                 &mut writer_c,
                                 &next_layer_input.as_slice().unwrap(),
-                                &state.relu_encoder.as_ref().unwrap(),
-                                &state.rc_01_labels.as_ref().unwrap(),
+                                layer_encoders,
+                                &rc_01_labels,
                                 num_relus,
                                 rng,
                             );
+                num_consumed_relus += layer_size;
 
             }
             Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
@@ -930,8 +935,9 @@ where
                 }
                 Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
                 Layer::LL(layer) => {
-                    let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
                     println!("Linear");
+                    let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
+                    // println!("Linear");
                     let layer_randomizer = state.output_randomizer.get(&i).unwrap();
                     // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
                     //     next_layer_derandomizer
