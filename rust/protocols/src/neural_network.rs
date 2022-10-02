@@ -833,7 +833,7 @@ where
                                 &next_layer_input.as_slice().unwrap(),
                                 layer_encoders,
                                 &rc_01_labels,
-                                num_relus,
+                                layer_size,
                                 rng,
                             );
                 num_consumed_relus += layer_size;
@@ -922,11 +922,12 @@ where
                     //     let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
                     //     let mut write_stream = IMuxSync::new(vec![stream]);
                     let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
+                    let layer_size = next_layer_input.len();
                     let share_c_labels = 
                         ReluProtocol::<P>::online_server_c_protocol(
                             &mut writer_c,
                             &mut reader_c,
-                            num_relus,
+                            layer_size,
                             &next_layer_input.as_slice().unwrap(),
                             rng,
                             // &mut server_c_offline,

@@ -623,6 +623,7 @@ where
         reader: &mut IMuxSync<R>,
         // server_a_state: &mut ServerAState,
     )->Vec<Vec<Wire>>{
+        println!("A receiving");
         let in_msg: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         let mut rb_garbler_wires = in_msg.msg();
 
@@ -644,8 +645,9 @@ where
         rng: &mut RNG,
     ){
         //encode rb share and send it to server a
-
+        println!("b working");
         if number_of_relus != 0 {
+            println!("OT to server C online");
             let r_c = reader_c.get_mut_ref().remove(0);
             let w_c = writer_c.get_mut_ref().remove(0);
 
@@ -713,6 +715,7 @@ where
         rng: &mut RNG,
         // server_c_state: &mut ServerCState<P>,
     )->Vec<Wire>{
+        println!("c OT");
         let p = u128::from(u64::from(P::Field::characteristic()));
         let field_size = (p.next_power_of_two() * 2).trailing_zeros() as usize;
         let mut rc_labels: Vec<Wire>= Vec::with_capacity(number_of_relus); 
