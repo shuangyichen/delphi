@@ -1,6 +1,7 @@
 use experiments::nn_server_c;
 use clap::{App, Arg, ArgMatches};
 use experiments::minionn::construct_minionn;
+use experiments::minionn::construct_minionn_test;
 use neural_network::{ndarray::Array4, npy::NpyData};
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
