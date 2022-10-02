@@ -658,7 +658,7 @@ where
         // let next_layer_input = input;
         
         for (i, layer) in architecture.layers.iter().enumerate() {
-            thread::sleep(time::Duration::from_millis(2000));
+            // thread::sleep(time::Duration::from_millis(2000));
             // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
             // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
             match layer {
@@ -666,7 +666,8 @@ where
                     match nll_info {
                         NonLinearLayerInfo::ReLU => {
                             println!("ReLU");
-                            let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+                            // thread::sleep(time::Duration::from_millis(1000));
+                            let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
                             let layer_size = input.len();
                             let mut rb_garbler_wires : Vec<Vec<Wire>>  = Vec::with_capacity(layer_size);
                             // let servera_listener = TcpListener::bind(server_a_addr).unwrap();
@@ -674,7 +675,7 @@ where
                                 // let stream = stream.expect("server connection failed!");
                                 // let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
                                 // let mut write_stream = IMuxSync::new(vec![stream]);
-                                rb_garbler_wires =  ReluProtocol::<P>::online_server_a_protocol(&mut reader_b);
+                                rb_garbler_wires =  ReluProtocol::<P>::online_server_a_protocol(&mut reader_a);
                                 // break;
                             // }
 
@@ -710,8 +711,9 @@ where
                             //     .flat_map(|l| l.clone())
                             //     .collect::<Vec<_>>();
                             // thread::sleep(time::Duration::from_millis(1000));
-                            let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
                             println!("ReLU r2");
+                            let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+                            // println!("ReLU r2");
                             let output =ReluProtocol::eval_server_a_protocol(
                                                 &mut reader_c,
                                                 &mut rb_garbler_wires,
@@ -734,6 +736,7 @@ where
                 }
 
                 LayerInfo::LL(dims, layer_info) => {
+                    thread::sleep(time::Duration::from_millis(2000));
                     println!("Linear");
                     let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
                     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
@@ -811,14 +814,14 @@ where
                 // let mut write_stream_a = IMuxSync::new(vec![stream_a]);
                 // let mut read_stream_c = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
                 // let mut write_stream_c = IMuxSync::new(vec![stream_c]);
-                let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
+                let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
                 let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
                 let layer_size = next_layer_input.len();
                 let layer_encoders =
                         &state.relu_encoder.as_ref().unwrap()[num_consumed_relus..(num_consumed_relus + layer_size)];
                 let rc_01_labels = &state.rc_01_labels.as_ref().unwrap()[num_consumed_relus..(num_consumed_relus + layer_size)];
                 ReluProtocol::<P>::online_server_b_protocol(
-                                &mut writer_b,
+                                &mut writer_a,
                                 &mut reader_c,
                                 &mut writer_c,
                                 &next_layer_input.as_slice().unwrap(),
