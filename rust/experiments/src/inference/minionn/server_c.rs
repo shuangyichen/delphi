@@ -78,8 +78,8 @@ fn main(){
     let args = get_args();
 
     let weights_c = args.value_of("weights").unwrap();
-    // let mut network_c = construct_minionn(None, 1, layers, &mut rng);
-    let mut network_c = construct_minionn_test(None, 1, layers, &mut rng);
+    let mut network_c = construct_minionn(None, 1, layers, &mut rng);
+    // let mut network_c = construct_minionn_test(None, 1, layers, &mut rng);
     network_c.from_numpy(&weights_c).unwrap();
 
     // let ip_a = args.value_of("ip_a").unwrap();
