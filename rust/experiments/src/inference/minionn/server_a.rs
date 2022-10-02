@@ -88,7 +88,8 @@ fn main() {
     let server_b_addr = "10.30.8.15:8000";
     let server_c_addr = "10.30.8.14:8000";
 
-    let network = construct_minionn(None, 1, layers, &mut rng);
+    // let network = construct_minionn(None, 1, layers, &mut rng);
+    let network = construct_minionn_test(None, 1, layers, &mut rng);
     let architecture = (&network).into();
 
     let mut buf = vec![];

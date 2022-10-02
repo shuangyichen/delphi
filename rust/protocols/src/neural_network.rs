@@ -27,7 +27,9 @@ use crypto_primitives::{
     beavers_mul::{FPBeaversMul, Triple},
     gc::fancy_garbling::{Encoder, GarbledCircuit, Wire},
 };
-
+use std::io::BufReader;
+use io_utils::counting::CountingIO;
+use std::io::BufWriter;
 use crate::{gc::ReluProtocol, linear_layer::LinearProtocol, quad_approx::QuadApproxProtocol};
 use protocols_sys::*;
 use std::collections::BTreeMap;
@@ -167,6 +169,42 @@ pub type MsgRcv<P> = crate::InMessage<Output<AdditiveShare<P>>, NNProtocolType>;
 //         .unwrap();
 //     layer_randomness.into()
 // }
+
+
+pub fn client_connect(
+    addr: &str,
+) -> (
+    IMuxSync<CountingIO<BufReader<TcpStream>>>,
+    IMuxSync<CountingIO<BufWriter<TcpStream>>>,
+) {
+    // TODO: Maybe change to rayon_num_threads
+    let mut readers = Vec::with_capacity(16);
+    let mut writers = Vec::with_capacity(16);
+    for _ in 0..16 {
+        let stream = TcpStream::connect(addr).unwrap();
+        readers.push(CountingIO::new(BufReader::new(stream.try_clone().unwrap())));
+        writers.push(CountingIO::new(BufWriter::new(stream)));
+    }
+    (IMuxSync::new(readers), IMuxSync::new(writers))
+}
+
+pub fn server_connect(
+    addr: &str,
+) -> (
+    IMuxSync<CountingIO<BufReader<TcpStream>>>,
+    IMuxSync<CountingIO<BufWriter<TcpStream>>>,
+) {
+    let listener = TcpListener::bind(addr).unwrap();
+    let mut incoming = listener.incoming();
+    let mut readers = Vec::with_capacity(16);
+    let mut writers = Vec::with_capacity(16);
+    for _ in 0..16 {
+        let stream = incoming.next().unwrap().unwrap();
+        readers.push(CountingIO::new(BufReader::new(stream.try_clone().unwrap())));
+        writers.push(CountingIO::new(BufWriter::new(stream)));
+    }
+    (IMuxSync::new(readers), IMuxSync::new(writers))
+}
 impl<P: FixedPointParameters> NNProtocol<P>
 where
     <P::Field as PrimeField>::Params: Fp64Parameters,
@@ -585,16 +623,17 @@ where
         );
     }
 
-    pub fn online_server_a_protocol<R: Read + Send, W: Write + Send>(
-        // server_a_addr: &str,
-        // server_b_addr: &str,
-        // server_c_addr: &str,
-        reader_b: &mut IMuxSync<R>,
-        writer_b: &mut IMuxSync<W>,
-        reader_c: &mut IMuxSync<R>,
-        writer_c: &mut IMuxSync<W>,
-        reader_a: &mut IMuxSync<R>,
-        writer_a: &mut IMuxSync<W>,
+    // pub fn online_server_a_protocol<R: Read + Send, W: Write + Send>(
+    pub fn online_server_a_protocol(
+        server_a_addr: &str,
+        server_b_addr: &str,
+        server_c_addr: &str,
+        // reader_b: &mut IMuxSync<R>,
+        // writer_b: &mut IMuxSync<W>,
+        // reader_c: &mut IMuxSync<R>,
+        // writer_c: &mut IMuxSync<W>,
+        // reader_a: &mut IMuxSync<R>,
+        // writer_a: &mut IMuxSync<W>,
         input: &Input<AdditiveShare<P>>,
         architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerAState<P>,
@@ -617,10 +656,13 @@ where
         // let next_layer_input = input;
         
         for (i, layer) in architecture.layers.iter().enumerate() {
+            let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+            let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
             match layer {
                 LayerInfo::NLL(dims, nll_info) => {
                     match nll_info {
                         NonLinearLayerInfo::ReLU => {
+                            println!("ReLU");
                             let layer_size = input.len();
                             let mut rb_garbler_wires : Vec<Vec<Wire>>  = Vec::with_capacity(layer_size);
                             // let servera_listener = TcpListener::bind(server_a_addr).unwrap();
@@ -628,7 +670,7 @@ where
                                 // let stream = stream.expect("server connection failed!");
                                 // let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
                                 // let mut write_stream = IMuxSync::new(vec![stream]);
-                                rb_garbler_wires =  ReluProtocol::<P>::online_server_a_protocol(reader_a);
+                                rb_garbler_wires =  ReluProtocol::<P>::online_server_a_protocol(&mut reader_b);
                                 // break;
                             // }
 
@@ -663,8 +705,9 @@ where
                             //     .into_iter()
                             //     .flat_map(|l| l.clone())
                             //     .collect::<Vec<_>>();
+                            let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
                             let output =ReluProtocol::eval_server_a_protocol(
-                                                reader_a,
+                                                &mut reader_c,
                                                 &mut rb_garbler_wires,
                                                 &layer_ra_labels,
                                                 &layer_rb_labels,
@@ -685,6 +728,9 @@ where
                 }
 
                 LayerInfo::LL(dims, layer_info) => {
+                    println!("Linear");
+                    // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+                    // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
 
                     // let mut writer_b =
                     //     IMuxSync::new(vec![TcpStream::connect(server_b_addr).unwrap()]);
@@ -694,8 +740,8 @@ where
 
 
                     LinearProtocol::online_server_a_protocol(
-                        writer_b,
-                        writer_c,
+                        &mut writer_b,
+                        &mut writer_c,
                         &input,
                         &layer_info,
                         &mut next_layer_input,
@@ -716,13 +762,17 @@ where
         // let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
     
 
-    pub fn online_server_b_protocol<R: Read + Send, W: Write + Send,RNG: CryptoRng + RngCore>(
-        reader_b: &mut IMuxSync<R>,
-        writer_b: &mut IMuxSync<W>,
-        reader_c: &mut IMuxSync<R>,
-        writer_c: &mut IMuxSync<W>,
-        reader_a: &mut IMuxSync<R>,
-        writer_a: &mut IMuxSync<W>,
+    // pub fn online_server_b_protocol<R: Read + Send, W: Write + Send,RNG: CryptoRng + RngCore>(
+    pub fn online_server_b_protocol<RNG: CryptoRng + RngCore>(
+        server_a_addr: &str,
+        server_b_addr: &str,
+        server_c_addr: &str,
+        // reader_b: &mut IMuxSync<R>,
+        // writer_b: &mut IMuxSync<W>,
+        // reader_c: &mut IMuxSync<R>,
+        // writer_c: &mut IMuxSync<W>,
+        // reader_a: &mut IMuxSync<R>,
+        // writer_a: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerBState<P>,
         rng: &mut RNG,
@@ -745,18 +795,21 @@ where
         // let serverb_listener = TcpListener::bind(server_b_addr).unwrap();
 
         for (i, layer) in neural_network.layers.iter().enumerate() {
+            let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
             match layer {
             Layer::NLL(NonLinearLayer::ReLU(dims)) => {
+                println!("ReLU");
                 // let stream_a = TcpStream::connect(server_a_addr).expect("connecting to server failed");
                 // let stream_c = TcpStream::connect(server_c_addr).expect("connecting to server failed");
                 // let mut read_stream_a = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
                 // let mut write_stream_a = IMuxSync::new(vec![stream_a]);
                 // let mut read_stream_c = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
                 // let mut write_stream_c = IMuxSync::new(vec![stream_c]);
+                let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
                 ReluProtocol::<P>::online_server_b_protocol(
-                                writer_a,
-                                reader_c,
-                                writer_c,
+                                &mut writer_b,
+                                &mut reader_c,
+                                &mut writer_c,
                                 &next_layer_input.as_slice().unwrap(),
                                 &state.relu_encoder.as_ref().unwrap(),
                                 &state.rc_01_labels.as_ref().unwrap(),
@@ -767,6 +820,7 @@ where
             }
             Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
             Layer::LL(layer) => {
+                println!("Linear");
                 let layer_randomizer = state.output_randomizer.get(&i).unwrap();
                 // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
                 //     next_layer_derandomizer
@@ -781,7 +835,7 @@ where
                     // let mut read_stream =
                     // IMuxSync::new(vec![stream.expect("server connection failed!")]);
                     LinearProtocol::online_server_protocol(
-                        reader_b,       // we only receive here, no messages to client
+                        &mut reader_b,       // we only receive here, no messages to client
                         &layer, // layer parameters
                         layer_randomizer,       // this is our `s` from above.
                         &next_layer_derandomizer,
@@ -799,14 +853,11 @@ where
     }
 }
 
-    pub fn online_server_c_protocol<'a,R: Read + Send, W: Write + Send,RNG: RngCore + CryptoRng>(
-        // server_a_addr: &str,
-        // server_b_addr: &str,
-        // server_c_addr: &str,
-        reader_c: &mut IMuxSync<R>,
-        writer_c: &mut IMuxSync<W>,
-        reader_a: &mut IMuxSync<R>,
-        writer_a: &mut IMuxSync<W>,
+    // pub fn online_server_c_protocol<'a,R: Read + Send, W: Write + Send,RNG: RngCore + CryptoRng>(
+    pub fn online_server_c_protocol<'a,RNG: RngCore + CryptoRng>(
+        server_a_addr: &str,
+        server_b_addr: &str,
+        server_c_addr: &str,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerCState<P>,
         rng: &mut RNG,
@@ -840,27 +891,30 @@ where
             // let serverc_listener = TcpListener::bind(server_c_addr).unwrap();
 
             for (i, layer) in neural_network.layers.iter().enumerate() {
+                let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
                 match layer {
                 Layer::NLL(NonLinearLayer::ReLU(dims)) => {
+                    println!("ReLU");
                     // for stream in serverc_listener.incoming() {
                     //     let stream = stream.expect("server connection failed!");
                     //     let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
                     //     let mut write_stream = IMuxSync::new(vec![stream]);
                     let share_c_labels = 
                         ReluProtocol::<P>::online_server_c_protocol(
-                            writer_c,
-                            reader_c,
+                            &mut writer_c,
+                            &mut reader_c,
                             num_relus,
                             &next_layer_input.as_slice().unwrap(),
                             rng,
                             // &mut server_c_offline,
                         );
+                        let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
                     // let stream_a =
                     //     TcpStream::connect(server_a_addr).expect("connecting to server failed");
                     // let mut reader_b = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
                     // let mut writer_a = IMuxSync::new(vec![stream_a]);
                         ReluProtocol::<P>::eval_server_c_protocol(
-                                            writer_a,
+                                            &mut writer_c,
                                             &Some(share_c_labels),
                                         );
                     
@@ -868,6 +922,7 @@ where
                 }
                 Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
                 Layer::LL(layer) => {
+                    println!("Linear");
                     let layer_randomizer = state.output_randomizer.get(&i).unwrap();
                     // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
                     //     next_layer_derandomizer
@@ -882,7 +937,7 @@ where
                     //     let mut read_stream =
                     //     IMuxSync::new(vec![stream.expect("server connection failed!")]);
                         LinearProtocol::online_server_protocol(
-                            reader_c,       // we only receive here, no messages to client
+                            &mut reader_c,       // we only receive here, no messages to client
                             &layer, // layer parameters
                             layer_randomizer,       // this is our `s` from above.
                             &next_layer_derandomizer,
