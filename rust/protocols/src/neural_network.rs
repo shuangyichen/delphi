@@ -581,7 +581,7 @@ where
         // let gc_server_c_state = server_c_state.gc_server_c_state.as_ref().unwrap();
         ReluProtocol::<P>::offline_server_c_protocol_2(
             writer_a,
-            &server_c_state.rc_prime_labels,
+            &server_c_state.rc_prime_labels.unwrap(),
         );
     }
 
