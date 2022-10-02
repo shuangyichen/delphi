@@ -711,6 +711,7 @@ where
                             //     .collect::<Vec<_>>();
                             // thread::sleep(time::Duration::from_millis(1000));
                             let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+                            println!("ReLU r2");
                             let output =ReluProtocol::eval_server_a_protocol(
                                                 &mut reader_c,
                                                 &mut rb_garbler_wires,
@@ -922,6 +923,7 @@ where
                             // &mut server_c_offline,
                         );
                         let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
+                        println!("ReLU r2");
                     // let stream_a =
                     //     TcpStream::connect(server_a_addr).expect("connecting to server failed");
                     // let mut reader_b = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);

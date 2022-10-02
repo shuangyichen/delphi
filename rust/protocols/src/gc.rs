@@ -626,7 +626,7 @@ where
         let in_msg: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         let mut rb_garbler_wires = in_msg.msg();
 
-        let flag: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
+        // let flag: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         // server_a_state.rb_garbler_wires = Some(rb_garbler_wires);
         rb_garbler_wires
         // println!("Receiving rb labels");
@@ -644,6 +644,20 @@ where
         rng: &mut RNG,
     ){
         //encode rb share and send it to server a
+
+        if number_of_relus != 0 {
+            let r_c = reader_c.get_mut_ref().remove(0);
+            let w_c = writer_c.get_mut_ref().remove(0);
+
+
+            let mut channel_c = Channel::new(r_c, w_c);
+            let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
+            // println!("Ready to send to server C ");
+            // ot_c.send(&mut channel_c, rc_labels.as_slice(), rng).unwrap();    //rc_next
+            ot_c.send(&mut channel_c, rc_labels, rng).unwrap(); 
+            println!("OT to server C online");
+            // timer_end!(ot_time);
+        }
         let num_garbler_inputs = 84;
         let mut rb_labels: Vec<Vec<Wire>> = Vec::with_capacity(number_of_relus); 
         let p = u128::from(u64::from(P::Field::characteristic()));
@@ -668,25 +682,25 @@ where
         let sent_message = ServerLabelMsgSend::new(rb_labels.as_slice());
         crate::bytes::serialize(writer_a, &sent_message).unwrap();
 
-        // println!("Sending rb labels");
+        println!("Sending rb labels");
 
         // OT with server c 
-        if number_of_relus != 0 {
-            let r_c = reader_c.get_mut_ref().remove(0);
-            let w_c = writer_c.get_mut_ref().remove(0);
+        // if number_of_relus != 0 {
+        //     let r_c = reader_c.get_mut_ref().remove(0);
+        //     let w_c = writer_c.get_mut_ref().remove(0);
 
 
-            let mut channel_c = Channel::new(r_c, w_c);
-            let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
-            // println!("Ready to send to server C ");
-            // ot_c.send(&mut channel_c, rc_labels.as_slice(), rng).unwrap();    //rc_next
-            ot_c.send(&mut channel_c, rc_labels, rng).unwrap(); 
-            println!("OT to server C online");
-            // timer_end!(ot_time);
-        }
-        let mut flag: Vec<i8> = vec![0; 4];
-        let sent_message = ServerMsgSend::new(&flag);
-        crate::bytes::serialize(writer_a, &sent_message).unwrap();
+        //     let mut channel_c = Channel::new(r_c, w_c);
+        //     let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
+        //     // println!("Ready to send to server C ");
+        //     // ot_c.send(&mut channel_c, rc_labels.as_slice(), rng).unwrap();    //rc_next
+        //     ot_c.send(&mut channel_c, rc_labels, rng).unwrap(); 
+        //     println!("OT to server C online");
+        //     // timer_end!(ot_time);
+        // }
+        // let mut flag: Vec<i8> = vec![0; 4];
+        // let sent_message = ServerMsgSend::new(&flag);
+        // crate::bytes::serialize(writer_a, &sent_message).unwrap();
 
     }
 
