@@ -42,6 +42,7 @@ pub type ClientGcMsgRcv = InMessage<(Vec<GarbledCircuit>, Vec<Wire>), ReluProtoc
 pub type ServerLabelMsgSend<'a> = OutMessage<'a, [Vec<Wire>], ReluProtocolType>;
 pub type ClientLabelMsgRcv = InMessage<Vec<Vec<Wire>>, ReluProtocolType>;
 pub type ServerLabelMsgRcv = InMessage<Vec<Wire>, ReluProtocolType>;
+pub type ServerMsgSend<'a> = OutMessage<'a, Vec<std::os::raw::c_char>, ReluProtocolType>;
 // pub type ServerLabelEvalSend<'a> = OutMessage<'a, &'a [Wire], ReluProtocolType>;
 pub type ServerLabelEvalSend<'a> = OutMessage<'a, Vec<Wire>, ReluProtocolType>;
 
@@ -624,6 +625,8 @@ where
     )->Vec<Vec<Wire>>{
         let in_msg: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         let mut rb_garbler_wires = in_msg.msg();
+
+        let flag: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         // server_a_state.rb_garbler_wires = Some(rb_garbler_wires);
         rb_garbler_wires
         // println!("Receiving rb labels");
@@ -681,6 +684,9 @@ where
             println!("OT to server C online");
             // timer_end!(ot_time);
         }
+        let mut flag: Vec<i8> = vec![0; 4];
+        let sent_message = ServerMsgSend::new(&flag);
+        crate::bytes::serialize(writer_a, &sent_message).unwrap();
 
     }
 
