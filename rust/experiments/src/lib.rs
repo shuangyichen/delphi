@@ -182,10 +182,11 @@ pub fn nn_server_a<R: RngCore + CryptoRng>(
             sa_state.num_relu,  //?
             &mut sa_state,
         );
-        let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-        // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+        // thread::sleep(time::Duration::from_millis(200));
+        // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+        let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
         NNProtocol::offline_server_a_protocol_r3(
-            &mut reader_c,
+            &mut reader_a,
             sa_state.num_relu,
             &mut sa_state,
         );
@@ -284,10 +285,10 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
             sc_state.num_relu,
             &mut sc_state,
         );
-        let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
-        // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+        // let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
+        let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
         NNProtocol::offline_server_c_protocol_r3(
-            &mut writer_c,
+            &mut writer_a,
             &mut sc_state,
         );
         sc_state
