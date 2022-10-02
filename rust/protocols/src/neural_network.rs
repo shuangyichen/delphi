@@ -578,10 +578,10 @@ where
         writer_a: &mut IMuxSync<W>,
         server_c_state: &mut ServerCState<P>,
     ){
-        let gc_server_c_state = server_c_state.gc_server_c_state.as_ref().unwrap();
+        // let gc_server_c_state = server_c_state.gc_server_c_state.as_ref().unwrap();
         ReluProtocol::<P>::offline_server_c_protocol_2(
             writer_a,
-            &gc_server_c_state.server_c_randomizer_labels,
+            &server_c_state.rc_prime_labels,
         );
     }
 
