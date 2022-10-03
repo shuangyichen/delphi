@@ -650,49 +650,8 @@ where
         rng: &mut RNG,
     ){
         //encode rb share and send it to server a
-        println!("b working");
+        // println!("b working");
 
-        let num_garbler_inputs = 84;
-        let mut rb_labels: Vec<Vec<Wire>> = Vec::with_capacity(number_of_relus); 
-        let p = u128::from(u64::from(P::Field::characteristic()));
-        let field_size = (p.next_power_of_two() * 2).trailing_zeros() as usize;
-        // for (enc_index,rb_label) in rb_labels.iter().enumerate() {  
-            // let mut arr = Vec::with_capacity((num_garbler_inputs / 2)); 
-        for (enc_index,enc) in encoders.iter().enumerate() {  
-            let mut arr = Vec::with_capacity(num_garbler_inputs / 2); 
-                let share = u128_from_share(shares[enc_index]);
-                let bits = fancy_garbling::util::u128_to_bits(share, field_size);
-                for (i,bit) in bits.iter().enumerate(){
-                    let label = enc.encode_garbler_input(*bit, i);
-                    arr.push(label);
-                }
-                rb_labels.push(arr);
-           
-        }  
-
-
-        println!("b sending");
-        println!("{}",rc_labels.len());
-
-        let sent_message = ServerLabelMsgSend::new(rb_labels.as_slice());
-        crate::bytes::serialize(writer_a, &sent_message).unwrap();
-
-        println!("Sending rb labels");
-
-        if number_of_relus != 0 {
-            println!("OT to server C online");
-            let r_c = reader_c.get_mut_ref().remove(0);
-            let w_c = writer_c.get_mut_ref().remove(0);
-
-
-            let mut channel_c = Channel::new(r_c, w_c);
-            let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
-            println!("Ready to send to server C ");
-            // ot_c.send(&mut channel_c, rc_labels.as_slice(), rng).unwrap();    //rc_next
-            ot_c.send(&mut channel_c, rc_labels, rng).unwrap(); 
-            println!("OT to server C online");
-            // timer_end!(ot_time);
-        }
         // let num_garbler_inputs = 84;
         // let mut rb_labels: Vec<Vec<Wire>> = Vec::with_capacity(number_of_relus); 
         // let p = u128::from(u64::from(P::Field::characteristic()));
@@ -712,12 +671,53 @@ where
         // }  
 
 
-
+        // println!("b sending");
+        // println!("{}",rc_labels.len());
 
         // let sent_message = ServerLabelMsgSend::new(rb_labels.as_slice());
         // crate::bytes::serialize(writer_a, &sent_message).unwrap();
 
         // println!("Sending rb labels");
+
+        if number_of_relus != 0 {
+            println!("OT to server C online");
+            let r_c = reader_c.get_mut_ref().remove(0);
+            let w_c = writer_c.get_mut_ref().remove(0);
+
+
+            let mut channel_c = Channel::new(r_c, w_c);
+            let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
+            println!("Ready to send to server C ");
+            // ot_c.send(&mut channel_c, rc_labels.as_slice(), rng).unwrap();    //rc_next
+            ot_c.send(&mut channel_c, rc_labels, rng).unwrap(); 
+            println!("OT to server C online");
+            // timer_end!(ot_time);
+        }
+        let num_garbler_inputs = 84;
+        let mut rb_labels: Vec<Vec<Wire>> = Vec::with_capacity(number_of_relus); 
+        let p = u128::from(u64::from(P::Field::characteristic()));
+        let field_size = (p.next_power_of_two() * 2).trailing_zeros() as usize;
+        // for (enc_index,rb_label) in rb_labels.iter().enumerate() {  
+            // let mut arr = Vec::with_capacity((num_garbler_inputs / 2)); 
+        for (enc_index,enc) in encoders.iter().enumerate() {  
+            let mut arr = Vec::with_capacity(num_garbler_inputs / 2); 
+                let share = u128_from_share(shares[enc_index]);
+                let bits = fancy_garbling::util::u128_to_bits(share, field_size);
+                for (i,bit) in bits.iter().enumerate(){
+                    let label = enc.encode_garbler_input(*bit, i);
+                    arr.push(label);
+                }
+                rb_labels.push(arr);
+           
+        }  
+
+
+
+
+        let sent_message = ServerLabelMsgSend::new(rb_labels.as_slice());
+        crate::bytes::serialize(writer_a, &sent_message).unwrap();
+
+        println!("Sending rb labels");
 
         // OT with server c 
         // if number_of_relus != 0 {

@@ -262,6 +262,7 @@ where
                     println!("ReLU");
                     relu_layers.push(i);
                     let (b, c, h, w) = dims.input_dimensions();
+                    println!("{} {} {} {}",b,c,h,w);
                     num_relu += b * c * h * w;
                 }
                 LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
@@ -270,7 +271,7 @@ where
                 LayerInfo::LL(dims, linear_layer_info) => {
                     let input_dims = dims.input_dimensions();
                     let output_dims = dims.output_dimensions();
-                    println!("{} {} {} {}",output_dims.0,output_dims.1,output_dims.2,output_dims.3);
+                    // println!("{} {} {} {}",output_dims.0,output_dims.1,output_dims.2,output_dims.3);
                     let (in_share, mut out_share) = match &linear_layer_info {
                         LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
                             let mut cg_handler = match &linear_layer_info {
@@ -367,6 +368,7 @@ where
         //     &current_layer_shares.as_slice(),
         //     rng,
         // ).unwrap();
+        println!("num relu {}", num_relu);
         Ok(ServerAState {
             gc_server_a_state:None,
             relu_circuits:None,
