@@ -748,7 +748,7 @@ where
         rng: &mut RNG,
         // server_c_state: &mut ServerCState<P>,
     )->Vec<Wire>{
-        println!("c OT");
+        println!("c num relu {}",number_of_relus);
         let p = u128::from(u64::from(P::Field::characteristic()));
         let field_size = (p.next_power_of_two() * 2).trailing_zeros() as usize;
         let mut rc_labels: Vec<Wire>= Vec::with_capacity(number_of_relus); 
@@ -784,6 +784,7 @@ where
             // }
         //     server_c_state.rc_labels = Some(rc_labels);
         // println!("Server C receive rc labels via OT");
+        println!("rc labels {}", rc_labels.len)();
         rc_labels
     }
        
@@ -800,10 +801,16 @@ where
     )-> Result<Vec<AdditiveShare<P>>, bincode::Error>{
         let in_msg: ServerLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         let rc_labels = in_msg.msg();
+        println!("rc labels {}",rc_labels.len());
 
         println!("Server A receive rc labels from server C");
 
         //GC eval
+        println!("rb labels {}",rb_labels.len());
+        println!("ra labels {}",ra_labels.len());
+        println!("rb_next_labels {}",rb_next_labels.len());
+        println!("rc_next_labels {}",rc_next_labels.len());
+        println!("evaluators {}",evaluators.len());
         let c = make_relu_3::<P>();
         let num_evaluator_inputs = c.num_evaluator_inputs();
         let num_garbler_inputs = c.num_garbler_inputs();
@@ -824,13 +831,17 @@ where
         ra_labels_.extend_from_slice(ra_labels);
         let mut eval_labels : Vec<Vec<Wire>>= ra_labels_.chunks(num_evaluator_inputs / 3).map(|x| x.to_vec()).collect();
         // ; 
+        println!("eval labels {}",eval_labels.len());
         eval_labels
             .iter_mut()
             .zip(rc_labels.chunks(num_evaluator_inputs / 3))
             .zip(rc_next_labels.chunks(num_evaluator_inputs / 3))
             .for_each(|((mut w1, w2),w3)| {
+                println!("w2 len {}",w2.len());
+                println!("w3 len {}",w3.len());
                 w1.extend_from_slice(w2);
                 w1.extend_from_slice(w3);
+                println!("w1 len {}",w1.len());
             });
             println!("evaluator labels {}",eval_labels[0].iter().count());
 
