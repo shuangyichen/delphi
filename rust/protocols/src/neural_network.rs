@@ -826,7 +826,8 @@ where
                 let layer_size = next_layer_input.len();
                 let layer_encoders =
                         &state.relu_encoder.as_ref().unwrap()[num_consumed_relus..(num_consumed_relus + layer_size)];
-                let rc_01_labels = &state.rc_01_labels.as_ref().unwrap()[num_consumed_relus..(num_consumed_relus + layer_size)];
+                println!("r 01 labels {}",&state.rc_01_labels.as_ref().unwrap().len());
+                let rc_01_labels = &state.rc_01_labels.as_ref().unwrap()[42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
                 ReluProtocol::<P>::online_server_b_protocol(
                                 &mut writer_b,
                                 &mut reader_c,
