@@ -270,6 +270,7 @@ where
                 LayerInfo::LL(dims, linear_layer_info) => {
                     let input_dims = dims.input_dimensions();
                     let output_dims = dims.output_dimensions();
+                    println!("{} {} {} {}",output_dims.0,output_dims.1,output_dims.2,output_dims.3);
                     let (in_share, mut out_share) = match &linear_layer_info {
                         LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
                             let mut cg_handler = match &linear_layer_info {
@@ -666,7 +667,7 @@ where
                     match nll_info {
                         NonLinearLayerInfo::ReLU => {
                             println!("ReLU");
-                            thread::sleep(time::Duration::from_millis(3000));
+                            // thread::sleep(time::Duration::from_millis(3000));
                             let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
                             // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
                             let layer_size = input.len();
@@ -863,6 +864,7 @@ where
                         &next_layer_derandomizer,
                         &mut next_layer_input, // this is where the result will go.
                     ).unwrap();
+                    println!("next layer input length b {}", next_layer_input.len());
                     next_layer_derandomizer = Output::zeros(layer.output_dimensions());
 
                     for share in next_layer_input.iter_mut() {
@@ -923,6 +925,7 @@ where
                     //     let mut write_stream = IMuxSync::new(vec![stream]);
                     let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
                     let layer_size = next_layer_input.len();
+                    println!("{}",layer_size);
                     let share_c_labels = 
                         ReluProtocol::<P>::online_server_c_protocol(
                             &mut writer_c,
@@ -970,6 +973,7 @@ where
                             &next_layer_derandomizer,
                             &mut next_layer_input, // this is where the result will go.
                         ).unwrap();
+                        println!("next layer input length c {}", next_layer_input.len());
                         next_layer_derandomizer = Output::zeros(layer.output_dimensions());
 
                         for share in next_layer_input.iter_mut() {
