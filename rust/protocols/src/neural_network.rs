@@ -672,7 +672,7 @@ where
                             // thread::sleep(time::Duration::from_millis(3000));
                             let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
                             // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
-                            let layer_size = input.len();
+                            let layer_size = next_layer_input.len();
                             let mut rb_garbler_wires : Vec<Vec<Wire>>  = Vec::with_capacity(layer_size);
                             // let servera_listener = TcpListener::bind(server_a_addr).unwrap();
                             // for stream in servera_listener.incoming() {
@@ -732,7 +732,7 @@ where
                             .into_shape(dims.output_dimensions())
                             .expect("shape should be correct")
                             .into();
-                            // let input = next_layer_input;
+                            let input = next_layer_input;
 
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {}
