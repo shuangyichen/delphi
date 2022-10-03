@@ -131,7 +131,7 @@ where
         // for i in 0..num_chunks {
         //     println!("i num chunks {}", i);
         let in_msg: ServerLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
-        println!("Server A receive");
+        // println!("Server A receive");
         let r_wire_chunks = in_msg.msg();
         // println!/"in msg length {}", r_wire_chunks.iter().count());
         // if i < (num_chunks - 1) {
@@ -197,7 +197,7 @@ where
         rc_next_labels.extend_from_slice(&server_c_randomizer_labels);
         let sent_message = ServerLabelEvalSend::new(&rc_next_labels);
         crate::bytes::serialize(writer, &sent_message).unwrap();
-        println!("Server C sent");
+        // println!("Server C sent");
     }
 
 
@@ -306,11 +306,11 @@ where
             let mut channel_c = Channel::new(r_c, w_c);
             let mut ot_a = OTSender::init(&mut channel_a, rng).unwrap();
             // println!("Ready to send to server A ");
-            println!("{}",labels_ra.len());
+            // println!("{}",labels_ra.len());
             ot_a.send(&mut channel_a, labels_ra.as_slice(), rng).unwrap();   //ra
             // println!("OT to server A ");
             let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
-            println!("{}",labels_rc_next.len());
+            // println!("{}",labels_rc_next.len());
             // println!("Ready to send to server C ");
             ot_c.send(&mut channel_c, labels_rc_next.as_slice(), rng).unwrap();    //rc_next
             
@@ -415,6 +415,8 @@ where
             gc_s.extend(gc_chunks);
             rb_wires.extend(r_wire_chunks);
         }
+        // println!("gc length {}",gc_s.len());
+        // println!("rb_wires length {}",rb_wires.len());
         let bs = shares
         .iter()
         .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
@@ -430,7 +432,7 @@ where
 
             let mut channel = Channel::new(r, w);
             let mut ot = OTReceiver::init(&mut channel, rng).expect("should work");
-            println!("{}",bs.len());
+            // println!("{}",bs.len());
             let labels = ot
                 .receive(&mut channel, bs.as_slice(), rng)
                 .expect("should work");
@@ -442,7 +444,7 @@ where
         } else {
             Vec::new()
         };
-
+        // println!("total ra labels {}",labels.len());
         Ok(ServerAState{
             gc_s,
             server_b_randomizer_labels:rb_wires,
@@ -628,7 +630,7 @@ where
         reader: &mut IMuxSync<R>,
         // server_a_state: &mut ServerAState,
     )->Vec<Vec<Wire>>{
-        println!("A receiving");
+        // println!("A receiving");
         let in_msg: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         let mut rb_garbler_wires = in_msg.msg();
 
@@ -801,28 +803,28 @@ where
     )-> Result<Vec<AdditiveShare<P>>, bincode::Error>{
         let in_msg: ServerLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         let rc_labels = in_msg.msg();
-        println!("rc labels {}",rc_labels.len());
+        // println!("rc labels {}",rc_labels.len());
 
-        println!("Server A receive rc labels from server C");
+        // println!("Server A receive rc labels from server C");
 
-        //GC eval
-        println!("rb labels {}",rb_labels.len());
-        println!("ra labels {}",ra_labels.len());
-        println!("rb_next_labels {}",rb_next_labels.len());
-        println!("rc_next_labels {}",rc_next_labels.len());
-        println!("evaluators {}",evaluators.len());
+        // //GC eval
+        // println!("rb labels {}",rb_labels.len());
+        // println!("ra labels {}",ra_labels.len());
+        // println!("rb_next_labels {}",rb_next_labels.len());
+        // println!("rc_next_labels {}",rc_next_labels.len());
+        // println!("evaluators {}",evaluators.len());
         let c = make_relu_3::<P>();
         let num_evaluator_inputs = c.num_evaluator_inputs();
         let num_garbler_inputs = c.num_garbler_inputs();
-        println!("num_garbler_inputs {}", num_garbler_inputs);
-        println!("num_evaluator_inputs {}", num_evaluator_inputs);
+        // println!("num_garbler_inputs {}", num_garbler_inputs);
+        // println!("num_evaluator_inputs {}", num_evaluator_inputs);
 
         //Concatnate garbler input
         rb_labels.iter_mut()
             .zip(rb_next_labels.chunks(num_garbler_inputs / 2))
             .for_each(|(w1, w2)| w1.extend_from_slice(w2));
         assert_eq!(num_relus, rb_labels.len());
-        println!("garbler labels {}",rb_labels[0].iter().count());
+        // println!("garbler labels {}",rb_labels[0].iter().count());
         // println!("evaluator 1 labels {}",ra_labels.iter().count());
         // println!("evaluator 2 labels {}",rc_labels.iter().count());
         // println!("evaluator 3 labels {}",rc_next_labels.iter().count());
@@ -831,20 +833,20 @@ where
         ra_labels_.extend_from_slice(ra_labels);
         let mut eval_labels : Vec<Vec<Wire>>= ra_labels_.chunks(num_evaluator_inputs / 3).map(|x| x.to_vec()).collect();
         // ; 
-        println!("eval labels {}",eval_labels.len());
+        // println!("eval labels {}",eval_labels.len());
         eval_labels
             .iter_mut()
             .zip(rc_labels.chunks(num_evaluator_inputs / 3))
             .zip(rc_next_labels.chunks(num_evaluator_inputs / 3))
             .for_each(|((mut w1, w2),w3)| {
-                println!("w2 len {}",w2.len());
-                println!("w3 len {}",w3.len());
+                // println!("w2 len {}",w2.len());
+                // println!("w3 len {}",w3.len());
                 w1.extend_from_slice(w2);
                 w1.extend_from_slice(w3);
-                println!("w1 len {}",w1.len());
+                // println!("w1 len {}",w1.len());
             });
-            println!("evaluator labels {}",eval_labels[0].iter().count());
-
+        // println!("evaluator labels {}",eval_labels[0].iter().count());
+        // let mut i:i32 = 0;
         let c = make_relu_3::<P>();
         let mut results = eval_labels
             .iter()
@@ -852,6 +854,10 @@ where
             .zip(rb_labels)
             .zip(evaluators)
             .map(|((eval_inps, garbler_inps), gc)| {
+                assert_eq!(126, eval_inps.len());
+                assert_eq!(84, garbler_inps.len());
+                // i += 1;
+                // println!("{}",i);
                 let mut c = c.clone();
                 let result = gc
                     .eval(&mut c, &garbler_inps, eval_inps)

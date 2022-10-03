@@ -690,11 +690,11 @@ where
                             // let stream_c = TcpStream::connect(server_c_addr).expect("connecting to server failed");
                             // let mut read_stream = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
                             let layer_ra_labels = &state.relu_server_a_labels.as_ref().unwrap()
-                                [num_consumed_relus..(num_consumed_relus + layer_size)];
+                                [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
                             let layer_rb_labels = &state.relu_server_b_labels.as_ref().unwrap()
-                                [num_consumed_relus..(num_consumed_relus + layer_size)];
+                                [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
                             let layer_rc_labels = &state.relu_server_c_labels.as_ref().unwrap()
-                                [num_consumed_relus..(num_consumed_relus + layer_size)];
+                                [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
                             let next_layer_randomizers = &state.relu_next_layer_randomizers
                                 [num_consumed_relus..(num_consumed_relus + layer_size)];
 

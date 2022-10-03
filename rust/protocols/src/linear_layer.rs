@@ -439,7 +439,8 @@ where
         layer: &LinearLayerInfo<AdditiveShare<P>, FixedPoint<P>>,
         next_layer_input: &mut Output<AdditiveShare<P>>,
     ) -> Result<(), bincode::Error> {
-        let start = timer_start!(|| "Linear online protocol");
+        println!("Function online_server_a_protocol");
+        // let start = timer_start!(|| "Linear online protocol");
         match layer {
             LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
                 let sent_message = MsgSend::new(x_s);
@@ -453,7 +454,7 @@ where
                 }
             }
         }
-        timer_end!(start);
+        // timer_end!(start);
         Ok(())
     }
 
@@ -469,6 +470,7 @@ where
         let mut input: Input<AdditiveShare<P>> = match &layer {
             LinearLayer::Conv2d { .. } | LinearLayer::FullyConnected { .. } => {
                 let recv: MsgRcv<P> = crate::bytes::deserialize(reader).unwrap();
+                println!("receving online msg from A");
                 recv.msg()
             }
             _ => Input::zeros(input_derandomizer.dim()),
