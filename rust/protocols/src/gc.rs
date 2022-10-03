@@ -306,11 +306,14 @@ where
             let mut channel_c = Channel::new(r_c, w_c);
             let mut ot_a = OTSender::init(&mut channel_a, rng).unwrap();
             // println!("Ready to send to server A ");
+            println!("{}",labels_ra.len());
             ot_a.send(&mut channel_a, labels_ra.as_slice(), rng).unwrap();   //ra
             // println!("OT to server A ");
             let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
+            println!("{}",labels_rc_next.len());
             // println!("Ready to send to server C ");
             ot_c.send(&mut channel_c, labels_rc_next.as_slice(), rng).unwrap();    //rc_next
+            
             // println!("OT to server C ");
             // timer_end!(ot_time);
         }
@@ -364,6 +367,7 @@ where
 
             let mut channel = Channel::new(r, w);
             let mut ot = OTReceiver::init(&mut channel, rng).expect("should work");
+            println!("{}", bs.len());
             let labels = ot
                 .receive(&mut channel, bs.as_slice(), rng)
                 .expect("should work");
@@ -426,6 +430,7 @@ where
 
             let mut channel = Channel::new(r, w);
             let mut ot = OTReceiver::init(&mut channel, rng).expect("should work");
+            println!("{}",bs.len());
             let labels = ot
                 .receive(&mut channel, bs.as_slice(), rng)
                 .expect("should work");
@@ -667,6 +672,7 @@ where
 
 
         println!("b sending");
+        println!("{}",rc_labels.len());
 
         let sent_message = ServerLabelMsgSend::new(rb_labels.as_slice());
         crate::bytes::serialize(writer_a, &sent_message).unwrap();
@@ -760,6 +766,7 @@ where
                     .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
                     .map(|b| b == 1)
                     .collect::<Vec<_>>();
+                    println!("{}",bs.len());
                     let labels = ot
                         .receive(&mut channel, bs.as_slice(), rng)
                         .expect("should work");
