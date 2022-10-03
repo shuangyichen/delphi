@@ -262,7 +262,7 @@ where
                     println!("ReLU");
                     relu_layers.push(i);
                     let (b, c, h, w) = dims.input_dimensions();
-                    println!("{} {} {} {}",b,c,h,w);
+                    // println!("{} {} {} {}",b,c,h,w);
                     num_relu += b * c * h * w;
                 }
                 LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
@@ -821,15 +821,15 @@ where
                 // let mut write_stream_c = IMuxSync::new(vec![stream_c]);
                 // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
                 let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
-                println!("b connected");
+                // println!("b connected");
                 let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-                println!("c connected");
+                // println!("c connected");
                 // let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
                 // println!("b connected");
                 let layer_size = next_layer_input.len();
                 let layer_encoders =
                         &state.relu_encoder.as_ref().unwrap()[num_consumed_relus..(num_consumed_relus + layer_size)];
-                println!("r 01 labels {}",&state.rc_01_labels.as_ref().unwrap().len());
+                // println!("r 01 labels {}",&state.rc_01_labels.as_ref().unwrap().len());
                 let rc_01_labels = &state.rc_01_labels.as_ref().unwrap()[42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
                 ReluProtocol::<P>::online_server_b_protocol(
                                 &mut writer_b,
@@ -857,6 +857,8 @@ where
                 //             *l_r += &inp.inner.inner;
                 //         });
                 // }
+                let (b, c, h, w) = layer.input_dimensions();
+                println!("input dimension {} {} {} {}",b,c,h,w);
                 next_layer_input = Output::zeros(layer.output_dimensions());
                 // for stream in serverb_listener.incoming() {
                     // let mut read_stream =
@@ -929,7 +931,7 @@ where
                     //     let mut write_stream = IMuxSync::new(vec![stream]);
                     let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
                     let layer_size = next_layer_input.len();
-                    println!("{}",layer_size);
+                    // println!("{}",layer_size);
                     let share_c_labels = 
                         ReluProtocol::<P>::online_server_c_protocol(
                             &mut writer_c,
@@ -966,6 +968,8 @@ where
                     //             *l_r += &inp.inner.inner;
                     //         });
                     // }
+                    let (b, c, h, w) = layer.input_dimensions();
+                    println!("input dimension {} {} {} {}",b,c,h,w);
                     next_layer_input = Output::zeros(layer.output_dimensions());
                     // for stream in serverc_listener.incoming() {
                     //     let mut read_stream =
