@@ -244,7 +244,7 @@ def serialize_weights_additive_share_test(model, save_path):
     np.save(os.path.join(save_path,"model2_test.npy"), network2_weights.astype(np.float64))
 
 
-def serialize_weights_aplit_additive_share(model, save_path,split):
+def serialize_weights_split_additive_share(model, save_path,split):
     # """Serialize Keras model into flattened numpy array in correct shape for Pytorch in Rust"""
     # All the weights need to be flattened into a single array for rust interopt
     network_weights = np.array([])
@@ -335,7 +335,7 @@ def serialize_weights_aplit_additive_share(model, save_path,split):
             network1_weights = np.concatenate((network1_weights, layer1_weights))
             layer2_weights = np.concatenate((A2.flatten(), b2.flatten()))
             network2_weights = np.concatenate((network2_weights, layer2_weights))
-    np.save(os.path.join(save_path,"model1.npy"), network_weights.astype(np.float64))
+    np.save(os.path.join(save_path,"model10.npy"), network_weights.astype(np.float64))
     np.save(os.path.join(save_path,"model21.npy"), network1_weights.astype(np.float64))
     np.save(os.path.join(save_path,"model22.npy"), network2_weights.astype(np.float64))
 
@@ -381,5 +381,5 @@ if __name__ == "__main__":
     # Serialize weights for Rust
     # serialize_weights(model, save_path)
     # serialize_weights_additive_share(model, save_path)
-    serialize_weights_additive_share_test(model, save_path)
-    # serialize_weights_additive_share(model, save_path,2)
+    # serialize_weights_additive_share_test(model, save_path)
+    serialize_weights_split_additive_share(model, save_path,2)
