@@ -227,6 +227,20 @@ where
         layer_randomness.into()
     }
 
+    pub fn transform_fp(
+        r2 : &Input<AdditiveShare<P>>,
+        input_dims: (usize, usize, usize, usize),
+    )-> Input<FixedPoint<P>>{
+        let layer_randomness = r2
+            .iter()
+            .map(|r: &AdditiveShare<P>| r.inner)
+            .collect::<Vec<_>>();
+        let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
+            .into_shape(input_dims)
+            .unwrap();
+        layer_randomness.into()
+    }
+
     pub fn transform_additive_share(
         r2 : &[AdditiveShare<P>],
         input_dims: (usize, usize, usize, usize),
@@ -657,7 +671,7 @@ where
         assert_eq!(first_layer_in_dims, input.dim());
         // let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
         let mut num_consumed_relus = 0;
-        let next_layer_input = input;
+        let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
         // let next_layer_input = input;
         
         for (i, layer) in architecture.layers.iter().enumerate() {
@@ -729,11 +743,17 @@ where
                                                 &next_layer_randomizers,
                                                 layer_size,
                                             ).unwrap();
-                            let next_layer_input:Input<FixedPoint<P>> =  ndarray::Array1::from_iter(output)
+                            let mut next_layer_input:Input<FixedPoint<P>> =  ndarray::Array1::from_iter(output)
                             .into_shape(dims.output_dimensions())
                             .expect("shape should be correct")
                             .into();
-                            let input = next_layer_input;
+                            // let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.output_dimensions()); 
+                            // next_layer_input.iter_mut().zip(input.iter_mut())
+                            // .for_each(|(a,b)|{
+                            //     *b = AdditiveShare::new(*a)
+                            // });
+                            // // let input = next_layer_input;
+                            // println!("Relu output {} {} {} {},", input.dim().0,input.dim().1,input.dim().2,input.dim().3);
 
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {}
@@ -746,13 +766,31 @@ where
                     let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
                     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
 
+                    // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
+                    //     next_layer_derandomizer
+                    //         .iter_mut()
+                    //         .zip(&next_layer_input)
+                    //         .for_each(|(l_r, inp)| {
+                    //             *l_r += &inp.inner.inner;
+                    //         });
+                    // }
+
                     // let mut writer_b =
                     //     IMuxSync::new(vec![TcpStream::connect(server_b_addr).unwrap()]);
                     // let mut writer_c =
                     //     IMuxSync::new(vec![TcpStream::connect(server_c_addr).unwrap()]);
+                    // if i != 0{
+                    let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
+                            next_layer_input.iter_mut().zip(input.iter_mut())
+                            .for_each(|(a,b)|{
+                                *b = AdditiveShare::new(*a)
+                            });
+                        // }
                     let mut next_layer_input = state.linear_post_application_share[&i].clone();
+                    
 
-
+                    assert_eq!(dims.input_dimensions(), input.dim());
+                    // let input = next_layer_input;
                     LinearProtocol::online_server_a_protocol(
                         &mut writer_b,
                         &mut writer_c,
@@ -760,16 +798,18 @@ where
                         &layer_info,
                         &mut next_layer_input,
                     ).unwrap();
-                    if i != (architecture.layers.len() - 1)
-                        && architecture.layers[i + 1].is_linear()
-                    {
-                        let randomizer = NNProtocol::transform(&state.linear_randomizer[&(i + 1)],dims.input_dimensions());
-                        next_layer_input.randomize_local_share(&randomizer);
-                    }
+                    // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
+                    // if i != (architecture.layers.len() - 1)
+                    //     && architecture.layers[i + 1].is_linear()
+                    // {
+                    //     let randomizer = NNProtocol::transform(&state.linear_randomizer[&(i + 1)],dims.input_dimensions());
+                    //     next_layer_input.randomize_local_share(&randomizer);
+                    // }
                     // let input = next_layer_input;
 
                     }
                 }
+                // let input = next_layer_input;
             }
         }
 
