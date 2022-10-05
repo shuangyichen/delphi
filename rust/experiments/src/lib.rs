@@ -170,6 +170,14 @@ pub fn nn_user<R: RngCore + CryptoRng>(
         rng,
         &mut client_state,
     );
+
+    NNProtocol::offline_client_relu_protocol(
+        &mut reader_a, 
+        &mut writer_a,
+        &architecture1,
+        rng,
+        &mut client_state,
+    );
 }
 
 pub fn nn_root_server<R: RngCore + CryptoRng>(
@@ -186,7 +194,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
 
     //***************Split 1 preprocessing  *********
-    let (sa_split1,pk) =  NNProtocol::offline_server_linear_protocol(&mut reader_a, &mut writer_a, &nn1, rng).unwrap();
+    let (mut sa_split1,pk) =  NNProtocol::offline_server_linear_protocol(&mut reader_a, &mut writer_a, &nn1, rng).unwrap();
     //***************Split 2 preprocessing   **********
 
     let (mut sa_state,cpk,rsmphe,lsmphe) = {
@@ -198,23 +206,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
                         &architecture2,
                         rng,
                     ).unwrap();
-                    // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
-                    // NNProtocol::offline_server_a_protocol_r2(
-                    //     &mut reader_b,
-                    //     &mut writer_b,
-                    //     rng,
-                    //     // &mut sa_state.relu_current_layer_output_shares,
-                    //     sa_state.num_relu,  //?
-                    //     &mut sa_state,
-                    // );
-                    // thread::sleep(time::Duration::from_millis(1000));
-                    // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-            
-                    // NNProtocol::offline_server_a_protocol_r3(
-                    //     &mut reader_c,
-                    //     sa_state.num_relu,
-                    //     &mut sa_state,
-                    // );
+               
                  (sa_state,cpk,rsmphe_,lsmphe_)
             };
     //l+1 layer linear preprocessing
@@ -230,6 +222,15 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &rsmphe,
         &lsmphe,
         &mut sa_state,
+    );
+    println!("l layer preprocessed");
+
+    NNProtocol::offline_server_relu_protocol(
+        &mut reader_a,
+        &mut writer_a,
+        &nn1,
+        rng,
+        &mut sa_split1,
     );
 
     // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);

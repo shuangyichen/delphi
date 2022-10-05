@@ -222,21 +222,27 @@ where
         rserver_cg:&mut SealRootServerCG,
         output_dims: (usize, usize, usize, usize),
     )-> Result<Output<AdditiveShare<P>>, bincode::Error>{
+        println!("offline_root_server_l_protocol ");
         let r_u: OfflineClientMsgRcv = crate::bytes::deserialize(readera).unwrap();
         let lserver_share_b: OfflineRootServerMsgRcv = crate::bytes::deserialize(readerb).unwrap();
         let lserver_share_c: OfflineRootServerMsgRcv = crate::bytes::deserialize(readerc).unwrap();
         let lserver_share_b_vec  = lserver_share_b.msg();
         let lserver_share_c_vec  = lserver_share_c.msg();
 
-        let result_ct = rserver_cg.l_online_process(lserver_share_b_vec[0].clone(),lserver_share_b_vec[1].clone(),lserver_share_c_vec[0].clone(),lserver_share_c_vec[1].clone(),r_u.msg());
-        rserver_cg.dis_decrypt(result_ct.clone());
 
+        println!("offline_root_server_l_protocol 2");
+        // let r_u: OfflineClientMsgRcv = crate::bytes::deserialize(readera).unwrap();
+        let result_ct = rserver_cg.l_online_process(lserver_share_b_vec[0].clone(),lserver_share_b_vec[1].clone(),lserver_share_c_vec[0].clone(),lserver_share_c_vec[1].clone(),r_u.msg());
+        println!("l online processing ");
+        rserver_cg.dis_decrypt(result_ct.clone());
+        // println!("l online processing ")
         let sent_message = OfflineServerMsgSend::new(&result_ct);
         crate::bytes::serialize(writerb, &sent_message).unwrap();
         crate::bytes::serialize(writerc, &sent_message).unwrap();
         let pd_b: OfflineServerMsgRcv = crate::bytes::deserialize(readerb).unwrap();
         let pd_c: OfflineServerMsgRcv = crate::bytes::deserialize(readerc).unwrap();
         rserver_cg.final_decrypt(pd_b.msg(), pd_c.msg());
+        println!("l final decrypt ");
         let mut share_next = Input::zeros(output_dims);
         rserver_cg.postprocess(&mut share_next);
         Ok(share_next)
@@ -318,10 +324,12 @@ where
           .for_each(|(a,b)|{
               *a = AdditiveShare::new(FixedPoint::from(*b))
           });
+        println!("r u preprocessing ");
         let mut r_u = user_cg.preprocess(&r1.to_repr());
 
         let sent_message = OfflineServerMsgSend::new(&r_u);
         crate::bytes::serialize(writer, &sent_message).unwrap();
+        println!("r u sent ");
 
         let layer_randomness = r2
             .iter()

@@ -283,9 +283,11 @@ where
     ){
         let lsmphe= crate::client_mphe_keygen(reader_a).unwrap();
         let total_num = state.linear_randomizer.iter().count();
+        let total_layer = neural_network_architecture.layers.iter().count();
+        // println!("total num {}", total_num);
 
         //define cg, processing the last layer
-        let layer = neural_network_architecture.layers.last().unwrap();
+        let layer = &neural_network_architecture.layers[total_layer-2];
         match layer {
             LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
             }
@@ -301,7 +303,7 @@ where
                                 println!("Conv2d");
                                 SealUserCG::Conv2D(user_cg::Conv2D::new(
                                     &lsmphe,
-                                    linear_layer_info,
+                                    &linear_layer_info,
                                     input_dims,
                                     output_dims,
                                 ))
@@ -310,14 +312,14 @@ where
                                 println!("FullyConnected");
                                 SealUserCG::FullyConnected(user_cg::FullyConnected::new(
                                     &lsmphe,
-                                    linear_layer_info,
+                                    &linear_layer_info,
                                     input_dims,
                                     output_dims,
                                 ))
                             }
                             _ => unreachable!(),
                         };
-                        
+                        println!("offline_user_l_protocol");
                         LinearProtocol::<P>::offline_user_l_protocol(
                             writer_a, 
                             &mut cg_handler,
@@ -325,7 +327,7 @@ where
                             rng,
                         ).unwrap()
                     }
-                    &&LinearLayerInfo::AvgPool { .. } | &&LinearLayerInfo::Identity => {Input::zeros(dims.input_dimensions())}
+                    &LinearLayerInfo::AvgPool { .. } | &LinearLayerInfo::Identity => {Input::zeros(dims.input_dimensions())}
             };
             state.linear_randomizer.insert(total_num,input_share);
         }
@@ -1401,6 +1403,24 @@ where
             relu_output_randomizers,
             approx_state,
         },pk))
+    }
+
+    pub fn offline_server_relu_protocol<R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
+        rng: &mut RNG,
+        state: &mut RootServerState<P>,
+    ){
+        let crate::gc::ServerState {
+                encoders: relu_encoders,
+                output_randomizers: relu_output_randomizers,
+            } = ReluProtocol::<P>::offline_server_protocol(reader, writer, state.num_relu, rng).unwrap();
+            // timer_end!(relu_time);
+
+        state.relu_encoders = Some(relu_encoders);
+        state.relu_output_randomizers = Some(relu_output_randomizers);
+
     }
 
     pub fn offline_server_linear_protocol<R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
