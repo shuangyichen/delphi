@@ -190,8 +190,11 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
 ){
     // Preprocessing
     let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+    println!("user connected");
     let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+    println!("server b connected");
     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+    println!("server c connected");
 
     //***************Split 1 preprocessing  *********
     let (mut sa_split1,pk) =  NNProtocol::offline_server_linear_protocol(&mut reader_a, &mut writer_a, &nn1, rng).unwrap();
