@@ -1433,9 +1433,10 @@ where
         // let mut num_approx = 0;
         let mut linear_state = BTreeMap::new();
         let (sfhe,pk) = crate::server_keygen(reader)?;
+        println!("plain pk received");
 
-        let start_time = timer_start!(|| "Server offline phase");
-        let linear_time = timer_start!(|| "Linear layers offline phase");
+        // let start_time = timer_start!(|| "Server offline phase");
+        // let linear_time = timer_start!(|| "Linear layers offline phase");
         for (i, layer) in neural_network.layers.iter().enumerate() {
             match layer {
                 Layer::NLL(NonLinearLayer::ReLU(dims)) => {
