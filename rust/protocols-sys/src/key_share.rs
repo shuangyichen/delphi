@@ -18,6 +18,17 @@ impl KeyShare {
         })
     }
 
+    pub fn mphe_receive(&mut self, mut cpk: Vec<std::os::raw::c_char>) -> LeafServerMPHE{
+        let mut cpk_ct = SerialCT {
+            inner: cpk.as_mut_ptr(),
+            size: cpk.len() as u64,
+        };
+        let lsmphe = unsafe{
+            client_mphe_keygen(cpk_ct)
+        };
+        lsmphe
+    }
+
     pub fn mphe_generate(&mut self) -> (LeafServerMPHE, Vec<std::os::raw::c_char>) {
         let lfmphe = unsafe { server_mphe_keygen(&mut self.0) };
         (lfmphe, unsafe {
@@ -39,6 +50,7 @@ impl KeyShare {
             inner: keys_vecs_c.as_mut_ptr(),
             size: keys_vecs_c.len() as u64,
         };
+
         let rsmphe = unsafe { server_mphe_aggregation_r1(ser_a_ct,ser_b_ct,ser_c_ct,&mut self.0) };
         (rsmphe, unsafe {
             from_raw_parts(self.0.inner, self.0.size as usize).to_vec()

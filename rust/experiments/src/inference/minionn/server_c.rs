@@ -1,7 +1,8 @@
 use experiments::nn_server_c;
 use clap::{App, Arg, ArgMatches};
 use experiments::minionn::construct_minionn;
-use experiments::minionn::construct_minionn_test;
+// use experiments::minionn::construct_minionn_test;
+use experiments::minionn::construct_minionn_second_split;
 use neural_network::{ndarray::Array4, npy::NpyData};
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
@@ -78,7 +79,7 @@ fn main(){
     let args = get_args();
 
     let weights_c = args.value_of("weights").unwrap();
-    let mut network_c = construct_minionn(None, 1, layers, &mut rng);
+    let mut network_c = construct_minionn_second_split(None, 1, layers, &mut rng,layers);
     // let mut network_c = construct_minionn_test(None, 1, layers, &mut rng);
     network_c.from_numpy(&weights_c).unwrap();
 
@@ -96,7 +97,7 @@ fn main(){
     // let server_c_addr = format!("{}:{}", ip_b, port_b);
     let server_a_addr = "10.30.0.5:8000";
     let server_b_addr = "10.30.8.15:8000";
-    let server_c_addr = "10.30.8.14:8000";
+    let server_c_addr = "10.30.0.12:8000";
 
 
     nn_server_c(&server_a_addr,&server_b_addr,&server_c_addr,&network_c,&mut rng);

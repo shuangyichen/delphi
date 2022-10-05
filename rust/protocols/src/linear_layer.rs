@@ -197,9 +197,8 @@ where
         // Ok(())
 
         let result_ct: OfflineServerMsgRcv = crate::bytes::deserialize(reader).unwrap();
-        println!("Rcv result ct");
+    
         let pd = lserver_cg.dis_decrypt(result_ct.msg());
-        println!("Server b c distribute decrypt");
         let sent_message = OfflineServerMsgSend::new(&pd);
         crate::bytes::serialize(writer, &sent_message).unwrap();
 
@@ -212,6 +211,127 @@ where
         //     .unwrap();
         // Ok((layer_randomness.into(),server_randomness))
         Ok((r2,server_randomness))
+    }
+
+    pub fn offline_root_server_l_protocol<'a,R: Read + Send, W: Write + Send>(
+        readera: &mut IMuxSync<R>,
+        readerb: &mut IMuxSync<R>,
+        readerc: &mut IMuxSync<R>,
+        writerb: &mut IMuxSync<W>,
+        writerc: &mut IMuxSync<W>,
+        rserver_cg:&mut SealRootServerCG,
+        output_dims: (usize, usize, usize, usize),
+    )-> Result<Output<AdditiveShare<P>>, bincode::Error>{
+        let r_u: OfflineClientMsgRcv = crate::bytes::deserialize(readera).unwrap();
+        let lserver_share_b: OfflineRootServerMsgRcv = crate::bytes::deserialize(readerb).unwrap();
+        let lserver_share_c: OfflineRootServerMsgRcv = crate::bytes::deserialize(readerc).unwrap();
+        let lserver_share_b_vec  = lserver_share_b.msg();
+        let lserver_share_c_vec  = lserver_share_c.msg();
+
+        let result_ct = rserver_cg.l_online_process(lserver_share_b_vec[0].clone(),lserver_share_b_vec[1].clone(),lserver_share_c_vec[0].clone(),lserver_share_c_vec[1].clone(),r_u.msg());
+        rserver_cg.dis_decrypt(result_ct.clone());
+
+        let sent_message = OfflineServerMsgSend::new(&result_ct);
+        crate::bytes::serialize(writerb, &sent_message).unwrap();
+        crate::bytes::serialize(writerc, &sent_message).unwrap();
+        let pd_b: OfflineServerMsgRcv = crate::bytes::deserialize(readerb).unwrap();
+        let pd_c: OfflineServerMsgRcv = crate::bytes::deserialize(readerc).unwrap();
+        rserver_cg.final_decrypt(pd_b.msg(), pd_c.msg());
+        let mut share_next = Input::zeros(output_dims);
+        rserver_cg.postprocess(&mut share_next);
+        Ok(share_next)
+
+    }
+
+    pub fn offline_leaf_server_l_protocol<R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        output_dims: (usize, usize, usize, usize),
+        lserver_cg: &mut SealLeafServerCG,
+        kernel: &Kernel<u64>,
+        rng: &mut RNG,
+    )-> Result<Output<P::Field>, bincode::Error> {
+        let mut server_r: Output<FixedPoint<P>> = Output::zeros(output_dims);
+        server_r.iter_mut()
+        .for_each(|s_r|{
+          *s_r  = FixedPoint::from(generate_random_number(rng).0)
+        });
+
+
+        let mut server_randomness: Output<P::Field> = Output::zeros(output_dims);
+        // let mut server_randomness: Output<AdditiveShare<P>> = Output::zeros(output_dims);
+        server_randomness.iter_mut()
+        .zip(server_r.iter_mut())
+        .for_each(|(s_ra,s_r)|{
+            *s_ra = (*s_r).inner
+        });
+
+        let mut server_randomness_c = Output::zeros(output_dims);
+        server_randomness_c
+            .iter_mut()
+            .zip(&server_randomness)
+            .for_each(|(e1, e2)| *e1 = e2.into_repr().0);
+
+        let (mut weight_ct_vec, mut s_ct_vec) = lserver_cg.l_preprocess(kernel, &server_randomness_c);
+        let  ct_send = vec![weight_ct_vec, s_ct_vec];
+
+        let sent_message =OfflineLeafServerMsgSend::new(&ct_send);
+        crate::bytes::serialize(writer, &sent_message).unwrap();
+        // Ok(())
+
+        let result_ct: OfflineServerMsgRcv = crate::bytes::deserialize(reader).unwrap();
+    
+        let pd = lserver_cg.dis_decrypt(result_ct.msg());
+        let sent_message = OfflineServerMsgSend::new(&pd);
+        crate::bytes::serialize(writer, &sent_message).unwrap();
+
+        //return
+        Ok(server_randomness)
+
+    }
+
+    pub fn offline_user_l_protocol<W: Write + Send, RNG: RngCore + CryptoRng>(
+        writer: &mut IMuxSync<W>,
+        user_cg: &mut SealUserCG,
+        input_dims: (usize, usize, usize, usize),
+        rng: &mut RNG,
+    )-> Result<Input<P::Field>, bincode::Error>{
+        let mut r1_ = Input::zeros(input_dims);
+        let mut r2_ = Input::zeros(input_dims);
+        // let (n1, n2) = generate_random_number(rng);
+        r1_.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(r_1,r_2)|{
+            (*r_1, *r_2) = generate_random_number(rng)
+          });
+
+        let mut r1: Input<AdditiveShare<P>>  = Input::zeros(input_dims); 
+        let mut r2: Input<AdditiveShare<P>>  = Input::zeros(input_dims);
+
+        r1.iter_mut()
+          .zip(r1_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+        r2.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+        let mut r_u = user_cg.preprocess(&r1.to_repr());
+
+        let sent_message = OfflineServerMsgSend::new(&r_u);
+        crate::bytes::serialize(writer, &sent_message).unwrap();
+
+        let layer_randomness = r2
+            .iter()
+            .map(|r: &AdditiveShare<P>| r.inner.inner)
+            .collect::<Vec<_>>();
+        let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
+            .into_shape(input_dims)
+            .unwrap();
+        //return r2
+        Ok(layer_randomness.into())
     }
 
 
@@ -484,5 +604,16 @@ where
         Ok(())
     }
 
+    pub fn online_server_receive_intermediate<R: Read + Send>(
+        reader: &mut IMuxSync<R>,
+    ) -> Result<Input<AdditiveShare<P>>, bincode::Error> {
+        // Receive client share and compute layer if conv or fc
+        let mut input: Input<AdditiveShare<P>> = {
+                let recv: MsgRcv<P> = crate::bytes::deserialize(reader).unwrap();
+                recv.msg()
+        };
+        
+        Ok(input)
+    }
 
 }

@@ -741,7 +741,7 @@ fn bindgen_test_layout_ServerFHE() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct RootServerMPHe {
+pub struct RootServerMPHE {
     pub context:    *mut ::std::os::raw::c_void,
     pub encoder:    *mut ::std::os::raw::c_void,
     pub encryptor:  *mut ::std::os::raw::c_void,
@@ -751,89 +751,88 @@ pub struct RootServerMPHe {
     pub zero:       *mut ::std::os::raw::c_char,
 }
 #[test]
-fn bindgen_test_layout_RootServerMPHe() {
+fn bindgen_test_layout_RootServerMPHE() {
     assert_eq!(
-        ::std::mem::size_of::<RootServerMPHe>(),
+        ::std::mem::size_of::<RootServerMPHE>(),
         56usize,
-        concat!("Size of: ", stringify!(RootServerMPHe))
+        concat!("Size of: ", stringify!(RootServerMPHE))
     );
     assert_eq!(
-        ::std::mem::align_of::<RootServerMPHe>(),
+        ::std::mem::align_of::<RootServerMPHE>(),
         8usize,
-        concat!("Alignment of ", stringify!(RootServerMPHe))
+        concat!("Alignment of ", stringify!(RootServerMPHE))
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).context as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).context as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHe),
+            stringify!(RootServerMPHE),
             "::",
             stringify!(context)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).encoder as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).encoder as *const _ as usize },
         8usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHe),
+            stringify!(RootServerMPHE),
             "::",
             stringify!(encoder)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).encryptor as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).encryptor as *const _ as usize },
         16usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHe),
+            stringify!(RootServerMPHE),
             "::",
             stringify!(encryptor)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).evaluator as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).evaluator as *const _ as usize },
         24usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHe),
+            stringify!(RootServerMPHE),
             "::",
             stringify!(evaluator)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).gal_keys as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).gal_keys as *const _ as usize },
         32usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHe),
+            stringify!(RootServerMPHE),
             "::",
             stringify!(gal_keys)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).relin_keys as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).relin_keys as *const _ as usize },
         40usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHe),
+            stringify!(RootServerMPHE),
             "::",
             stringify!(relin_keys)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<RootServerMPHe>())).zero as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<RootServerMPHE>())).zero as *const _ as usize },
         48usize,
         concat!(
             "Offset of field: ",
-            stringify!(RootServerMPHe),
+            stringify!(RootServerMPHE),
             "::",
             stringify!(zero)
         )
     );
 }
-pub type RootServerMPHE = RootServerMPHe;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct LeafServerMPHE {
@@ -1358,6 +1357,9 @@ extern "C" {
     ) -> RootServerMPHE;
 }
 extern "C" {
+    pub fn client_mphe_keygen(rec: SerialCT) -> LeafServerMPHE;
+}
+extern "C" {
     pub fn server_mphe_aggregation_r2(
         rsmphe: *mut RootServerMPHE,
         key_share0: SerialCT,
@@ -1413,6 +1415,36 @@ extern "C" {
         data: *const Metadata,
         filters: *const *const *const u64,
     ) -> *mut *mut *mut *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn user_conv_preprocess(
+        lfmphe: *const LeafServerMPHE,
+        data: *const Metadata,
+        image: *const *const u64,
+    ) -> LeafServerShares;
+}
+extern "C" {
+    pub fn user_fc_preprocess(
+        lfmphe: *const LeafServerMPHE,
+        data: *const Metadata,
+        vector: *const u64,
+    ) -> LeafServerShares;
+}
+extern "C" {
+    pub fn server_bc_l_conv_preprocess(
+        lsmphe: *const LeafServerMPHE,
+        data: *const Metadata,
+        filters: *const *const *const u64,
+        linear_share: *const *const u64,
+    ) -> LeafServerShares;
+}
+extern "C" {
+    pub fn server_bc_l_fc_preprocess(
+        lsmphe: *const LeafServerMPHE,
+        data: *const Metadata,
+        matrix: *const *const u64,
+        linear_share: *const u64,
+    ) -> LeafServerShares;
 }
 extern "C" {
     pub fn server_conv_preprocess_shares(
@@ -1541,6 +1573,17 @@ extern "C" {
     );
 }
 extern "C" {
+    pub fn root_server_l_conv_online(
+        rsmphe: *const RootServerMPHE,
+        data: *const Metadata,
+        serverB_ct_w: SerialCT,
+        serverB_ct_s: SerialCT,
+        serverC_ct_w: SerialCT,
+        serverC_ct_s: SerialCT,
+        user_r: SerialCT,
+    ) -> RootServerShares;
+}
+extern "C" {
     pub fn test_conv(
         rsmphe: *const RootServerMPHE,
         data: *const Metadata,
@@ -1574,6 +1617,17 @@ extern "C" {
         serverC_ct_s: SerialCT,
         root_share: *mut RootServerShares,
     );
+}
+extern "C" {
+    pub fn root_server_l_fc_online(
+        rsmphe: *const RootServerMPHE,
+        data: *const Metadata,
+        serverB_ct_w: SerialCT,
+        serverB_ct_s: SerialCT,
+        serverC_ct_w: SerialCT,
+        serverC_ct_s: SerialCT,
+        user_r_ct: SerialCT,
+    ) -> RootServerShares;
 }
 extern "C" {
     pub fn server_triples_online(

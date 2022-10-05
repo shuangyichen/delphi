@@ -46,6 +46,7 @@ pub trait RServerCG {
     fn preprocess(&mut self, r: &Input<u64>);
 
     fn online_process(&mut self, w_b: Vec<c_char>,r_b: Vec<c_char>,s_b: Vec<c_char>,w_c: Vec<c_char>,r_c: Vec<c_char>,s_c: Vec<c_char>)-> Vec<c_char>;
+    fn l_online_process(&mut self, w_b: Vec<c_char>,s_b: Vec<c_char>,w_c: Vec<c_char>,s_c: Vec<c_char>,r_u:Vec<c_char>)-> Vec<c_char>;
 
     fn dis_decrypt(&mut self, result_ct: Vec<c_char>);
 
@@ -70,6 +71,13 @@ impl<'a> SealRootServerCG<'a> {
         match self {
             Self::Conv2D(s) => s.online_process(w_b,r_b,s_b,w_c,r_c,s_c),
             Self::FullyConnected(s) => s.online_process(w_b,r_b,s_b,w_c,r_c,s_c),
+        }
+    }
+
+    pub fn l_online_process(&mut self,mut  w_b: Vec<c_char>,mut s_b: Vec<c_char>,mut w_c: Vec<c_char>,mut s_c: Vec<c_char>,mut r_u:Vec<c_char>)-> Vec<c_char>{
+        match self {
+            Self::Conv2D(s) => s.l_online_process(w_b,s_b,w_c,s_c,r_u),
+            Self::FullyConnected(s) => s.l_online_process(w_b,s_b,w_c,s_c,r_u),
         }
     }
 
@@ -189,6 +197,41 @@ impl<'a> RServerCG for Conv2D<'a> {
         };
 
         unsafe{root_server_conv_online(self.rsmphe, &self.data, wb_ct,rb_ct,sb_ct, wc_ct,rc_ct,sc_ct,&mut shares)};
+        // unsafe{test_conv(self.rsmphe, &self.data, wb_ct,rb_ct,sb_ct, wc_ct,rc_ct,sc_ct,&mut shares)};
+        self.shares = Some(shares);
+        let result_ct_vec = unsafe {
+            std::slice::from_raw_parts(shares.result_ct.inner, shares.result_ct.size as usize)
+                .to_vec()
+        };
+        result_ct_vec
+    }
+
+    fn l_online_process(&mut self,mut  w_b: Vec<c_char>,mut s_b: Vec<c_char>,mut w_c: Vec<c_char>,mut s_c: Vec<c_char>,mut r_u:Vec<c_char>)-> Vec<c_char>{
+        let wb_ct = SerialCT {
+            inner: w_b.as_mut_ptr(),
+            size: w_b.len() as u64,
+        };
+        let sb_ct = SerialCT {
+            inner: s_b.as_mut_ptr(),
+            size: s_b.len() as u64,
+        };
+
+        let wc_ct = SerialCT {
+            inner: w_c.as_mut_ptr(),
+            size: w_c.len() as u64,
+        };
+       
+        let sc_ct = SerialCT {
+            inner: s_c.as_mut_ptr(),
+            size: s_c.len() as u64,
+        };
+
+        let ru_ct = SerialCT {
+            inner: r_u.as_mut_ptr(),
+            size: r_u.len() as u64,
+        };
+
+        let shares = unsafe{root_server_l_conv_online(self.rsmphe, &self.data, wb_ct,sb_ct, wc_ct,sc_ct,ru_ct)};
         // unsafe{test_conv(self.rsmphe, &self.data, wb_ct,rb_ct,sb_ct, wc_ct,rc_ct,sc_ct,&mut shares)};
         self.shares = Some(shares);
         let result_ct_vec = unsafe {
@@ -336,6 +379,40 @@ impl<'a> RServerCG for FullyConnected<'a> {
         };
 
         unsafe{root_server_fc_online(self.rsmphe, &self.data, wb_ct,rb_ct,sb_ct, wc_ct,rc_ct,sc_ct,&mut shares)};
+        self.shares = Some(shares);
+        let result_ct_vec = unsafe {
+            std::slice::from_raw_parts(shares.result_ct.inner, shares.result_ct.size as usize)
+                .to_vec()
+        };
+        result_ct_vec
+    }
+
+    fn l_online_process(&mut self,mut w_b: Vec<c_char>,mut s_b: Vec<c_char>,mut w_c: Vec<c_char>,mut s_c: Vec<c_char>, mut r_u: Vec<c_char>)-> Vec<c_char>{
+        // let mut shares = self.shares.unwrap();
+        // let mut lshares = self.lshares.unwrap();
+        let wb_ct = SerialCT {
+            inner: w_b.as_mut_ptr(),
+            size: w_b.len() as u64,
+        };
+        let sb_ct = SerialCT {
+            inner: s_b.as_mut_ptr(),
+            size: s_b.len() as u64,
+        };
+
+        let wc_ct = SerialCT {
+            inner: w_c.as_mut_ptr(),
+            size: w_c.len() as u64,
+        };
+        let sc_ct = SerialCT {
+            inner: s_c.as_mut_ptr(),
+            size: s_c.len() as u64,
+        };
+        let ru_ct = SerialCT {
+            inner: r_u.as_mut_ptr(),
+            size: r_u.len() as u64,
+        };
+
+        let shares = unsafe{root_server_l_fc_online(self.rsmphe, &self.data, wb_ct,sb_ct, wc_ct,sc_ct,ru_ct)};
         self.shares = Some(shares);
         let result_ct_vec = unsafe {
             std::slice::from_raw_parts(shares.result_ct.inner, shares.result_ct.size as usize)

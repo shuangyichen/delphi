@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cargo +nightly run --release --bin minionn-server-a
+cargo +nightly run --release --bin minionn-server-a  -- --weights model10.npy

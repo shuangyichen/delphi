@@ -92,7 +92,7 @@ extern "C" {
         char* zero;
     } ServerFHE;
 
-    typedef struct RootServerMPHe {
+    typedef struct RootServerMPHE {
         void* context;
         void* encoder;
         void* encryptor;
@@ -189,6 +189,7 @@ extern "C" {
 
     // RootServerMPHE server_mphe_aggregation_r1(SerialCT key_share, SerialCT *key_share_r2);
     RootServerMPHE server_mphe_aggregation_r1(SerialCT key_share0, SerialCT key_share1, SerialCT key_share2, SerialCT *key_share_r2);
+    LeafServerMPHE client_mphe_keygen(SerialCT rec);
     // void server_mphe_aggregation_r1(SerialCT key_share0, SerialCT key_share1, SerialCT key_share2, SerialCT *key_share_r2);
     // void server_mphe_aggregation_r2(RootServerMPHE* rsmphe,vector<SerialCT> key_share);
     RootServerMPHE server_mphe_aggregation_r2(RootServerMPHE* rsmphe,SerialCT key_share0, SerialCT key_share1, SerialCT key_share2);
@@ -213,7 +214,12 @@ extern "C" {
     
     /* Preprocesses convolution filters */
     char**** server_conv_preprocess(const ServerFHE* sfhe, const Metadata* data, const uint64_t* const* const* filters);
-
+    LeafServerShares user_conv_preprocess(const LeafServerMPHE* lfmphe,const Metadata* data, const uint64_t* const* image);
+    LeafServerShares user_fc_preprocess(const LeafServerMPHE* lfmphe,const Metadata* data, const uint64_t* vector);
+    LeafServerShares server_bc_l_conv_preprocess(const LeafServerMPHE* lsmphe, const Metadata* data, 
+        const uint64_t* const* const* filters, const uint64_t* const* linear_share);
+    LeafServerShares server_bc_l_fc_preprocess(const LeafServerMPHE* lsmphe, const Metadata* data, 
+        const uint64_t* const* matrix, const uint64_t* linear_share);
     /* Converts secret shares to opaque SEAL Plaintexts for conv computation */        
     ServerShares server_conv_preprocess_shares(const ServerFHE* sfhe, const Metadata* data,
             const uint64_t* const* linear_share);
@@ -257,6 +263,7 @@ extern "C" {
     void root_server_conv_online(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,RootServerShares* serverAshares);
     void root_server_conv_online_test(const RootServerMPHE* rsmphe, const Metadata* data, char**** serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, char**** serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,
      RootServerShares* serverAshares);
+    RootServerShares root_server_l_conv_online(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w,SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_s,SerialCT user_r);
     void test_conv(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,
      RootServerShares* serverAshares);
     /* Performs matrix multiplication on the given inputs */
@@ -265,6 +272,7 @@ extern "C" {
 
     void root_server_fc_online(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w, SerialCT serverB_ct_r,SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_r,SerialCT serverC_ct_s,
       RootServerShares* root_share);
+    RootServerShares root_server_l_fc_online(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serverB_ct_w, SerialCT serverB_ct_s, SerialCT serverC_ct_w,SerialCT serverC_ct_s,SerialCT user_r_ct);
     /* Computes the encrypted client's share of multiplication triple */
     void server_triples_online(const ServerFHE* sfhe, SerialCT client_a, SerialCT client_b, ServerTriples* shares);
 

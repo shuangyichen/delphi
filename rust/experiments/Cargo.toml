@@ -97,6 +97,10 @@ name = "gc-server"
 path = "src/latency/gc/server.rs"
 
 [[bin]]
+name = "minionn-user"
+path = "src/inference/minionn/user.rs"
+
+[[bin]]
 name = "minionn-server-a"
 path = "src/inference/minionn/server_a.rs"
 

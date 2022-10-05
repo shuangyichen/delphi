@@ -50,6 +50,21 @@ pub fn client_keygen<W: Write + Send>(
     timer_end!(send_time);
     Ok(cfhe)
 }
+pub fn client_mphe_keygen<R: Read + Send>(
+    reader: &mut IMuxSync<R>,
+)->Result<LeafServerMPHE, bincode::Error>{
+    let keys: ServerKeyRcv = crate::bytes::deserialize(reader)?;
+    let mut key_share = KeyShare::new();
+    Ok(key_share.mphe_receive(keys.msg()))
+}
+
+pub fn deliver_cpk<W: Write + Send>(
+    writer: &mut IMuxSync<W>,
+    cpk: Vec<std::os::raw::c_char>,
+){
+    let sent_message = ClientKeySend::new(&cpk);
+    crate::bytes::serialize(writer, &sent_message).unwrap();
+}
 
 pub fn hello<W: Write + Send>(
     writer: &mut IMuxSync<W>,
@@ -63,16 +78,28 @@ pub fn hello<W: Write + Send>(
     // writer.flush().expect("could not flush");
     // writer.
 }
-
 pub fn server_keygen<R: Read + Send>(
     reader: &mut IMuxSync<R>,
-) -> Result<ServerFHE, bincode::Error> {
+) -> Result<(ServerFHE,Vec<std::os::raw::c_char>), bincode::Error> {
     let recv_time = timer_start!(|| "Receiving keys");
     let keys: ServerKeyRcv = crate::bytes::deserialize(reader)?;
     timer_end!(recv_time);
     let mut key_share = KeyShare::new();
-    Ok(key_share.receive(keys.msg()))
+    let keys_msg = keys.msg();
+    Ok((key_share.receive(keys_msg.clone()),keys_msg))
 }
+
+// pub fn root_server_keygen<R: Read + Send>(
+//     reader: &mut IMuxSync<R>,
+// ) -> Result<ServerFHE, bincode::Error> {
+//     let recv_time = timer_start!(|| "Receiving keys");
+//     let keys: ServerKeyRcv = crate::bytes::deserialize(reader)?;
+//     timer_end!(recv_time);
+//     // crate::bytes::serialize(writer1, &keys).unwrap();
+//     // crate::bytes::serialize(writer2, &keys).unwrap();
+//     let mut key_share = KeyShare::new();
+//     Ok(key_share.receive(keys.msg()))
+// }
 
 pub fn leaf_server_keygen_r1<W: Write + Send>(
     writer: &mut IMuxSync<W>,
@@ -117,8 +144,10 @@ pub fn root_server_keygen_r1<R: Read + Send, W: Send+ Write>(
     let mut key_share = KeyShare::new();
     let (mut lsmphe, mut keys_a) = key_share.mphe_generate();
     let mut key_share_root = KeyShare::new();
-    let (mut rsmphe,mut key_r1) = key_share.root_mphe_receive_r1(keys_a,keys_b.msg(),keys_c.msg());
+    let (mut rsmphe,mut key_r1 ) = key_share.root_mphe_receive_r1(keys_a,keys_b.msg(),keys_c.msg());
     // let (mut rsmphe,mut key_r1) = key_share.root_mphe_receive_r1(keys_a,info_b,info_c);
+    // let sent_message_cpk = ClientKeySend::new(&cpk);
+    // crate::bytes::serialize(writer0, &sent_message_cpk).unwrap();
     
     let sent_message = ClientKeySend::new(&key_r1);
     crate::bytes::serialize(writer1, &sent_message).unwrap();

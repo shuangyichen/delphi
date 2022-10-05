@@ -55,6 +55,19 @@ pub struct ServerState<P: FixedPointParameters> {
 unsafe impl<P: FixedPointParameters> Send for ServerState<P> {}
 unsafe impl<P: FixedPointParameters> Sync for ServerState<P> {}
 
+pub struct UserState<P: FixedPointParameters> {
+    pub relu_circuits: Option<Vec<GarbledCircuit>>,
+    pub relu_server_labels: Option<Vec<Vec<Wire>>>,
+    pub relu_client_labels: Option<Vec<Vec<Wire>>>,
+    pub relu_current_layer_randomizers: Vec<AdditiveShare<P>>,
+    pub relu_next_layer_randomizers: Vec<P::Field>,
+    /// Randomizers for the input of a linear layer.
+    pub linear_randomizer: BTreeMap<usize, Input<P::Field>>,
+    /// Shares of the output of a linear layer
+    pub linear_post_application_share: BTreeMap<usize, Output<AdditiveShare<P>>>,
+    pub num_relu: usize,
+}
+
 pub struct ClientState<P: FixedPointParameters> {
     pub relu_circuits: Vec<GarbledCircuit>,
     pub relu_server_labels: Vec<Vec<Wire>>,
@@ -254,6 +267,247 @@ where
         //     .unwrap();
         layer_randomness
     }
+
+    pub fn offline_user_l_protocol<R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
+        reader_a: &mut IMuxSync<R>,
+        writer_a: &mut IMuxSync<W>,
+        neural_network_architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
+        rng: &mut RNG,
+        state: &mut UserState<P>,
+    ){
+        let lsmphe= crate::client_mphe_keygen(reader_a).unwrap();
+        let total_num = state.linear_randomizer.iter().count();
+
+        //define cg, processing the last layer
+        let layer = neural_network_architecture.layers.last().unwrap();
+        match layer {
+            LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
+            }
+            LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
+            }
+            LayerInfo::LL(dims, linear_layer_info) => {
+                let input_dims = dims.input_dimensions();
+                let output_dims = dims.output_dimensions();
+                let input_share = match &linear_layer_info {
+                    LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
+                        let mut cg_handler = match &linear_layer_info {
+                            LinearLayerInfo::Conv2d { .. } => {
+                                println!("Conv2d");
+                                SealUserCG::Conv2D(user_cg::Conv2D::new(
+                                    &lsmphe,
+                                    linear_layer_info,
+                                    input_dims,
+                                    output_dims,
+                                ))
+                            }
+                            LinearLayerInfo::FullyConnected => {
+                                println!("FullyConnected");
+                                SealUserCG::FullyConnected(user_cg::FullyConnected::new(
+                                    &lsmphe,
+                                    linear_layer_info,
+                                    input_dims,
+                                    output_dims,
+                                ))
+                            }
+                            _ => unreachable!(),
+                        };
+                        
+                        LinearProtocol::<P>::offline_user_l_protocol(
+                            writer_a, 
+                            &mut cg_handler,
+                            input_dims,
+                            rng,
+                        ).unwrap()
+                    }
+                    &&LinearLayerInfo::AvgPool { .. } | &&LinearLayerInfo::Identity => {Input::zeros(dims.input_dimensions())}
+            };
+            state.linear_randomizer.insert(total_num,input_share);
+        }
+    }
+}
+
+    pub fn offline_server_a_l_protocol<'a,R: Read + Send, W: Write + Send>(
+        reader_a: &mut IMuxSync<R>,
+        writer_a: &mut IMuxSync<W>,
+        reader_b: &mut IMuxSync<R>,
+        writer_b: &mut IMuxSync<W>,
+        reader_c: &mut IMuxSync<R>,
+        writer_c: &mut IMuxSync<W>,
+        neural_network_architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
+        cpk: Vec<std::os::raw::c_char>,
+        rsmphe: &'a RootServerMPHE,
+        lsmphe: &'a LeafServerMPHE,
+        state:  &mut ServerAState<P>,
+    ){
+        crate::deliver_cpk(writer_a,cpk);
+        let layer = &neural_network_architecture.layers[0];
+
+        //processing the first layer
+        match layer {
+            LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
+            }
+            LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
+            }
+            LayerInfo::LL(dims, linear_layer_info) => {
+                let input_dims = dims.input_dimensions();
+                let output_dims = dims.output_dimensions();
+                let mut out_share = match &linear_layer_info {
+                    LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
+                        let mut cg_handler = match &linear_layer_info {
+                            LinearLayerInfo::Conv2d { .. } => {
+                                println!("Conv2d");
+                                SealRootServerCG::Conv2D(root_server_cg::Conv2D::new(
+                                    &rsmphe,
+                                    &lsmphe,
+                                    &linear_layer_info,
+                                    input_dims,
+                                    output_dims,
+                            ))
+                            }
+                            LinearLayerInfo::FullyConnected => {
+                                println!("FullyConnected");
+                                SealRootServerCG::FullyConnected(root_server_cg::FullyConnected::new(
+                                    &rsmphe,
+                                    &lsmphe,
+                                    &linear_layer_info,
+                                    input_dims,
+                                    output_dims,
+                                ))
+                            }
+                            _ => unreachable!(),
+                        };
+                        
+                        LinearProtocol::<P>::offline_root_server_l_protocol(
+                            reader_a,
+                            reader_b,
+                            reader_c,
+                            writer_b,
+                            writer_c,
+                            &mut cg_handler,
+                            output_dims,
+                        ).unwrap()
+                    }
+                    &&LinearLayerInfo::AvgPool { .. } | &&LinearLayerInfo::Identity => {
+                        Output::zeros(output_dims)
+                    }
+            };
+            state.linear_post_application_share.insert(0,out_share);
+            state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
+        }
+    }
+    // state.num_relu+=
+    }
+
+    pub fn offline_server_b_l_protocol<'a,R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
+        reader_b: &mut IMuxSync<R>,
+        writer_b: &mut IMuxSync<W>,
+        neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
+        lsmphe: &'a LeafServerMPHE,
+        rng: &mut RNG,
+        state: &mut ServerBState<P>,
+    ){
+        //processing the first layer
+        let layer = &neural_network.layers[0];
+        match layer {
+            Layer::NLL(NonLinearLayer::ReLU(dims)) => {
+                
+            }
+            Layer::NLL(NonLinearLayer::PolyApprox { dims, .. }) => {
+            }
+            Layer::LL(layer) => {
+                let  output_randomizer = match &layer {
+                    LinearLayer::Conv2d { .. } | LinearLayer::FullyConnected { .. } => {
+                        let mut cg_handler = match &layer {
+                            LinearLayer::Conv2d { .. } => SealLeafServerCG::Conv2D(leaf_server_cg::Conv2D::new(
+                                &lsmphe,
+                                &layer,
+                            )),
+                            LinearLayer::FullyConnected { .. } => {
+                                SealLeafServerCG::FullyConnected(leaf_server_cg::FullyConnected::new(
+                                    &lsmphe,
+                                    &layer,
+                                ))
+                            }
+                            _ => unreachable!(),
+                        };
+                        LinearProtocol::<P>::offline_leaf_server_l_protocol(
+                            reader_b,
+                            writer_b,
+                            layer.output_dimensions(),
+                            &mut cg_handler,
+                            &layer.kernel_to_repr(),
+                            rng).unwrap()
+                    }
+                    // AvgPool and Identity don't require an offline phase
+                    LinearLayer::AvgPool { dims, .. } => {
+                        Output::zeros(dims.output_dimensions())
+                    }
+                    LinearLayer::Identity { dims } =>  {
+                        Output::zeros(dims.output_dimensions())
+                    }
+                    // (Input::zeros(dims.input_dimensions()),Output::zeros(dims.output_dimensions())),
+                };
+                state.output_randomizer.insert(0,output_randomizer);
+                state.num_relu += layer.output_dimensions().0*layer.output_dimensions().1*layer.output_dimensions().2*layer.output_dimensions().3;
+            }
+        }
+    }
+
+    pub fn offline_server_c_l_protocol<'a ,R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
+        reader_c: &mut IMuxSync<R>,
+        writer_c: &mut IMuxSync<W>,
+        neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
+        lsmphe: &'a LeafServerMPHE,
+        rng: &mut RNG,
+        state: &mut ServerCState<P>,
+    ){
+        //processing the first layer
+        let layer = &neural_network.layers[0];
+        match layer {
+            Layer::NLL(NonLinearLayer::ReLU(dims)) => {
+                
+            }
+            Layer::NLL(NonLinearLayer::PolyApprox { dims, .. }) => {
+            }
+            Layer::LL(layer) => {
+                let  output_randomizer = match &layer {
+                    LinearLayer::Conv2d { .. } | LinearLayer::FullyConnected { .. } => {
+                        let mut cg_handler = match &layer {
+                            LinearLayer::Conv2d { .. } => SealLeafServerCG::Conv2D(leaf_server_cg::Conv2D::new(
+                                &lsmphe,
+                                &layer,
+                            )),
+                            LinearLayer::FullyConnected { .. } => {
+                                SealLeafServerCG::FullyConnected(leaf_server_cg::FullyConnected::new(
+                                    &lsmphe,
+                                    &layer,
+                                ))
+                            }
+                            _ => unreachable!(),
+                        };
+                        LinearProtocol::<P>::offline_leaf_server_l_protocol(
+                            reader_c,
+                            writer_c,
+                            layer.output_dimensions(),
+                            &mut cg_handler,
+                            &layer.kernel_to_repr(),
+                            rng).unwrap()
+                    }
+                    // AvgPool and Identity don't require an offline phase
+                    LinearLayer::AvgPool { dims, .. } => {
+                        Output::zeros(dims.output_dimensions())
+                        // (Input::zeros(dims.input_dimensions()),Output::zeros(dims.output_dimensions()))
+                    }
+                    LinearLayer::Identity { dims } =>  {Output::zeros(dims.output_dimensions())}
+                    // (Input::zeros(dims.input_dimensions()),Output::zeros(dims.output_dimensions())),
+                };
+                state.output_randomizer.insert(0,output_randomizer);
+                state.num_relu += layer.output_dimensions().0*layer.output_dimensions().1*layer.output_dimensions().2*layer.output_dimensions().3;
+            }
+        }
+    }
+
+
     pub fn offline_server_a_protocol<R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
         reader_b: &mut IMuxSync<R>,
         writer_b: &mut IMuxSync<W>,
@@ -261,16 +515,17 @@ where
         writer_c: &mut IMuxSync<W>,
         neural_network_architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         rng: &mut RNG,
-    )-> Result<ServerAState<P>, bincode::Error>{
+    )-> Result<(ServerAState<P>,Vec<std::os::raw::c_char>,RootServerMPHE,LeafServerMPHE), bincode::Error>{
         let mut num_relu = 0;
         let mut in_shares = BTreeMap::new();
         let mut out_shares = BTreeMap::new();
         let mut relu_layers = Vec::new();
-        let (mut rsmphe_, mut lsmphe_, rlk_r1 )= crate::root_server_keygen_r1(reader_b,reader_c,writer_b, writer_c);
+        let (mut rsmphe_, mut lsmphe_, rlk_r1)= crate::root_server_keygen_r1(reader_b,reader_c,writer_b, writer_c);
 
-        let (lsmphe, rsmphe)= crate::root_server_keygen_r2(lsmphe_, rsmphe_, rlk_r1, reader_b,reader_c);
+        let (lsmphe, rsmphe)= crate::root_server_keygen_r2(lsmphe_, rsmphe_, rlk_r1.clone(), reader_b,reader_c);
 
         for (i, layer) in neural_network_architecture.layers.iter().enumerate() {
+            if i>1{
             match layer {
                 LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
                     println!("ReLU");
@@ -358,6 +613,7 @@ where
                 }
             }
         }
+        }
 
         let mut current_layer_shares = Vec::new(); //Fr-s
         let mut relu_next_layer_randomizers = Vec::new(); //ra'
@@ -383,7 +639,7 @@ where
         //     rng,
         // ).unwrap();
         println!("num relu {}", num_relu);
-        Ok(ServerAState {
+        Ok((ServerAState {
             gc_server_a_state:None,
             relu_circuits:None,
             relu_server_a_labels:None,
@@ -394,7 +650,7 @@ where
             linear_randomizer: in_shares,
             linear_post_application_share: out_shares,
             num_relu:num_relu,
-        })
+        },rlk_r1,rsmphe,lsmphe))
         
     }
 
@@ -403,15 +659,17 @@ where
         writer: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         rng: &mut RNG,
-    )-> Result<ServerBState<P>, bincode::Error>{
+    )-> Result<(ServerBState<P>,LeafServerMPHE), bincode::Error>{
         let mut num_relu = 0;
         let mut r_vec = BTreeMap::new();
         let mut s_vec = BTreeMap::new();
+        // let sfhe: ServerFHE = crate::server_keygen(reader)?;
 
         let lsmphe_:LeafServerMPHE = crate::leaf_server_keygen_r1(writer).unwrap();
         let lsmphe: LeafServerMPHE = crate::leaf_server_keygen_r2(lsmphe_, reader,writer);
 
         for (i, layer) in neural_network.layers.iter().enumerate() {
+            if i>1{
             match layer {
                 Layer::NLL(NonLinearLayer::ReLU(dims)) => {
                     let (b, c, h, w) = dims.input_dimensions();
@@ -455,17 +713,18 @@ where
                 }
             }
         }
+        }
 
 
        
-        Ok(ServerBState {
+        Ok((ServerBState {
             input_randomizer:r_vec,
             output_randomizer:s_vec,
             relu_encoder:None,
             gc_server_b_state:None,
             rc_01_labels: None,
             num_relu:num_relu,
-        })
+        },lsmphe))
 
 
     }
@@ -475,15 +734,17 @@ where
         writer: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         rng: &mut RNG,
-    )-> Result<ServerCState<P>, bincode::Error>{
+    )-> Result<(ServerCState<P>,LeafServerMPHE), bincode::Error>{
         let mut num_relu = 0;
         let mut r_vec = BTreeMap::new();
         let mut s_vec = BTreeMap::new();
+        // let sfhe: ServerFHE = crate::server_keygen(reader)?;
 
         let lsmphe_:LeafServerMPHE = crate::leaf_server_keygen_r1(writer).unwrap();
         let lsmphe: LeafServerMPHE = crate::leaf_server_keygen_r2(lsmphe_, reader,writer);
 
         for (i, layer) in neural_network.layers.iter().enumerate() {
+            if i>1{
             match layer {
                 Layer::NLL(NonLinearLayer::ReLU(dims)) => {
                     let (b, c, h, w) = dims.input_dimensions();
@@ -527,16 +788,17 @@ where
                 }
             }
         }
+        }
 
 
        
-        Ok(ServerCState {
+        Ok((ServerCState {
             input_randomizer:r_vec,
             output_randomizer:s_vec,
             gc_server_c_state:None,
             rc_prime_labels:None,
             num_relu:num_relu,
-        })
+        },lsmphe))
 
 
     }
@@ -1054,11 +1316,11 @@ where
         writer: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         rng: &mut RNG,
-    ) -> Result<ServerState<P>, bincode::Error> {
+    ) -> Result<(ServerState<P>,Vec<std::os::raw::c_char>), bincode::Error> {
         let mut num_relu = 0;
         let mut num_approx = 0;
         let mut linear_state = BTreeMap::new();
-        let sfhe: ServerFHE = crate::server_keygen(reader)?;
+        let (sfhe,pk) = crate::server_keygen(reader)?;
 
         let start_time = timer_start!(|| "Server offline phase");
         let linear_time = timer_start!(|| "Linear layers offline phase");
@@ -1127,12 +1389,182 @@ where
         )?;
         timer_end!(approx_time);
         timer_end!(start_time);
-        Ok(ServerState {
+        Ok((ServerState {
             linear_state,
             relu_encoders,
             relu_output_randomizers,
             approx_state,
+        },pk))
+    }
+
+    pub fn offline_client_linear_protocol<R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        neural_network_architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
+        rng: &mut RNG,
+    ) -> Result<UserState<P>, bincode::Error> {
+        let mut num_relu = 0;
+        let mut in_shares = BTreeMap::new();
+        let mut out_shares = BTreeMap::new();
+        let mut relu_layers = Vec::new();
+        // let mut approx_layers = Vec::new();
+        let cfhe: ClientFHE = crate::client_keygen(writer)?;
+        let layer_total = neural_network_architecture.layers.iter().count();
+
+        for (i, layer) in neural_network_architecture.layers.iter().enumerate() {
+            if i< layer_total-1{
+            match layer {
+                LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
+                    relu_layers.push(i);
+                    let (b, c, h, w) = dims.input_dimensions();
+                    num_relu += b * c * h * w;
+                }
+                LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
+                    
+                }
+                LayerInfo::LL(dims, linear_layer_info) => {
+                    let input_dims = dims.input_dimensions();
+                    let output_dims = dims.output_dimensions();
+                    let (in_share, mut out_share) = match &linear_layer_info {
+                        LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
+                            let mut cg_handler = match &linear_layer_info {
+                                LinearLayerInfo::Conv2d { .. } => {
+                                    println!("Conv");
+                                    SealClientCG::Conv2D(client_cg::Conv2D::new(
+                                        &cfhe,
+                                        linear_layer_info,
+                                        input_dims,
+                                        output_dims,
+                                    ))
+                                }
+                                LinearLayerInfo::FullyConnected => {
+                                    println!("FC");
+                                    SealClientCG::FullyConnected(client_cg::FullyConnected::new(
+                                        &cfhe,
+                                        linear_layer_info,
+                                        input_dims,
+                                        output_dims,
+                                    ))
+                                }
+                                _ => unreachable!(),
+                            };
+                            LinearProtocol::<P>::offline_client_protocol(
+                                reader,
+                                writer,
+                                layer.input_dimensions(),
+                                layer.output_dimensions(),
+                                &mut cg_handler,
+                                rng,
+                            )?
+                        }
+                        _ => {
+                            // AvgPool and Identity don't require an offline communication
+                            if out_shares.keys().any(|k| k == &(i - 1)) {
+                                // If the layer comes after a linear layer, apply the function to
+                                // the last layer's output share
+                                let prev_output_share = out_shares.get(&(i - 1)).unwrap();
+                                let mut output_share = Output::zeros(dims.output_dimensions());
+                                linear_layer_info
+                                    .evaluate_naive(prev_output_share, &mut output_share);
+                                (Input::zeros(dims.input_dimensions()), output_share)
+                            } else {
+                                // Otherwise, just return randomizers of 0
+                                (
+                                    Input::zeros(dims.input_dimensions()),
+                                    Output::zeros(dims.output_dimensions()),
+                                )
+                            }
+                        }
+                    };
+
+                    // We reduce here becase the input to future layers requires
+                    // shares to already be reduced correctly; for example,
+                    // `online_server_protocol` reduces at the end of each layer.
+                    for share in &mut out_share {
+                        share.inner.signed_reduce_in_place();
+                    }
+                    // r
+                    in_shares.insert(i, in_share);
+                    // -(Lr + s)
+                    out_shares.insert(i, out_share);
+                }
+            }
+        }
+        }
+         let mut current_layer_shares = Vec::new();
+         let mut relu_next_layer_randomizers = Vec::new();
+         let relu_time =
+             timer_start!(|| format!("ReLU layers offline phase with {} ReLUs", num_relu));
+         for &i in &relu_layers {
+             let current_layer_output_shares = out_shares
+                 .get(&(i - 1))
+                 .expect("should exist because every ReLU should be preceeded by a linear layer");
+             current_layer_shares.extend_from_slice(current_layer_output_shares.as_slice().unwrap());
+ 
+             let next_layer_randomizers = in_shares
+                 .get(&(i + 1))
+                 .expect("should exist because every ReLU should be succeeded by a linear layer");
+             relu_next_layer_randomizers
+                 .extend_from_slice(next_layer_randomizers.as_slice().unwrap());
+         }
+        Ok(UserState {
+            relu_circuits:None,
+            relu_server_labels:None,
+            relu_client_labels:None,
+            relu_current_layer_randomizers:current_layer_shares,
+            relu_next_layer_randomizers,
+            linear_randomizer: in_shares,
+            linear_post_application_share: out_shares,
+            num_relu,
         })
+
+    }
+    pub fn offline_client_relu_protocol<R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        neural_network_architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
+        rng: &mut RNG,
+        state: &mut UserState<P>,
+    )  {
+        let crate::gc::ClientState {
+            gc_s: relu_circuits,
+            server_randomizer_labels: randomizer_labels,
+            client_input_labels: relu_labels,
+        } = ReluProtocol::<P>::offline_client_protocol(
+            reader,
+            writer,
+            state.num_relu,
+            state.relu_current_layer_randomizers.as_slice(),
+            rng,
+        ).unwrap();
+
+        let (relu_client_labels, relu_server_labels) = if state.num_relu != 0 {
+            let size_of_client_input = relu_labels.len() / state.num_relu;
+            let size_of_server_input = randomizer_labels.len() / state.num_relu;
+
+            assert_eq!(
+                size_of_client_input,
+                ReluProtocol::<P>::size_of_client_inputs(),
+                "number of inputs unequal"
+            );
+
+            let client_labels = relu_labels
+                .chunks(size_of_client_input)
+                .map(|chunk| chunk.to_vec())
+                .collect();
+            let server_labels = randomizer_labels
+                .chunks(size_of_server_input)
+                .map(|chunk| chunk.to_vec())
+                .collect();
+
+            (client_labels, server_labels)
+        } else {
+            (vec![], vec![])
+        };
+        state.relu_circuits = Some(relu_circuits);
+        state.relu_server_labels = Some(relu_server_labels);
+        state.relu_client_labels = Some(relu_client_labels);
+        
     }
 
     pub fn offline_client_protocol<R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
@@ -1314,7 +1746,7 @@ where
         writer: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerState<P>,
-    ) -> Result<(), bincode::Error> {
+    ) -> Result<Input<AdditiveShare<P>>, bincode::Error> {
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
             assert!(
@@ -1412,10 +1844,12 @@ where
                 }
             }
         }
-        let sent_message = MsgSend::new(&next_layer_input);
-        crate::bytes::serialize(writer, &sent_message)?;
-        timer_end!(start_time);
-        Ok(())
+
+        let next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
+        // let sent_message = MsgSend::new(&next_layer_input);
+        // crate::bytes::serialize(writer, &sent_message)?;
+        // timer_end!(start_time);
+        Ok(next_input)
     }
 
 
