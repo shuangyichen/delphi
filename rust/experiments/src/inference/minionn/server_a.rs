@@ -85,7 +85,7 @@ fn main() {
     // let ip_c = args.value_of("ip_a").unwrap();
     // let port_c = args.value_of("port_a").unwrap_or("8000");
     // let server_c_addr = format!("{}:{}", ip_b, port_b);
-    let server_a_addr = "10.30.0.5:8000";
+    let server_a_addr = "10.30.8.3:8000";
     let server_b_addr = "10.30.8.15:8000";
     let server_c_addr = "10.30.0.12:8000";
     let split_layer:usize = 1;
