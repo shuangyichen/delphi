@@ -11,6 +11,7 @@ use std::io::Read;
 use std::path::Path;
 use rand::ChaChaRng;
 use rand::SeedableRng;
+use experiments::nn_user;
 const RANDOMNESS: [u8; 32] = [
     0x11, 0xe0, 0x8f, 0xbc, 0x89, 0xa7, 0x34, 0x01, 0x45, 0x86, 0x82, 0xb6, 0x51, 0xda, 0xf4, 0x76,
     0x5d, 0xc9, 0x8d, 0xea, 0x23, 0xf2, 0x90, 0x8f, 0x9d, 0x03, 0xf2, 0x77, 0xd3, 0x4a, 0x52, 0xd2,
@@ -118,7 +119,7 @@ fn main() {
     //           *a = AdditiveShare::new(FixedPoint::from(*b))
     //       });
 
-    nn_client(&server_a_addr,&architecture,(image.clone()).into(),&mut rng);
+    nn_user(&server_a_addr,&architecture,(image.clone()).into(),&mut rng);
 
 }
 

@@ -50,6 +50,12 @@ pub struct ServerState<P: FixedPointParameters> {
     pub relu_output_randomizers: Vec<P::Field>,
     pub approx_state: Vec<Triple<P::Field>>,
 }
+pub struct RootServerState<P: FixedPointParameters> {
+    pub linear_state: BTreeMap<usize, Output<P::Field>>,
+    pub relu_encoders: Option<Vec<Encoder>>,
+    pub relu_output_randomizers: Option<Vec<P::Field>>,
+    pub num_relu: usize,
+}
 // This is a hack since Send + Sync aren't implemented for the raw pointer types
 // Not sure if there's a cleaner way to guarantee this
 unsafe impl<P: FixedPointParameters> Send for ServerState<P> {}
@@ -1397,6 +1403,93 @@ where
         },pk))
     }
 
+    pub fn offline_server_linear_protocol<R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
+        rng: &mut RNG,
+    ) -> Result<(RootServerState<P>,Vec<std::os::raw::c_char>), bincode::Error> {
+        let mut num_relu = 0;
+        // let mut num_approx = 0;
+        let mut linear_state = BTreeMap::new();
+        let (sfhe,pk) = crate::server_keygen(reader)?;
+
+        let start_time = timer_start!(|| "Server offline phase");
+        let linear_time = timer_start!(|| "Linear layers offline phase");
+        for (i, layer) in neural_network.layers.iter().enumerate() {
+            match layer {
+                Layer::NLL(NonLinearLayer::ReLU(dims)) => {
+                    println!("ReLU");
+                    let (b, c, h, w) = dims.input_dimensions();
+                    num_relu += b * c * h * w;
+                }
+                Layer::NLL(NonLinearLayer::PolyApprox { dims, .. }) => {
+                    // let (b, c, h, w) = dims.input_dimensions();
+                    // num_approx += b * c * h * w;
+                }
+                Layer::LL(layer) => {
+                    let randomizer = match &layer {
+                        LinearLayer::Conv2d { .. } | LinearLayer::FullyConnected { .. } => {
+                            let mut cg_handler = match &layer {
+                                LinearLayer::Conv2d { .. } => SealServerCG::Conv2D(
+                                    server_cg::Conv2D::new(&sfhe, layer, &layer.kernel_to_repr()),
+                                ),
+                                LinearLayer::FullyConnected { .. } => {
+                                    SealServerCG::FullyConnected(server_cg::FullyConnected::new(
+                                        &sfhe,
+                                        layer,
+                                        &layer.kernel_to_repr(),
+                                    ))
+                                }
+                                _ => unreachable!(),
+                            };
+                            LinearProtocol::<P>::offline_server_protocol(
+                                reader,
+                                writer,
+                                layer.input_dimensions(),
+                                layer.output_dimensions(),
+                                &mut cg_handler,
+                                rng,
+                            )?
+                        }
+                        // AvgPool and Identity don't require an offline phase
+                        LinearLayer::AvgPool { dims, .. } => {
+                            Output::zeros(dims.output_dimensions())
+                        }
+                        LinearLayer::Identity { dims } => Output::zeros(dims.output_dimensions()),
+                    };
+                    linear_state.insert(i, randomizer);
+                }
+            }
+        }
+        // timer_end!(linear_time);
+
+        // let relu_time =
+        //     timer_start!(|| format!("ReLU layers offline phase, with {:?} activations", num_relu));
+        // let crate::gc::ServerState {
+        //     encoders: relu_encoders,
+        //     output_randomizers: relu_output_randomizers,
+        // } = ReluProtocol::<P>::offline_server_protocol(reader, writer, num_relu, rng)?;
+        // timer_end!(relu_time);
+
+        // let approx_time = timer_start!(|| format!(
+        //     "Approx layers offline phase, with {:?} activations",
+        //     num_approx
+        // ));
+        // let approx_state = QuadApproxProtocol::offline_server_protocol::<FPBeaversMul<P>, _, _, _>(
+        //     reader, writer, &sfhe, num_approx, rng,
+        // )?;
+        // timer_end!(approx_time);
+        // timer_end!(start_time);
+        Ok((RootServerState {
+            linear_state,
+            relu_encoders:None,
+            relu_output_randomizers:None,
+            num_relu:num_relu,
+        },pk))
+    }
+
+
     pub fn offline_client_linear_protocol<R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
         reader: &mut IMuxSync<R>,
         writer: &mut IMuxSync<W>,
@@ -1410,9 +1503,10 @@ where
         // let mut approx_layers = Vec::new();
         let cfhe: ClientFHE = crate::client_keygen(writer)?;
         let layer_total = neural_network_architecture.layers.iter().count();
+        println!("total layer {}",layer_total);
 
         for (i, layer) in neural_network_architecture.layers.iter().enumerate() {
-            if i< layer_total-1{
+            if i< layer_total-2{
             match layer {
                 LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
                     relu_layers.push(i);
@@ -1493,19 +1587,19 @@ where
         }
          let mut current_layer_shares = Vec::new();
          let mut relu_next_layer_randomizers = Vec::new();
-         let relu_time =
-             timer_start!(|| format!("ReLU layers offline phase with {} ReLUs", num_relu));
+         
          for &i in &relu_layers {
              let current_layer_output_shares = out_shares
                  .get(&(i - 1))
                  .expect("should exist because every ReLU should be preceeded by a linear layer");
              current_layer_shares.extend_from_slice(current_layer_output_shares.as_slice().unwrap());
- 
+             if (i+1)< layer_total-2{
              let next_layer_randomizers = in_shares
                  .get(&(i + 1))
                  .expect("should exist because every ReLU should be succeeded by a linear layer");
              relu_next_layer_randomizers
                  .extend_from_slice(next_layer_randomizers.as_slice().unwrap());
+             }
          }
         Ok(UserState {
             relu_circuits:None,

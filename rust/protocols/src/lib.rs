@@ -53,7 +53,8 @@ pub fn client_keygen<W: Write + Send>(
 pub fn client_mphe_keygen<R: Read + Send>(
     reader: &mut IMuxSync<R>,
 )->Result<LeafServerMPHE, bincode::Error>{
-    let keys: ServerKeyRcv = crate::bytes::deserialize(reader)?;
+    let keys: ServerKeyRcv = crate::bytes::deserialize(reader).unwrap();
+    println!("User receive cpk");
     let mut key_share = KeyShare::new();
     Ok(key_share.mphe_receive(keys.msg()))
 }
