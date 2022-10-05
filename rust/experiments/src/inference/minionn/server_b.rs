@@ -96,8 +96,8 @@ fn main(){
     // let port_c = args.value_of("port_a").unwrap_or("8000");
     // let server_c_addr = format!("{}:{}", ip_b, port_b);
     let server_a_addr = "10.30.8.15:8000";
-    let server_b_addr = "10.30.8.3:8000";
-    let server_c_addr = "10.30.0.5:8000";
+    let server_b_addr = "10.30.0.5:8000";
+    let server_c_addr = "10.30.0.12:8000";
 
 
     nn_server_b(&server_a_addr,&server_b_addr,&server_c_addr,&network_b,&mut rng);
