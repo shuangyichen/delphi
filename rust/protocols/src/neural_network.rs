@@ -410,6 +410,7 @@ where
             };
             state.relu_current_layer_output_shares.splice(0..0, out_share.as_slice().unwrap().iter().cloned());
             state.linear_post_application_share.insert(0,out_share);
+            // state.relu_next_layer_randomizers.splice(0..0,state.linear_randomizer[&0].as_slice().unwrap().iter().clone());
             state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
         }
     }
@@ -652,6 +653,11 @@ where
 
         let mut current_layer_shares = Vec::new(); //Fr-s
         let mut relu_next_layer_randomizers = Vec::new(); //ra'
+        let next_layer_randomizers_0 = in_shares
+                .get(&0)
+                .expect("should exist because every ReLU should be succeeded by a linear layer");
+        relu_next_layer_randomizers
+                .extend_from_slice(next_layer_randomizers_0.as_slice().unwrap());
 
         for &i in &relu_layers {
             let current_layer_output_shares = out_shares
