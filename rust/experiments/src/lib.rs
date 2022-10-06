@@ -196,7 +196,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
     println!("server c connected");
 
-    let (mut reader_a, mut writer_a) = server_connect(user_addr);
+    let (mut reader_a, mut writer_a) = client_connect(user_addr);
     println!("user connected");
     // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
     // println!("server b connected");
