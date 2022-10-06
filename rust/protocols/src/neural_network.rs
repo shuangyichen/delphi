@@ -654,7 +654,7 @@ where
         let mut current_layer_shares = Vec::new(); //Fr-s
         let mut relu_next_layer_randomizers = Vec::new(); //ra'
         let next_layer_randomizers_0 = in_shares
-                .get(&0)
+                .get(&2)
                 .expect("should exist because every ReLU should be succeeded by a linear layer");
         relu_next_layer_randomizers
                 .extend_from_slice(next_layer_randomizers_0.as_slice().unwrap());
