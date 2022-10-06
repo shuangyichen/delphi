@@ -334,9 +334,13 @@ where
         }
     }
     let inshare_num = state.relu_next_layer_randomizers.iter().count();
-    println!("input share num {}",inshare_num);
+    println!("relu_next_layer_randomizers {}",inshare_num);
     let outshare_num = state.relu_current_layer_randomizers.iter().count();
-    println!("output share num {}",outshare_num);
+    println!("relu_current_layer_randomizers {}",outshare_num);
+    let inshare_num = state.linear_randomizer.iter().count();
+    let outshare_num = state.linear_post_application_share.iter().count();
+    println!("inshare_num {}",inshare_num);
+    println!("outshare_num {}",outshare_num);
 }
 
     pub fn offline_server_a_l_protocol<'a,R: Read + Send, W: Write + Send>(
@@ -410,10 +414,19 @@ where
         }
     }
     // state.num_relu+=
+    println!("ABC relu num {}", state.num_relu);
+    // let inshare_num = state.relu_next_layer_randomizers.iter().count();
+    // println!("relu_next_layer_randomizers {}",inshare_num);
+    // let outshare_num = state.relu_current_layer_output_shares.iter().count();
+    // println!("relu_current_layer_output_shares num {}",outshare_num);
     let inshare_num = state.relu_next_layer_randomizers.iter().count();
-    println!("input share num {}",inshare_num);
-    let outshare_num = state.relu_current_layer_output_shares.iter().count();
-    println!("output share num {}",outshare_num);
+    println!("relu_next_layer_randomizers {}",inshare_num);
+    let outshare_num = state.relu_current_layer_randomizers.iter().count();
+    println!("relu_current_layer_randomizers {}",outshare_num);
+    let inshare_num = state.linear_randomizer.iter().count();
+    let outshare_num = state.linear_post_application_share.iter().count();
+    println!("inshare_num {}",inshare_num);
+    println!("outshare_num {}",outshare_num);
     crate::hello(writer_b);
 
     }
@@ -472,6 +485,7 @@ where
             }
         }
         crate::rcv_sign(reader_b);
+        println!("b rec signal for l");
     }
 
     pub fn offline_server_c_l_protocol<'a ,R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
@@ -659,7 +673,7 @@ where
         //     &current_layer_shares.as_slice(),
         //     rng,
         // ).unwrap();
-        println!("num relu {}", num_relu);
+        // println!("A B C num relu {}", num_relu);
         Ok((ServerAState {
             gc_server_a_state:None,
             relu_circuits:None,
@@ -1537,7 +1551,7 @@ where
         // let mut approx_layers = Vec::new();
         let cfhe: ClientFHE = crate::client_keygen(writer)?;
         let layer_total = neural_network_architecture.layers.iter().count();
-        println!("total layer {}",layer_total);
+        // println!("total layer {}",layer_total);
 
         for (i, layer) in neural_network_architecture.layers.iter().enumerate() {
             if i< layer_total-2{
@@ -1635,6 +1649,7 @@ where
                  .extend_from_slice(next_layer_randomizers.as_slice().unwrap());
              }
          }
+         println!("user A relu num {}", num_relu);
         Ok(UserState {
             relu_circuits:None,
             relu_server_labels:None,

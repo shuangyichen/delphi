@@ -243,8 +243,9 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &mut sa_split1,
     );
 
-    thread::sleep(time::Duration::from_millis(1000));
+    // thread::sleep(time::Duration::from_millis(1000));
     let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+    
     NNProtocol::offline_server_a_protocol_r2(
         &mut reader_b,
         &mut writer_b,
@@ -373,10 +374,11 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
             rng,
             &mut sb_state,
         );
-        thread::sleep(time::Duration::from_millis(2000));
-        let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+        thread::sleep(time::Duration::from_millis(8000));
+        // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
         // thread::sleep(time::Duration::from_millis(100));
         let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+        let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
         // let (mut reader_a, mut writer_a) = client_connect(server_c_addr);
         NNProtocol::offline_server_b_protocol_r2(
             &mut reader_b,
