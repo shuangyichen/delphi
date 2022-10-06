@@ -79,6 +79,12 @@ pub fn hello<W: Write + Send>(
     // writer.flush().expect("could not flush");
     // writer.
 }
+
+pub fn rcv_sign<R: Read + Send>(
+    reader: &mut IMuxSync<R>,
+){
+    let keys: ServerKeyRcv = crate::bytes::deserialize(reader).unwrap();
+}
 pub fn server_keygen<R: Read + Send>(
     reader: &mut IMuxSync<R>,
 ) -> Result<(ServerFHE,Vec<std::os::raw::c_char>), bincode::Error> {

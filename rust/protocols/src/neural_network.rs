@@ -414,6 +414,8 @@ where
     println!("input share num {}",inshare_num);
     let outshare_num = state.relu_current_layer_output_shares.iter().count();
     println!("output share num {}",outshare_num);
+    crate::hello(writer_b);
+
     }
 
     pub fn offline_server_b_l_protocol<'a,R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
@@ -469,6 +471,7 @@ where
                 state.num_relu += layer.output_dimensions().0*layer.output_dimensions().1*layer.output_dimensions().2*layer.output_dimensions().3;
             }
         }
+        crate::rcv_sign(reader_b);
     }
 
     pub fn offline_server_c_l_protocol<'a ,R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
