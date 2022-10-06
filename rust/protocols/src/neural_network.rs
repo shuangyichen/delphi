@@ -329,9 +329,14 @@ where
                     }
                     &LinearLayerInfo::AvgPool { .. } | &LinearLayerInfo::Identity => {Input::zeros(dims.input_dimensions())}
             };
+            state.relu_next_layer_randomizers.extend_from_slice(input_share.as_slice().unwrap());
             state.linear_randomizer.insert(total_num,input_share);
         }
     }
+    let inshare_num = state.relu_next_layer_randomizers.iter().count();
+    println!("input share num {}",inshare_num);
+    let outshare_num = state.relu_current_layer_randomizers.iter().count();
+    println!("output share num {}",outshare_num);
 }
 
     pub fn offline_server_a_l_protocol<'a,R: Read + Send, W: Write + Send>(
@@ -399,11 +404,16 @@ where
                         Output::zeros(output_dims)
                     }
             };
+            state.relu_current_layer_output_shares.splice(0..0, out_share.as_slice().unwrap().iter().cloned());
             state.linear_post_application_share.insert(0,out_share);
             state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
         }
     }
     // state.num_relu+=
+    let inshare_num = state.relu_next_layer_randomizers.iter().count();
+    println!("input share num {}",inshare_num);
+    let outshare_num = state.relu_current_layer_output_shares.iter().count();
+    println!("output share num {}",outshare_num);
     }
 
     pub fn offline_server_b_l_protocol<'a,R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
