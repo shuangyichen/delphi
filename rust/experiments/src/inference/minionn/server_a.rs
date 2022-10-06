@@ -85,9 +85,9 @@ fn main() {
     // let ip_c = args.value_of("ip_a").unwrap();
     // let port_c = args.value_of("port_a").unwrap_or("8000");
     // let server_c_addr = format!("{}:{}", ip_b, port_b);
-    let server_a_addr = "10.30.0.5:8000";
-    let server_b_addr = "10.30.8.15:8000";
-    let server_c_addr = "10.30.8.14:8000";
+    let server_a_addr = "10.30.8.15:8000";
+    let server_b_addr = "10.30.8.11:8000";
+    let server_c_addr = "10.30.8.7:8000";
 
     let network = construct_minionn(None, 1, layers, &mut rng);
     // let network = construct_minionn_test(None, 1, layers, &mut rng);

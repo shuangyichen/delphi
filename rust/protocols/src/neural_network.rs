@@ -383,6 +383,14 @@ where
         //     rng,
         // ).unwrap();
         println!("num relu {}", num_relu);
+        let relu_next_layer_randomizers_num = relu_next_layer_randomizers.iter().count();
+        let current_layer_shares_num = current_layer_shares.iter().count();
+        let in_shares_num = in_shares.iter().count();
+        let out_shares_num = out_shares.iter().count();
+        println!("relu_next_layer_randomizers_num {}",relu_next_layer_randomizers_num);
+        println!("current_layer_shares_num {}",current_layer_shares_num);
+        println!("in_shares_num {}",in_shares_num);
+        println!("out_shares_num {}", out_shares_num);
         Ok(ServerAState {
             gc_server_a_state:None,
             relu_circuits:None,
