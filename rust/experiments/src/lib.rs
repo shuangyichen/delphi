@@ -154,12 +154,13 @@ pub fn nn_server<R: RngCore + CryptoRng>(
 }
 
 pub fn nn_user<R: RngCore + CryptoRng>(
+    user_addr: &str,
     server_a_addr: &str,
     architecture1: &NeuralArchitecture<TenBitAS, TenBitExpFP>,
     input: Input<TenBitExpFP>,
     rng: &mut R,
 ){
-    let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+    let (mut reader_a, mut writer_a) = server_connect(user_addr);
     let mut client_state = NNProtocol::offline_client_linear_protocol(&mut reader_a, &mut writer_a, &architecture1, rng)
                 .unwrap();
     
@@ -181,6 +182,7 @@ pub fn nn_user<R: RngCore + CryptoRng>(
 }
 
 pub fn nn_root_server<R: RngCore + CryptoRng>(
+    user_addr: &str,
     server_a_addr: &str,
     server_b_addr: &str,
     server_c_addr: &str,
@@ -194,7 +196,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
     println!("server c connected");
 
-    let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+    let (mut reader_a, mut writer_a) = server_connect(user_addr);
     println!("user connected");
     // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
     // println!("server b connected");
@@ -241,6 +243,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &mut sa_split1,
     );
 
+    thread::sleep(time::Duration::from_millis(1000));
     let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
     NNProtocol::offline_server_a_protocol_r2(
         &mut reader_b,

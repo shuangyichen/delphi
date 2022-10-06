@@ -85,6 +85,7 @@ fn main() {
     // let ip_c = args.value_of("ip_a").unwrap();
     // let port_c = args.value_of("port_a").unwrap_or("8000");
     // let server_c_addr = format!("{}:{}", ip_b, port_b);
+    let user_addr = "10.30.8.5:8000";
     let server_a_addr = "10.30.8.15:8000";
     let server_b_addr = "10.30.8.11:8000";
     let server_c_addr = "10.30.8.7:8000";
@@ -100,7 +101,7 @@ fn main() {
     let network2 = construct_minionn_second_split(None, 1, layers, &mut rng,split_layer);
     let architecture2 = (&network2).into();
 
-    nn_root_server(&server_a_addr,&server_b_addr,&server_c_addr,&network1,&architecture2,&mut rng);
+    nn_root_server(&user_addr,&server_a_addr,&server_b_addr,&server_c_addr,&network1,&architecture2,&mut rng);
 
     // let mut buf = vec![];
     // std::fs::File::open(Path::new("image.npy"))

@@ -95,6 +95,7 @@ fn main() {
     // let ip_c = args.value_of("ip_a").unwrap();
     // let port_c = args.value_of("port_a").unwrap_or("8000");
     // let server_c_addr = format!("{}:{}", ip_b, port_b);
+    let user_addr = "10.30.8.5:8000";
     let server_a_addr = "10.30.8.15:8000";
 
     let split_layer:usize = 1;
@@ -119,7 +120,7 @@ fn main() {
     //           *a = AdditiveShare::new(FixedPoint::from(*b))
     //       });
 
-    nn_user(&server_a_addr,&architecture,(image.clone()).into(),&mut rng);
+    nn_user(&user_addr,&server_a_addr,&architecture,(image.clone()).into(),&mut rng);
 
 }
 
