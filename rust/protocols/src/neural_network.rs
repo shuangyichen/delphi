@@ -421,7 +421,7 @@ where
     // println!("relu_current_layer_output_shares num {}",outshare_num);
     let inshare_num = state.relu_next_layer_randomizers.iter().count();
     println!("relu_next_layer_randomizers {}",inshare_num);
-    let outshare_num = state.relu_current_layer_randomizers.iter().count();
+    let outshare_num = state.relu_current_layer_output_shares.iter().count();
     println!("relu_current_layer_randomizers {}",outshare_num);
     let inshare_num = state.linear_randomizer.iter().count();
     let outshare_num = state.linear_post_application_share.iter().count();
