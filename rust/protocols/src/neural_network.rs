@@ -276,7 +276,8 @@ where
                     println!("ReLU");
                     relu_layers.push(i);
                     let (b, c, h, w) = dims.input_dimensions();
-                    // println!("{} {} {} {}",b,c,h,w);
+                    println!("{} {} {} {}",b,c,h,w);
+                    println!("{} ",b*c*h*w);
                     num_relu += b * c * h * w;
                 }
                 LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
