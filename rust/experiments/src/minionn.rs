@@ -283,12 +283,12 @@ pub fn construct_minionn_second_split<R: RngCore + CryptoRng>(
     split: usize,
 ) -> NeuralNetwork<TenBitAS, TenBitExpFP> {
     let relu_layers = match num_poly {
-        0 => vec![1, 3, 6, 8, 11, 13, 15],
-        1 => vec![1, 3, 6, 8, 11, 13],
-        2 => vec![1, 3, 6, 8, 11],
-        3 => vec![3, 11, 13, 15],
-        5 => vec![6, 11],
-        6 => vec![11],
+        // 0 => vec![1, 3, 6, 8, 11, 13, 15],
+        0 => vec![1, 3, 6, 8, 11, 13],
+        1 => vec![1, 3, 6, 8, 11],
+        2 => vec![3, 11, 13, 15],
+        3 => vec![6, 11],
+        5 => vec![11],
         7 => vec![],
         _ => unreachable!(),
     };

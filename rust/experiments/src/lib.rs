@@ -601,7 +601,7 @@ fn add_activation_layer(nn: &mut NeuralNetwork<TenBitAS, TenBitExpFP>, relu_laye
     };
     let num_layers_so_far = nn.layers.len();
     let is_relu = relu_layers.contains(&num_layers_so_far);
-    let layer = if is_relu {
+    let layer = if true {
         Layer::NLL(NonLinearLayer::ReLU(layer_dims))
     } else {
         let activation_poly_coefficients = vec![
