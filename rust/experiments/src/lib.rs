@@ -179,6 +179,15 @@ pub fn nn_user<R: RngCore + CryptoRng>(
         rng,
         &mut client_state,
     );
+
+    NNProtocol::online_user_protocol(
+        &mut reader_a, 
+        &mut writer_a,
+        &input,
+        &architecture1,
+        &client_state
+    );
+    println!("User Server finish eval");
 }
 
 pub fn nn_root_server<R: RngCore + CryptoRng>(
@@ -196,7 +205,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
     println!("server c connected");
 
-    let (mut reader_a, mut writer_a) = client_connect(user_addr);
+    let (mut reader_u, mut writer_u) = client_connect(user_addr);
     println!("user connected");
     // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
     // println!("server b connected");
@@ -204,7 +213,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // println!("server c connected");
 
     //***************Split 1 preprocessing  *********
-    let (mut sa_split1,pk) =  NNProtocol::offline_server_linear_protocol(&mut reader_a, &mut writer_a, &nn1, rng).unwrap();
+    let (mut sa_split1,pk) =  NNProtocol::offline_server_linear_protocol(&mut reader_u, &mut writer_u, &nn1, rng).unwrap();
     //***************Split 2 preprocessing   **********
 
     let (mut sa_state,cpk,rsmphe,lsmphe) = {
@@ -221,8 +230,8 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
             };
     //l+1 layer linear preprocessing
     NNProtocol::offline_server_a_l_protocol(
-        &mut reader_a,
-        &mut writer_a,
+        &mut reader_u,
+        &mut writer_u,
         &mut reader_b,
         &mut writer_b,
         &mut reader_c,
@@ -236,8 +245,8 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     println!("l layer preprocessed");
 
     NNProtocol::offline_server_relu_protocol(
-        &mut reader_a,
-        &mut writer_a,
+        &mut reader_u,
+        &mut writer_u,
         &nn1,
         rng,
         &mut sa_split1,
@@ -263,31 +272,23 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &mut sa_state,
     );
 
-    //l+1 layer preprocessing
-    ////////Linear
-    //Deliver pk to B and C, deliver cpk to user
-    //user generate randomness according to the shape of last layer output, use cpk to encrypt it sending to A
-    //B C encrypt first layer weights and s (randomness) send it to A
-    // A build share
-
-    //Non linear
-    // the same as ...
+    
 
 
     //Online evaluation
 
     //U-------A online
     // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
-    // let next_input = NNProtocol::online_server_protocol(&mut reader_a, &mut writer_a, &nn1, &server_a_state1).unwrap();
+    let next_input = NNProtocol::online_root_server_protocol(&mut reader_u, &mut writer_u, &nn1, &sa_split1).unwrap();
     // //A----B----C online
-    // NNProtocol::online_server_a_protocol(
-    //     server_a_addr,
-    //     server_b_addr,
-    //     server_c_addr,
-    //     &next_input,
-    //     &architecture2,
-    //     &server_a_state,
-    // );
+    NNProtocol::online_server_a_protocol(
+        server_a_addr,
+        server_b_addr,
+        server_c_addr,
+        &next_input,
+        &architecture2,
+        &sa_state,
+    );
 
 }
 
@@ -396,14 +397,14 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
     // let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
     // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
     // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-    // NNProtocol::online_server_b_protocol(
-    //     server_a_addr,
-    //     server_b_addr,
-    //     server_c_addr,
-    //     nn,
-    //     &server_b_state,
-    //     rng,
-    // );
+    NNProtocol::online_server_b_protocol(
+        server_a_addr,
+        server_b_addr,
+        server_c_addr,
+        nn,
+        &server_b_state,
+        rng,
+    );
 }
 
 pub fn nn_server_c<R: RngCore + CryptoRng>(
@@ -450,14 +451,14 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
     println!("Offline finished");
     // let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
     // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
-    // NNProtocol::online_server_c_protocol(
-    //     server_a_addr,
-    //     server_b_addr,
-    //     server_c_addr,
-    //     nn,
-    //     &server_c_state,
-    //     rng,
-    // );
+    NNProtocol::online_server_c_protocol(
+        server_a_addr,
+        server_b_addr,
+        server_c_addr,
+        nn,
+        &server_c_state,
+        rng,
+    );
 }
 
 

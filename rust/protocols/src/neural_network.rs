@@ -1913,6 +1913,9 @@ where
         })
     }
 
+
+    
+
     pub fn online_server_protocol<R: Read + Send, W: Write + Send + Send>(
         reader: &mut IMuxSync<R>,
         writer: &mut IMuxSync<W>,
@@ -2029,7 +2032,7 @@ where
         reader: &mut IMuxSync<R>,
         writer: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
-        state: &ServerState<P>,
+        state: &RootServerState<P>,
     ) -> Result<Input<AdditiveShare<P>>, bincode::Error> {
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
@@ -2055,13 +2058,13 @@ where
                     let layer_size = next_layer_input.len();
                     assert_eq!(dims.input_dimensions(), next_layer_input.dim());
                     let layer_encoders =
-                        &state.relu_encoders[num_consumed_relus..(num_consumed_relus + layer_size)];
+                        &state.relu_encoders.as_ref().unwrap()[num_consumed_relus..(num_consumed_relus + layer_size)];
                     ReluProtocol::online_server_protocol(
                         writer,
                         &next_layer_input.as_slice().unwrap(),
                         layer_encoders,
                     )?;
-                    let relu_output_randomizers = state.relu_output_randomizers
+                    let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
                         [num_consumed_relus..(num_consumed_relus + layer_size)]
                         .to_vec();
                     num_consumed_relus += layer_size;
@@ -2072,28 +2075,7 @@ where
                     timer_end!(start_time);
                 }
                 Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {
-                    let start_time = timer_start!(|| "Approx layer");
-                    let layer_size = next_layer_input.len();
-                    assert_eq!(dims.input_dimensions(), next_layer_input.dim());
-                    let triples = &state.approx_state
-                        [num_consumed_triples..(num_consumed_triples + layer_size)];
-                    num_consumed_triples += layer_size;
-                    let shares_of_eval =
-                        QuadApproxProtocol::online_server_protocol::<FPBeaversMul<P>, _, _>(
-                            SERVER, // party_index: 2
-                            reader,
-                            writer,
-                            &poly,
-                            next_layer_input.as_slice().unwrap(),
-                            triples,
-                        )?;
-                    let shares_of_eval: Vec<_> =
-                        shares_of_eval.into_iter().map(|s| s.inner.inner).collect();
-                    next_layer_derandomizer = ndarray::Array1::from_iter(shares_of_eval)
-                        .into_shape(dims.output_dimensions())
-                        .expect("shape should be correct")
-                        .into();
-                    timer_end!(start_time);
+                    
                 }
                 Layer::LL(layer) => {
                     let start_time = timer_start!(|| "Linear layer");
@@ -2256,6 +2238,114 @@ where
                     timer_end!(start_time);
                 }
             }
+        }
+        let result = crate::bytes::deserialize(reader).map(|output: MsgRcv<P>| {
+            let server_output_share = output.msg();
+            server_output_share.combine(&next_layer_input)
+        })?;
+        timer_end!(start_time);
+        Ok(result)
+    }
+
+    pub fn online_user_protocol<R: Read + Send, W: Write + Send + Send>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        input: &Input<FixedPoint<P>>,
+        architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
+        state: &UserState<P>,
+    ) -> Result<Output<FixedPoint<P>>, bincode::Error> {
+        let first_layer_in_dims = {
+            let layer = architecture.layers.first().unwrap();
+            assert!(
+                layer.is_linear(),
+                "first layer of the network should always be linear."
+            );
+            assert_eq!(layer.input_dimensions(), input.dim());
+            layer.input_dimensions()
+        };
+        assert_eq!(first_layer_in_dims, input.dim());
+
+        let mut num_consumed_relus = 0;
+        let mut num_consumed_triples = 0;
+
+        let start_time = timer_start!(|| "Client online phase");
+        let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
+        let total_layer = architecture.layers.iter().count();
+        for (i, layer) in architecture.layers.iter().enumerate() {
+            if i<total_layer{
+            match layer {
+                LayerInfo::NLL(dims, nll_info) => {
+                    match nll_info {
+                        NonLinearLayerInfo::ReLU => {
+                            let start_time = timer_start!(|| "ReLU layer");
+                            // The client receives the garbled circuits from the server,
+                            // uses its already encoded inputs to get the next linear
+                            // layer's input.
+                            let layer_size = next_layer_input.len();
+                            assert_eq!(dims.input_dimensions(), next_layer_input.dim());
+
+                            let layer_client_labels = &state.relu_client_labels.as_ref().unwrap()
+                                [num_consumed_relus..(num_consumed_relus + layer_size)];
+                            let layer_server_labels = &state.relu_server_labels.as_ref().unwrap()
+                                [num_consumed_relus..(num_consumed_relus + layer_size)];
+                            let next_layer_randomizers = &state.relu_next_layer_randomizers
+                                [num_consumed_relus..(num_consumed_relus + layer_size)];
+
+                            let layer_circuits = &state.relu_circuits.as_ref().unwrap()
+                                [num_consumed_relus..(num_consumed_relus + layer_size)];
+
+                            num_consumed_relus += layer_size;
+
+                            let layer_client_labels = layer_client_labels
+                                .into_iter()
+                                .flat_map(|l| l.clone())
+                                .collect::<Vec<_>>();
+                            let layer_server_labels = layer_server_labels
+                                .into_iter()
+                                .flat_map(|l| l.clone())
+                                .collect::<Vec<_>>();
+                            let output = ReluProtocol::online_client_protocol(
+                                reader,
+                                layer_size,              // num_relus
+                                &layer_server_labels,    // Labels for layer
+                                &layer_client_labels,    // Labels for layer
+                                &layer_circuits,         // circuits for layer.
+                                &next_layer_randomizers, // circuits for layer.
+                            )?;
+                            next_layer_input = ndarray::Array1::from_iter(output)
+                                .into_shape(dims.output_dimensions())
+                                .expect("shape should be correct")
+                                .into();
+                            timer_end!(start_time);
+                        }
+                        NonLinearLayerInfo::PolyApprox { poly, .. } => {
+                           
+                        }
+                    }
+                }
+                LayerInfo::LL(_, layer_info) => {
+                    let start_time = timer_start!(|| "Linear layer");
+                    // Send server secret share if required by the layer
+                    let input = next_layer_input;
+                    next_layer_input = state.linear_post_application_share[&i].clone();
+
+                    LinearProtocol::online_client_protocol(
+                        writer,
+                        &input,
+                        &layer_info,
+                        &mut next_layer_input,
+                    )?;
+                    // If this is not the last layer, and if the next layer
+                    // is also linear, randomize the output correctly.
+                    if i != (architecture.layers.len() - 1)
+                        && architecture.layers[i + 1].is_linear()
+                    {
+                        next_layer_input.randomize_local_share(&state.linear_randomizer[&(i + 1)]);
+                    }
+                    timer_end!(start_time);
+                }
+            }
+        }
         }
         let result = crate::bytes::deserialize(reader).map(|output: MsgRcv<P>| {
             let server_output_share = output.msg();
