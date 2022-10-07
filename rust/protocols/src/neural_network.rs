@@ -2253,7 +2253,7 @@ where
         input: &Input<FixedPoint<P>>,
         architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         state: &UserState<P>,
-    ) -> Result<Output<FixedPoint<P>>, bincode::Error> {
+    ) {
         let first_layer_in_dims = {
             let layer = architecture.layers.first().unwrap();
             assert!(
@@ -2311,7 +2311,7 @@ where
                                 &layer_client_labels,    // Labels for layer
                                 &layer_circuits,         // circuits for layer.
                                 &next_layer_randomizers, // circuits for layer.
-                            )?;
+                            ).unwrap();
                             next_layer_input = ndarray::Array1::from_iter(output)
                                 .into_shape(dims.output_dimensions())
                                 .expect("shape should be correct")
@@ -2327,14 +2327,14 @@ where
                     let start_time = timer_start!(|| "Linear layer");
                     // Send server secret share if required by the layer
                     let input = next_layer_input;
-                    next_layer_input = state.linear_post_application_share[&i].clone();
-
+                    // next_layer_input = state.linear_post_application_share[&i].clone();
+                    next_layer_input = Output::zeros(layer.output_dimensions());
                     LinearProtocol::online_client_protocol(
                         writer,
                         &input,
                         &layer_info,
                         &mut next_layer_input,
-                    )?;
+                    ).unwrap();
                     // If this is not the last layer, and if the next layer
                     // is also linear, randomize the output correctly.
                     if i != (architecture.layers.len() - 1)
@@ -2347,11 +2347,11 @@ where
             }
         }
         }
-        let result = crate::bytes::deserialize(reader).map(|output: MsgRcv<P>| {
-            let server_output_share = output.msg();
-            server_output_share.combine(&next_layer_input)
-        })?;
-        timer_end!(start_time);
-        Ok(result)
+        // let result = crate::bytes::deserialize(reader).map(|output: MsgRcv<P>| {
+        //     let server_output_share = output.msg();
+        //     server_output_share.combine(&next_layer_input)
+        // })?;
+        // timer_end!(start_time);
+        // Ok(result)
     }
 }
