@@ -2021,6 +2021,7 @@ where
         }
 
         let next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
+        println!("receiving intermeidate result from user");
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
         // timer_end!(start_time);
@@ -2353,5 +2354,8 @@ where
         // })?;
         // timer_end!(start_time);
         // Ok(result)
+        let sent_message = MsgSend::new(&next_layer_input);
+         crate::bytes::serialize(writer, &sent_message).unwrap();
+         println!("sending intermeidate result from user")
     }
 }
