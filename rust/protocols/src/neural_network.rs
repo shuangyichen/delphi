@@ -330,7 +330,7 @@ where
                     &LinearLayerInfo::AvgPool { .. } | &LinearLayerInfo::Identity => {Input::zeros(dims.input_dimensions())}
             };
             state.relu_next_layer_randomizers.extend_from_slice(input_share.as_slice().unwrap());
-            state.linear_randomizer.insert(total_num,input_share);
+            state.linear_randomizer.insert(total_layer-2,input_share);
         }
     }
     let inshare_num = state.relu_next_layer_randomizers.iter().count();
@@ -368,6 +368,7 @@ where
             LayerInfo::LL(dims, linear_layer_info) => {
                 let input_dims = dims.input_dimensions();
                 let output_dims = dims.output_dimensions();
+                let (b, c, h, w) = dims.input_dimensions();
                 let mut out_share = match &linear_layer_info {
                     LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
                         let mut cg_handler = match &linear_layer_info {
@@ -412,8 +413,26 @@ where
             state.linear_post_application_share.insert(0,out_share);
             // state.relu_next_layer_randomizers.splice(0..0,state.linear_randomizer[&0].as_slice().unwrap().iter().clone());
             state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
+            println!("{} {} {} {}",b,c,h,w);
+            println!("{} ",b*c*h*w);
         }
     }
+    // let layer = &neural_network_architecture.layers[1];
+
+    // match layer {
+    //     LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
+
+    //     }
+    //     LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
+    //     }
+    //     LayerInfo::LL(dims, linear_layer_info) => {
+           
+                
+    //     // state.relu_next_layer_randomizers.splice(0..0,state.linear_randomizer[&0].as_slice().unwrap().iter().clone());
+    //     // state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
+    // }
+
+
     // state.num_relu+=
     println!("ABC relu num {}", state.num_relu);
     // let inshare_num = state.relu_next_layer_randomizers.iter().count();
@@ -567,6 +586,8 @@ where
                     println!("ReLU");
                     relu_layers.push(i);
                     let (b, c, h, w) = dims.input_dimensions();
+                    println!("{} {} {} {}",b,c,h,w);
+                    println!("{} ",b*c*h*w);
                     // println!("{} {} {} {}",b,c,h,w);
                     num_relu += b * c * h * w;
                 }
@@ -1565,6 +1586,8 @@ where
                 LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
                     relu_layers.push(i);
                     let (b, c, h, w) = dims.input_dimensions();
+                    println!("{} {} {} {}",b,c,h,w);
+                    println!("{} ",b*c*h*w);
                     num_relu += b * c * h * w;
                 }
                 LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
