@@ -2273,7 +2273,7 @@ where
         let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
         let total_layer = architecture.layers.iter().count();
         for (i, layer) in architecture.layers.iter().enumerate() {
-            if i<total_layer{
+            if i<total_layer-2{
             match layer {
                 LayerInfo::NLL(dims, nll_info) => {
                     match nll_info {
