@@ -75,7 +75,7 @@ fn get_args() -> ArgMatches<'static> {
 
 fn main(){
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
-    let layers:usize = 1;
+    let layers:usize = 0;
     let args = get_args();
 
     let weights_c = args.value_of("weights").unwrap();

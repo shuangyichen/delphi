@@ -72,7 +72,7 @@ fn main() {
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
     let args = get_args();
     let weights_1 = args.value_of("weights").unwrap();
-    let layers:usize = 1; 
+    let layers:usize = 0; 
 
     // let ip_a = args.value_of("ip_a").unwrap();
     // let port_a = args.value_of("port_a").unwrap_or("8000");
