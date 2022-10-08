@@ -1112,7 +1112,10 @@ where
                         // }
                     let mut next_layer_input = state.linear_post_application_share[&i].clone();
                     
-
+                    let (b, c, h, w) = dims.input_dimensions();
+                    println!("Input dimension: {} {} {} {}", b,c,h,w);
+                    let (b2, c2, h2, w2) = dims.output_dimensions();
+                    println!("Ouput dimension: {} {} {} {}", b2,c2,h2,w2);
                     assert_eq!(dims.input_dimensions(), input.dim());
                     // let input = next_layer_input;
                     LinearProtocol::online_server_a_protocol(
