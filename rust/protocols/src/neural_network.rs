@@ -1158,7 +1158,7 @@ where
         state: &ServerBState<P>,
         rng: &mut RNG,
         // num_relus: usize,
-    ){
+    )->Output<AdditiveShare<P>>{
         let num_relus = state.num_relu;
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
@@ -1248,6 +1248,7 @@ where
             }
         }
     }
+    next_layer_input
 }
 
     // pub fn online_server_c_protocol<'a,R: Read + Send, W: Write + Send,RNG: RngCore + CryptoRng>(
@@ -1259,7 +1260,7 @@ where
         state: &ServerCState<P>,
         rng: &mut RNG,
         // num_relus: usize,
-    ){
+    )->Output<AdditiveShare<P>>{
         let num_relus = state.num_relu;
         // let server_c_listener = TcpListener::bind(server_c_addr).unwrap();
         // let stream = server_c_listener
@@ -1358,7 +1359,7 @@ where
                 }
             // }
     }
-
+    next_layer_input
     }
 
     // pub fn online_server_a_protocol_r2
