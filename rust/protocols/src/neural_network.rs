@@ -2404,7 +2404,9 @@ where
     )-> Output<FixedPoint<P>>{
         let result = crate::result_decrypt::<R, P>(reader_u,&cfhe,output_size);
         let mut output:Output<FixedPoint<P>> = Output::zeros((1,output_size,0,0));
+        println!("length {}",result.len());
         for idx in 0..output_size as usize{
+            println!("{}",result[idx]);
             output[[0, idx, 0, 0]] = FixedPoint::with_num_muls(
                 P::Field::from_repr(algebra::BigInteger64(result[idx])),
                 1,
