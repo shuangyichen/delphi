@@ -2413,6 +2413,7 @@ where
                 P::Field::from_repr(algebra::BigInteger64(result[idx])),
                 1,
             );
+            println!("{}",output[[0, idx, 0, 0]]);
         }
         output
     }
