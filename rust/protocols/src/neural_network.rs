@@ -101,18 +101,20 @@ pub struct ServerAState<P: FixedPointParameters> {
 }
 
 pub struct ServerBState<P: FixedPointParameters> {
+    pub relu_next_layer_randomizers: Vec<AdditiveShare<P>>,
     pub input_randomizer: BTreeMap<usize, Input<AdditiveShare<P>>>,
     pub output_randomizer: BTreeMap<usize, Output<P::Field>>,
     pub relu_encoder: Option<Vec<Encoder>>,
-    pub gc_server_b_state: Option<crate::gc::ServerBState<P>>,
+    pub gc_server_b_state: Option<crate::gc::ServerBState>,
     pub rc_01_labels: Option<Vec<(Block,Block)>>,
     pub num_relu: usize,
 }
 
 pub struct ServerCState<P: FixedPointParameters> {
+    pub relu_next_layer_randomizers: Vec<AdditiveShare<P>>,
     pub input_randomizer: BTreeMap<usize, Input<AdditiveShare<P>>>,
     pub output_randomizer: BTreeMap<usize, Output<P::Field>>,
-    pub gc_server_c_state: Option<crate::gc::ServerCState<P>>,
+    pub gc_server_c_state: Option<crate::gc::ServerCState>,
     pub rc_prime_labels: Option<Vec<Wire>>,
     pub num_relu: usize,
 }
@@ -725,6 +727,7 @@ where
         let mut num_relu = 0;
         let mut r_vec = BTreeMap::new();
         let mut s_vec = BTreeMap::new();
+        let mut relu_layers = Vec::new();
         // let sfhe: ServerFHE = crate::server_keygen(reader)?;
 
         let lsmphe_:LeafServerMPHE = crate::leaf_server_keygen_r1(writer).unwrap();
@@ -735,6 +738,7 @@ where
             match layer {
                 Layer::NLL(NonLinearLayer::ReLU(dims)) => {
                     let (b, c, h, w) = dims.input_dimensions();
+                    relu_layers.push(i); 
                     num_relu += b * c * h * w;
                 }
                 Layer::NLL(NonLinearLayer::PolyApprox { dims, .. }) => {
@@ -776,10 +780,27 @@ where
             }
         }
         }
+        let mut relu_next_layer_randomizers = Vec::new();
+
+        for &i in &relu_layers {
+            // let current_layer_output_shares = out_shares
+            //     .get(&(i - 1))
+            //     .expect("should exist because every ReLU should be preceeded by a linear layer");
+            // current_layer_shares.extend_from_slice(current_layer_output_shares.as_slice().unwrap());
+
+            let next_layer_randomizers = r_vec
+                .get(&(i + 1))
+                .expect("should exist because every ReLU should be succeeded by a linear layer");
+            relu_next_layer_randomizers
+                .extend_from_slice(next_layer_randomizers.as_slice().unwrap());
+        }
+
+
 
 
        
         Ok((ServerBState {
+            relu_next_layer_randomizers:relu_next_layer_randomizers,
             input_randomizer:r_vec,
             output_randomizer:s_vec,
             relu_encoder:None,
@@ -800,6 +821,7 @@ where
         let mut num_relu = 0;
         let mut r_vec = BTreeMap::new();
         let mut s_vec = BTreeMap::new();
+        let mut relu_layers = Vec::new();
         // let sfhe: ServerFHE = crate::server_keygen(reader)?;
 
         let lsmphe_:LeafServerMPHE = crate::leaf_server_keygen_r1(writer).unwrap();
@@ -810,6 +832,7 @@ where
             match layer {
                 Layer::NLL(NonLinearLayer::ReLU(dims)) => {
                     let (b, c, h, w) = dims.input_dimensions();
+                    relu_layers.push(i);
                     num_relu += b * c * h * w;
                 }
                 Layer::NLL(NonLinearLayer::PolyApprox { dims, .. }) => {
@@ -851,10 +874,26 @@ where
             }
         }
         }
+        let mut relu_next_layer_randomizers = Vec::new();
+
+        for &i in &relu_layers {
+            // let current_layer_output_shares = out_shares
+            //     .get(&(i - 1))
+            //     .expect("should exist because every ReLU should be preceeded by a linear layer");
+            // current_layer_shares.extend_from_slice(current_layer_output_shares.as_slice().unwrap());
+
+            let next_layer_randomizers = r_vec
+                .get(&(i + 1))
+                .expect("should exist because every ReLU should be succeeded by a linear layer");
+            relu_next_layer_randomizers
+                .extend_from_slice(next_layer_randomizers.as_slice().unwrap());
+        }
+
 
 
        
         Ok((ServerCState {
+            relu_next_layer_randomizers:relu_next_layer_randomizers,
             input_randomizer:r_vec,
             output_randomizer:s_vec,
             gc_server_c_state:None,
@@ -914,6 +953,7 @@ where
             writer_c,
             num_relu,
             rng,
+            &server_b_state.relu_next_layer_randomizers,
         ).unwrap();
         // server_b_state.gc_server_b_state = Some(gc_server_b_state);
         server_b_state.relu_encoder = Some(gc_server_b_state.encoders);
@@ -933,6 +973,7 @@ where
             writer_b,
             num_relu,
             rng,
+            &server_c_state.relu_next_layer_randomizers,
         ).unwrap();
         // server_c_state.gc_server_c_state = Some(gc_server_c_state);
         server_c_state.rc_prime_labels = Some(gc_server_c_state.server_c_randomizer_labels);
@@ -2028,7 +2069,17 @@ where
         }
 
         let next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
-        println!("receiving intermeidate result from user");
+        // let layer_size = next_input.len();
+        // let relu_output_randomizers = state.relu_output_randomizers
+        //                 [num_consumed_relus..(num_consumed_relus + layer_size)]
+        //                 .to_vec();
+        // // num_consumed_relus += layer_size;
+        // next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
+        //     .into_shape(dims.output_dimensions())
+        //     .expect("shape should be correct")
+        //     .into();
+        // next_input.randomize_local_share(&next_layer_derandomizer);
+        // println!("receiving intermeidate result from user");
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
         // timer_end!(start_time);
@@ -2121,7 +2172,25 @@ where
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
         timer_end!(start_time);
-        Ok(next_layer_input)
+        let layer = neural_network.layers.last().unwrap();
+        let input_dims = layer.input_dimensions();
+        let mut next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
+        let layer_size = next_input.len();
+        let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
+                        [num_consumed_relus..(num_consumed_relus + layer_size)]
+                        .to_vec();
+        // num_consumed_relus += layer_size;
+        next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
+            .into_shape(input_dims)
+            .expect("shape should be correct")
+            .into();
+        next_input.randomize_local_share(&next_layer_derandomizer);
+        println!("receiving intermeidate result from user");
+        // let sent_message = MsgSend::new(&next_layer_input);
+        // crate::bytes::serialize(writer, &sent_message)?;
+        // timer_end!(start_time);
+        Ok(next_input)
+        // Ok(next_layer_input)
     }
 
     /// Outputs shares for the next round's input.

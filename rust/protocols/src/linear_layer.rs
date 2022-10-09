@@ -209,6 +209,14 @@ where
         // let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
         //     .into_shape(input_dims)
         //     .unwrap();
+
+        // let layer_randomness = r2
+        //     .iter()
+        //     .map(|r: &AdditiveShare<P>| r.inner.inner)
+        //     .collect::<Vec<_>>();
+        // let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
+        //     .into_shape(input_dims)
+        //     .unwrap();
         // Ok((layer_randomness.into(),server_randomness))
         Ok((r2,server_randomness))
     }
@@ -620,6 +628,7 @@ where
                 let recv: MsgRcv<P> = crate::bytes::deserialize(reader).unwrap();
                 recv.msg()
         };
+        // input.randomize_local_share();
         
         Ok(input)
     }

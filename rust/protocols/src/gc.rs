@@ -95,15 +95,15 @@ pub struct ServerAState{
     pub rb_garbler_wires: Option<Vec<Vec<Wire>>>,
 }
 
-pub struct ServerBState<P: FixedPointParameters>{
+pub struct ServerBState{
     pub encoders: Vec<Encoder>,
-    pub output_randomizers: Vec<P::Field>,
+    // pub output_randomizers: Vec<P::Field>,
     pub rc_labels: Vec<(Block,Block)>,
 }
 
-pub struct ServerCState<P: FixedPointParameters>{
+pub struct ServerCState{
     pub server_c_randomizer_labels: Vec<Wire>,
-    pub output_randomizers: Vec<P::Field>,   
+    // pub output_randomizers: Vec<P::Field>,   
     pub rc_labels: Option<Vec<Wire>>,
 }
 
@@ -208,11 +208,13 @@ where
         writer_c: &mut IMuxSync<W>,
         number_of_relus: usize,
         rng: &mut RNG,
-    )-> Result<ServerBState<P>, bincode::Error> {
+        r_prime: &[AdditiveShare<P>],
+    )-> Result<ServerBState, bincode::Error> {
         let mut gc_s = Vec::with_capacity(number_of_relus);
         let mut encoders = Vec::with_capacity(number_of_relus);
-        let p = (<<P::Field as PrimeField>::Params>::MODULUS.0).into();
-
+        // let p = (<<P::Field as PrimeField>::Params>::MODULUS.0).into();
+        let p = u128::from(<<P::Field as PrimeField>::Params>::MODULUS.0);
+        let field_size = crypto_primitives::gc::num_bits(p);
         let c = make_relu_3::<P>();
 
 
@@ -230,7 +232,11 @@ where
 
         // println!("num_garbler_inputs {}", num_garbler_inputs);
         // println!("num_evaluator_inputs {}", num_evaluator_inputs);
-
+        // let r_prime_bits = r_prime
+        // .iter()
+        // .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
+        // .map(|b| b == 1)
+        // .collect::<Vec<_>>();
 
         let zero_inputs = vec![0u16; num_evaluator_inputs];
         let one_inputs = vec![1u16; num_evaluator_inputs];
@@ -239,15 +245,16 @@ where
         let mut labels_rc_next = Vec::with_capacity(number_of_relus * 42);
         // let mut labels = Vec::with_capacity(number_of_relus * num_evaluator_inputs);
         let mut randomizer_labels = Vec::with_capacity(number_of_relus); //rb_next 
-        let mut output_randomizers = Vec::with_capacity(number_of_relus);   //rb_next for recover
-        for enc in encoders.iter() {
-            let r = P::Field::uniform(rng);
-            output_randomizers.push(r);
-            let r_bits: u64 = ((-r).into_repr()).into();
+        // let mut output_randomizers = Vec::with_capacity(number_of_relus);   //rb_next for recover
+        for (i,enc) in encoders.iter().enumerate() {
+            // let r = P::Field::uniform(rng);
+            // output_randomizers.push(r);
+            // let r_bits: u64 = ((r_prime[i]).into_repr()).into();
             let r_bits = fancy_garbling::util::u128_to_bits(
-                r_bits.into(),
+                u128_from_share(r_prime[i]),
                 crypto_primitives::gc::num_bits(p),
             );
+            // let r_bits  =r_prime_bits[i];
             for w in ((num_garbler_inputs / 2)..num_garbler_inputs)
                 .zip(r_bits)
                 .map(|(i, r_i)| enc.encode_garbler_input(r_i, i))
@@ -321,7 +328,6 @@ where
         // println!("Server B sending GC and rb_next");
         Ok(ServerBState {
             encoders,
-            output_randomizers,
             rc_labels: labels_rc,
         })
     }
@@ -331,35 +337,36 @@ where
         writer: &mut IMuxSync<W>,
         number_of_relus: usize,
         rng: &mut RNG,
-    )-> Result<ServerCState<P>, bincode::Error>{
+        r_prime: &[AdditiveShare<P>],
+    )-> Result<ServerCState, bincode::Error>{
         use fancy_garbling::util::*;
         let p = u128::from(<<P::Field as PrimeField>::Params>::MODULUS.0);
         let field_size = crypto_primitives::gc::num_bits(p);
 
 
-        let mut output_randomizers = Vec::with_capacity(number_of_relus);
+        // let mut output_randomizers = Vec::with_capacity(number_of_relus);
 
-        let mut randomizers_labels = Vec::with_capacity(number_of_relus);
-
-
-        for i in 0..number_of_relus {
-            let r = P::Field::uniform(rng);
-            output_randomizers.push(r);
-            let r_bit: u64 = ((-r).into_repr()).into();
-            // let r_bits = fancy_garbling::util::u128_to_bits(
-            //     r_bit.into(),
-            //     crypto_primitives::gc::num_bits(p),
-            // );
-
-            randomizers_labels.push(r_bit);
-        }
+        // let mut randomizers_labels = Vec::with_capacity(number_of_relus);
 
 
-        let bs = randomizers_labels
-            .iter()
-            .flat_map(|s| fancy_garbling::util::u128_to_bits((*s).into(), field_size))
-            .map(|b| b == 1)
-            .collect::<Vec<_>>();
+        // for i in 0..number_of_relus {
+        //     let r = P::Field::uniform(rng);
+        //     output_randomizers.push(r);
+        //     let r_bit: u64 = ((-r).into_repr()).into();
+        //     // let r_bits = fancy_garbling::util::u128_to_bits(
+        //     //     r_bit.into(),
+        //     //     crypto_primitives::gc::num_bits(p),
+        //     // );
+
+        //     randomizers_labels.push(r_bit);
+        // }
+
+
+        let bs = r_prime
+        .iter()
+        .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
+        .map(|b| b == 1)
+        .collect::<Vec<_>>();
         //Receiving rc_next
         let labels = if number_of_relus != 0 {
             let r = reader.get_mut_ref().remove(0);
@@ -384,7 +391,6 @@ where
         // println!("Server C receiving  rc_next labels via OT");
         Ok(ServerCState{
             server_c_randomizer_labels: labels,
-            output_randomizers,
             rc_labels:None,
         })
 
