@@ -2401,10 +2401,10 @@ where
         reader_u: &mut IMuxSync<R>,
         cfhe: ClientFHE,
         output_size: usize,
-        output: &mut Output<FixedPoint<P>>,
-    ){
+        // output: &mut Output<FixedPoint<P>>,
+    )->Output<FixedPoint<P>>{
         let result = crate::result_decrypt::<R, P>(reader_u,&cfhe,output_size);
-        // let mut output:Output<FixedPoint<P>> = Output::zeros((1,output_size,0,0));
+        let mut output:Output<FixedPoint<P>> = Output::zeros((1,output_size,1,1));
         println!("length {}",result.len());
         for idx in 0..output_size{
             println!("{}",idx);
@@ -2414,6 +2414,6 @@ where
                 1,
             );
         }
-        // output
+        output
     }
 }
