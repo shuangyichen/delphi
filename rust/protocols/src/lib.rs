@@ -1,3 +1,6 @@
+// use crate::*;
+use protocols_sys::encrypt_vec_out;
+use protocols_sys::SerialCT;
 use algebra::fixed_point::FixedPoint;
 use io_utils::imux::IMuxSync;
 use protocols_sys::{ClientFHE, KeyShare, ServerFHE, RootServerMPHE, LeafServerMPHE};
@@ -6,6 +9,7 @@ use std::{
     io::{Read, Write},
     marker::PhantomData,
 };
+use ::neural_network::tensors::Output;
 
 #[macro_use]
 extern crate bench_utils;
@@ -33,6 +37,52 @@ pub type RootServerKeyRcvR1 = InMessage<Vec<std::os::raw::c_char>, KeygenType>;
 // pub type RootServerKeyRcvR1C = InMessage<Vec<std::os::raw::c_char>, KeygenType>;
 pub type LeafServerKeySendR1<'a> = OutMessage<'a, Vec<std::os::raw::c_char>, KeygenType>;
 
+
+pub fn encrypt_output<W: Write + Send>(
+    sfhe: &ServerFHE,
+    value: &Output<u64>,
+    writer: &mut IMuxSync<W>,
+){
+    let value_c:Vec<u64> = value
+            .iter()
+            .map(|r| *r)
+            .collect::<Vec<_>>();
+    let ct:SerialCT = unsafe{
+        encrypt_vec_out(sfhe,value_c.as_ptr(),value_c.len() as u64)
+    };
+    let ct_vec = unsafe {
+        std::slice::from_raw_parts(ct.inner, ct.size as usize)
+            .to_vec()
+    };
+    let sent_message = ClientKeySend::new(&ct_vec);
+    crate::bytes::serialize(writer, &sent_message).unwrap();
+
+}
+
+pub fn eval_output<R: Read+ Send, W:Write+Send>(
+    reader_b: &mut IMuxSync<R>,
+    reader_c: &mut IMuxSync<R>,
+    writer_u: &mut IMuxSync<W>,
+){
+    let output_b: ServerKeyRcv = crate::bytes::deserialize(reader_b).unwrap();
+    let output_c: ServerKeyRcv = crate::bytes::deserialize(reader_c).unwrap();
+
+    let output_b_vec = output_b.msg();
+    let output_c_vec = output_c.msg();
+
+    let outb_ct = SerialCT {
+        inner: output_b_vec.as_mut_ptr(),
+        size: output_b_vec.len() as u64,
+    };
+    let outc_ct = SerialCT {
+        inner: output_c_vec.as_mut_ptr(),
+        size: output_c_vec.len() as u64,
+    };
+
+    let result_ct = unsafe{
+        evaluate_result(outb_ct,outc_ct)
+    }
+}
 
 
 
@@ -66,6 +116,17 @@ pub fn deliver_cpk<W: Write + Send>(
     let sent_message = ClientKeySend::new(&cpk);
     crate::bytes::serialize(writer, &sent_message).unwrap();
 }
+pub fn deliver_pk<W: Write + Send>(
+    writer_b: &mut IMuxSync<W>,
+    writer_c: &mut IMuxSync<W>,
+    pk: Vec<std::os::raw::c_char>,
+){
+    let sent_message = ClientKeySend::new(&pk);
+    crate::bytes::serialize(writer_b, &sent_message).unwrap();
+    crate::bytes::serialize(writer_c, &sent_message).unwrap();
+}
+
+
 
 pub fn hello<W: Write + Send>(
     writer: &mut IMuxSync<W>,

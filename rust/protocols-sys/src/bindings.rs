@@ -1400,6 +1400,9 @@ extern "C" {
     pub fn encrypt_vec(cfhe: *const ClientFHE, vec: *const u64, vec_size: u64) -> SerialCT;
 }
 extern "C" {
+    pub fn encrypt_vec_out(sfhe: *const ServerFHE, vec: *const u64, vec_size: u64) -> SerialCT;
+}
+extern "C" {
     pub fn decrypt_vec(cfhe: *const ClientFHE, ct: *mut SerialCT, size: u64) -> *mut u64;
 }
 extern "C" {

@@ -405,7 +405,7 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
         &server_b_state,
         rng,
     );
-    NNProtocol::output();
+    NNProtocol::leaf_server_output();
 
 }
 
@@ -461,7 +461,7 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
         &server_c_state,
         rng,
     );
-    NNProtocol::output();
+    NNProtocol::leaf_server_output();
 }
 
 

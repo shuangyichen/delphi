@@ -205,7 +205,8 @@ extern "C" {
 
     /* Encrypts and serializes a vector */
     SerialCT encrypt_vec(const ClientFHE* cfhe, const uint64_t* vec, uint64_t vec_size);
-
+    
+    SerialCT encrypt_vec_out(const ServerFHE* sfhe, const uint64_t* vec, uint64_t vec_size);
     /* Deserializes and decrypts a vector */
     uint64_t* decrypt_vec(const ClientFHE* cfhe, SerialCT *ct, uint64_t size);
 

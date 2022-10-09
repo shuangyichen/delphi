@@ -2252,7 +2252,7 @@ where
         Ok(result)
     }
 
-    pub fn online_user_protocol<R: Read + Send, W: Write + Send + Send>(
+    pub fn online_user_protocol<R: Read + Send, W: Write + Send>(
         reader: &mut IMuxSync<R>,
         writer: &mut IMuxSync<W>,
         input: &Input<FixedPoint<P>>,
@@ -2360,6 +2360,34 @@ where
         // Ok(result)
         let sent_message = MsgSend::new(&next_layer_input);
          crate::bytes::serialize(writer, &sent_message).unwrap();
-         println!("sending intermeidate result from user")
+         println!("sending intermeidate result from user");
+    }
+
+    pub fn leaf_server_output<R: Read + Send, W: Write + Send>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        nn_output: Output<AdditiveShare<P>>,
+    ){
+        let (sfhe,_) = crate::server_keygen(reader).unwrap();
+
+        crate::encrypt_output(&sfhe,&nn_output.to_repr(),writer);
+
+
+        
+    }
+
+    pub fn root_server_output<R: Read + Send, W: Write + Send>(
+        writer_u: &mut IMuxSync<W>,
+        reader_b: &mut IMuxSync<R>,
+        writer_b: &mut IMuxSync<W>,
+        reader_c: &mut IMuxSync<R>,
+        writer_c: &mut IMuxSync<W>,
+        pk: Vec<std::os::raw::c_char>,
+    ){
+        crate::deliver_pk(writer_b,writer_c,pk);
+
+        crate::eval_output(reader_b,reader_c);
+        // crate::deliver_cpk(writer_c,pk);
+        
     }
 }
