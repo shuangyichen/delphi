@@ -198,7 +198,7 @@ pub fn nn_user<R: RngCore + CryptoRng>(
         &mut reader_a,
         cfhe,
         output_size,
-        &mut output,
+        // &mut output,
     );
     output
 }
