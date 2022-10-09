@@ -881,6 +881,11 @@ where
         }
         }
         let mut relu_next_layer_randomizers = Vec::new();
+        let next_layer_randomizers = r_vec
+                .get(&2)
+                .expect("should exist because every ReLU should be succeeded by a linear layer");
+            relu_next_layer_randomizers
+                .extend_from_slice(next_layer_randomizers.as_slice().unwrap());
 
         for &i in &relu_layers {
             // let current_layer_output_shares = out_shares
