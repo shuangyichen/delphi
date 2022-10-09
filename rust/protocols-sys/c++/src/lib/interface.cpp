@@ -105,6 +105,30 @@ SerialCT encrypt_vec_out(const ServerFHE* sfhe, const u64* vec, u64 vec_size) {
     return ct;
 }
 
+SerialCT evaluate_result(const ServerFHE* sfhe,SerialCT b_ct, SerialCT c_ct,const u64* share, u64 share_size, u64 outchannel){
+    auto context = static_cast<SEALContext*>(sfhe->context);
+    BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(sfhe->encoder);
+    Evaluator *evaluator = reinterpret_cast<Evaluator*>(sfhe->evaluator);
+
+    auto pt_share = encode_vec(share,share_size,*encoder);
+    istringstream is_b;
+    is_b.rdbuf()->pubsetbuf(b_ct.inner, b_ct.size);
+    vector<Ciphertext> ct_out_b(outchannel);
+
+    istringstream is_c;
+    is_c.rdbuf()->pubsetbuf(c_ct.inner, c_ct.size);
+    vector<Ciphertext> ct_out_c(outchannel);
+
+     for (int ct_idx = 0; ct_idx < outchannel; ct_idx++) {
+         ct_out_b[ct_idx].load(*context,is_b);
+         ct_out_c[ct_idx].load(*context,is_c);
+         evaluator->add_inplace(ct_out_b[ct_idx],ct_out_c[ct_idx]);
+         evaluator->add_plain_inplace(ct_out_b[ct_idx],pt_share[ct_idx]);
+     }
+
+    SerialCT ct = serialize_ct(ct_out_c);
+    return ct;
+}
 /* Encrypts and serializes a vector */
 SerialCT encrypt_vec(const ClientFHE* cfhe, const u64* vec, u64 vec_size) {
     // Recast the needed fhe helpers
@@ -153,6 +177,8 @@ u64* decrypt_vec(const ClientFHE* cfhe, SerialCT *ct, u64 size) {
     }
     return share;
 }
+
+
 
 ClientFHE client_keygen(SerialCT *key_share) {
     //---------------Param and Key Generation---------------

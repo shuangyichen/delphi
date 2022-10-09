@@ -981,7 +981,7 @@ where
         architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerAState<P>,
         // num_relus: usize,
-    ){
+    )->Output<FixedPoint<P>>{
         let num_relus = state.num_relu;
         let first_layer_in_dims = {
             let layer = architecture.layers.first().unwrap();
@@ -996,6 +996,8 @@ where
         // let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
         let mut num_consumed_relus = 0;
         let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
+
+        // let last_share :Output<AdditiveShare<P>> = 
         // let next_layer_input = input;
         
         for (i, layer) in architecture.layers.iter().enumerate() {
@@ -1138,6 +1140,7 @@ where
                 }
                 // let input = next_layer_input;
             }
+            next_layer_input
         }
 
         // let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
@@ -1486,7 +1489,7 @@ where
         writer: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         rng: &mut RNG,
-    ) -> Result<(RootServerState<P>,Vec<std::os::raw::c_char>), bincode::Error> {
+    ) -> Result<(RootServerState<P>,Vec<std::os::raw::c_char>,ServerFHE), bincode::Error> {
         let mut num_relu = 0;
         // let mut num_approx = 0;
         let mut linear_state = BTreeMap::new();
@@ -1565,7 +1568,7 @@ where
             relu_encoders:None,
             relu_output_randomizers:None,
             num_relu:num_relu,
-        },pk))
+        },pk,sfhe))
     }
 
 
@@ -1574,7 +1577,7 @@ where
         writer: &mut IMuxSync<W>,
         neural_network_architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         rng: &mut RNG,
-    ) -> Result<UserState<P>, bincode::Error> {
+    ) -> Result<(UserState<P>,ClientFHE), bincode::Error> {
         let mut num_relu = 0;
         let mut in_shares = BTreeMap::new();
         let mut out_shares = BTreeMap::new();
@@ -1683,7 +1686,7 @@ where
              }
          }
          println!("user A relu num {}", num_relu);
-        Ok(UserState {
+        Ok((UserState {
             relu_circuits:None,
             relu_server_labels:None,
             relu_client_labels:None,
@@ -1692,7 +1695,7 @@ where
             linear_randomizer: in_shares,
             linear_post_application_share: out_shares,
             num_relu,
-        })
+        },cfhe))
 
     }
     pub fn offline_client_relu_protocol<R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
@@ -2383,11 +2386,30 @@ where
         reader_c: &mut IMuxSync<R>,
         writer_c: &mut IMuxSync<W>,
         pk: Vec<std::os::raw::c_char>,
+        share: Output<FixedPoint<P>>,
+        sfhe: ServerFHE,
+        out_channel: usize,
     ){
         crate::deliver_pk(writer_b,writer_c,pk);
 
-        crate::eval_output(reader_b,reader_c);
+        crate::eval_output(reader_b,reader_c,writer_u,&sfhe,&share.to_repr(),out_channel);
         // crate::deliver_cpk(writer_c,pk);
         
+    }
+
+    pub fn user_decrypt<R: Read + Send>(
+        reader_u: &mut IMuxSync<R>,
+        cfhe: ClientFHE,
+        output_size: usize,
+    )-> Output<FixedPoint<P>>{
+        let result = crate::result_decrypt::<R, P>(reader_u,&cfhe,output_size);
+        let mut output:Output<FixedPoint<P>> = Output::zeros((1,output_size,0,0));
+        for idx in 0..output_size as usize{
+            output[[0, idx, 0, 0]] = FixedPoint::with_num_muls(
+                P::Field::from_repr(algebra::BigInteger64(result[idx])),
+                1,
+            );
+        }
+        output
     }
 }

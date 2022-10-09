@@ -1,5 +1,5 @@
 // use crate::*;
-use protocols_sys::encrypt_vec_out;
+use protocols_sys::{encrypt_vec_out,evaluate_result,decrypt_vec};
 use protocols_sys::SerialCT;
 use algebra::fixed_point::FixedPoint;
 use io_utils::imux::IMuxSync;
@@ -59,29 +59,69 @@ pub fn encrypt_output<W: Write + Send>(
 
 }
 
-pub fn eval_output<R: Read+ Send, W:Write+Send>(
+pub fn result_decrypt<'a,R: Read+ Send, P: algebra::FixedPointParameters>(
+    reader_u: &mut IMuxSync<R>,
+    cfhe: &'a ClientFHE,
+    output_size: usize,
+)-> Vec<u64>{
+    let ct: ServerKeyRcv = crate::bytes::deserialize(reader_u).unwrap();
+    let mut ct_vec = ct.msg();
+    let mut out_ct = SerialCT {
+        inner: ct_vec.as_mut_ptr(),
+        size: ct_vec.len() as u64,
+    };
+
+    unsafe{
+        let result = decrypt_vec(cfhe,&mut out_ct,output_size as u64);
+        std::slice::from_raw_parts(result, output_size as usize).to_vec()
+    }
+    // let output:Output<FixedPoint<P>> = Output::zeros((1,output_size,0,0));
+    // for idx in 0..output_size as uszie{
+    //     output[[0, row, 0, 0]] = FixedPoint::with_num_muls(
+    //         P::Field::from_repr(vec_result[idx]),
+    //         1,
+    //     );
+    // }
+}
+
+pub fn eval_output<'a,R: Read+ Send, W:Write+Send>(
     reader_b: &mut IMuxSync<R>,
     reader_c: &mut IMuxSync<R>,
     writer_u: &mut IMuxSync<W>,
+    sfhe: &'a ServerFHE,
+    share: &Output<u64>,
+    out_channel: usize,
 ){
     let output_b: ServerKeyRcv = crate::bytes::deserialize(reader_b).unwrap();
     let output_c: ServerKeyRcv = crate::bytes::deserialize(reader_c).unwrap();
 
-    let output_b_vec = output_b.msg();
-    let output_c_vec = output_c.msg();
+    let mut output_b_vec = output_b.msg();
+    let mut output_c_vec = output_c.msg();
 
     let outb_ct = SerialCT {
         inner: output_b_vec.as_mut_ptr(),
         size: output_b_vec.len() as u64,
     };
-    let outc_ct = SerialCT {
+    let mut outc_ct = SerialCT {
         inner: output_c_vec.as_mut_ptr(),
         size: output_c_vec.len() as u64,
     };
+    let share_c : Vec<u64> = share
+    .iter()
+    .map(|r| *r)
+    .collect::<Vec<_>>();
 
     let result_ct = unsafe{
-        evaluate_result(outb_ct,outc_ct)
-    }
+        evaluate_result(sfhe,outb_ct,outc_ct,share_c.as_ptr(),share_c.len() as u64,out_channel as u64)
+    };
+
+    let ct_vec = unsafe {
+        std::slice::from_raw_parts(result_ct.inner, result_ct.size as usize)
+            .to_vec()
+    };
+    let sent_message = ClientKeySend::new(&ct_vec);
+    crate::bytes::serialize(writer_u, &sent_message).unwrap();
+
 }
 
 

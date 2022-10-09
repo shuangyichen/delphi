@@ -12,6 +12,8 @@ use std::path::Path;
 use rand::ChaChaRng;
 use rand::SeedableRng;
 use experiments::nn_user;
+use experiments::inference::inference::softmax;
+// use experiments::validation::validate::softmax;
 const RANDOMNESS: [u8; 32] = [
     0x11, 0xe0, 0x8f, 0xbc, 0x89, 0xa7, 0x34, 0x01, 0x45, 0x86, 0x82, 0xb6, 0x51, 0xda, 0xf4, 0x76,
     0x5d, 0xc9, 0x8d, 0xea, 0x23, 0xf2, 0x90, 0x8f, 0x9d, 0x03, 0xf2, 0x77, 0xd3, 0x4a, 0x52, 0xd2,
@@ -99,11 +101,19 @@ fn main() {
     let server_a_addr = "10.30.8.15:8000";
 
     let split_layer:usize = 1;
+    let output_size :usize = 1;
     let network = construct_minionn_split(None, 1, layers, &mut rng,split_layer);
     // let network = construct_minionn_test(None, 1, layers, &mut rng);
     let architecture = (&network).into();
 
     let mut buf = vec![];
+    std::fs::File::open(Path::new("class.npy"))
+        .unwrap()
+        .read_to_end(&mut buf)
+        .unwrap();
+    let class: i64 = NpyData::from_bytes(&buf).unwrap().to_vec()[0];
+
+    buf = vec![];
     std::fs::File::open(Path::new("image.npy"))
         .unwrap()
         .read_to_end(&mut buf)
@@ -120,8 +130,11 @@ fn main() {
     //           *a = AdditiveShare::new(FixedPoint::from(*b))
     //       });
 
-    nn_user(&user_addr,&server_a_addr,&architecture,(image.clone()).into(),&mut rng);
-
+    let mut result = nn_user(&user_addr,&server_a_addr,&architecture,(image.clone()).into(),&mut rng,output_size);
+    let sm = softmax(&result);
+    let max = sm.iter().map(|e| f64::from(*e)).fold(0. / 0., f64::max);
+    let index = sm.iter().position(|e| f64::from(*e) == max).unwrap() as i64;
+    println!("Correct class is {}, inference result is {}", class, index);
 }
 
 

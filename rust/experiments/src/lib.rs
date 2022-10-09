@@ -159,9 +159,10 @@ pub fn nn_user<R: RngCore + CryptoRng>(
     architecture1: &NeuralArchitecture<TenBitAS, TenBitExpFP>,
     input: Input<TenBitExpFP>,
     rng: &mut R,
-){
+    output_size: usize,
+)-> Output<TenBitExpFP>{
     let (mut reader_a, mut writer_a) = server_connect(user_addr);
-    let mut client_state = NNProtocol::offline_client_linear_protocol(&mut reader_a, &mut writer_a, &architecture1, rng)
+    let (mut client_state,cfhe) = NNProtocol::offline_client_linear_protocol(&mut reader_a, &mut writer_a, &architecture1, rng)
                 .unwrap();
     
     NNProtocol::offline_user_l_protocol(
@@ -188,6 +189,16 @@ pub fn nn_user<R: RngCore + CryptoRng>(
         &client_state
     );
     println!("User Server finish eval");
+
+
+    //Output
+    let (mut reader_a, mut writer_a) = server_connect(user_addr);
+    let result = NNProtocol::user_decrypt(
+        &mut reader_a,
+        cfhe,
+        output_size,
+    );
+    result
 }
 
 pub fn nn_root_server<R: RngCore + CryptoRng>(
@@ -198,6 +209,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     nn1: &NeuralNetwork<TenBitAS, TenBitExpFP>,
     architecture2: &NeuralArchitecture<TenBitAS, TenBitExpFP>,
     rng: &mut R,
+    out_channel: usize,
 ){
     // Preprocessing
     let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
@@ -213,7 +225,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // println!("server c connected");
 
     //***************Split 1 preprocessing  *********
-    let (mut sa_split1,pk) =  NNProtocol::offline_server_linear_protocol(&mut reader_u, &mut writer_u, &nn1, rng).unwrap();
+    let (mut sa_split1,pk,sfhe) =  NNProtocol::offline_server_linear_protocol(&mut reader_u, &mut writer_u, &nn1, rng).unwrap();
     //***************Split 2 preprocessing   **********
 
     let (mut sa_state,cpk,rsmphe,lsmphe) = {
@@ -281,7 +293,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
     let next_input = NNProtocol::online_root_server_protocol(&mut reader_u, &mut writer_u, &nn1, &sa_split1).unwrap();
     // //A----B----C online
-    NNProtocol::online_server_a_protocol(
+    let last_share = NNProtocol::online_server_a_protocol(
         server_a_addr,
         server_b_addr,
         server_c_addr,
@@ -290,6 +302,26 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &sa_state,
     );
 
+
+    //Output
+
+    let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+    let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+    let (mut reader_u, mut writer_u) = client_connect(user_addr);
+
+    // let out_channel = architecture2.layers[]
+
+    NNProtocol::root_server_output(
+        &mut writer_u,
+        &mut reader_b,
+        &mut writer_b,
+        &mut reader_c,
+        &mut writer_c,
+        pk,
+        last_share,
+        sfhe,
+        out_channel,
+    );
 }
 
 pub fn nn_server_a<R: RngCore + CryptoRng>(
@@ -345,6 +377,11 @@ pub fn nn_server_a<R: RngCore + CryptoRng>(
         &architecture,
         &server_a_state,
     );
+
+    // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+    // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+    // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+
 }
 
 pub fn nn_server_b<R: RngCore + CryptoRng>(
@@ -405,7 +442,14 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
         &server_b_state,
         rng,
     );
-    NNProtocol::leaf_server_output();
+
+    //Output
+    let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
+    NNProtocol::leaf_server_output(
+        &mut reader_b,
+        &mut writer_b,
+        result,
+    );
 
 }
 
@@ -461,7 +505,14 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
         &server_c_state,
         rng,
     );
-    NNProtocol::leaf_server_output();
+
+    //Output
+    let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
+    NNProtocol::leaf_server_output(
+        &mut reader_c,
+        &mut writer_c,
+        result,
+    );
 }
 
 
