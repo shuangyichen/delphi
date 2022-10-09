@@ -101,7 +101,7 @@ fn main() {
     let server_a_addr = "10.30.8.15:8000";
 
     let split_layer:usize = 1;
-    let output_size :usize = 1;
+    let output_size :usize = 10;
     let network = construct_minionn_split(None, 1, layers, &mut rng,split_layer);
     // let network = construct_minionn_test(None, 1, layers, &mut rng);
     let architecture = (&network).into();
