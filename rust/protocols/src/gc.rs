@@ -237,6 +237,8 @@ where
         // .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
         // .map(|b| b == 1)
         // .collect::<Vec<_>>();
+        println!("r prime length {}",r_prime.len());
+        println!("num relu {}",number_of_relus);
 
         let zero_inputs = vec![0u16; num_evaluator_inputs];
         let one_inputs = vec![1u16; num_evaluator_inputs];
@@ -244,7 +246,7 @@ where
         let mut labels_rc = Vec::with_capacity(number_of_relus * 42);
         let mut labels_rc_next = Vec::with_capacity(number_of_relus * 42);
         // let mut labels = Vec::with_capacity(number_of_relus * num_evaluator_inputs);
-        let mut randomizer_labels = Vec::with_capacity(number_of_relus); //rb_next 
+        let mut randomizer_labels = Vec::with_capacity(number_of_relus*42); //rb_next 
         // let mut output_randomizers = Vec::with_capacity(number_of_relus);   //rb_next for recover
         for (i,enc) in encoders.iter().enumerate() {
             // let r = P::Field::uniform(rng);
