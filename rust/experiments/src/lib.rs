@@ -304,10 +304,11 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
 
 
     //Output
-
+    let (mut reader_u, mut writer_u) = client_connect(user_addr);
+    thread::sleep(time::Duration::from_millis(1000));
     let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-    let (mut reader_u, mut writer_u) = client_connect(user_addr);
+    // let (mut reader_u, mut writer_u) = client_connect(user_addr);
 
     // let out_channel = architecture2.layers[]
 
