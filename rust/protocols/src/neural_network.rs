@@ -2186,15 +2186,15 @@ where
         let layer = neural_network.layers.last().unwrap();
         let input_dims = layer.input_dimensions();
         let mut next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
-        let layer_size = next_input.len();
-        let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
-                        [num_consumed_relus..(num_consumed_relus + layer_size)]
-                        .to_vec();
-        // num_consumed_relus += layer_size;
-        next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
-            .into_shape(input_dims)
-            .expect("shape should be correct")
-            .into();
+        // let layer_size = next_input.len();
+        // let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
+        //                 [num_consumed_relus..(num_consumed_relus + layer_size)]
+        //                 .to_vec();
+        // // num_consumed_relus += layer_size;
+        // next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
+        //     .into_shape(input_dims)
+        //     .expect("shape should be correct")
+        //     .into();
         next_input.randomize_local_share(&next_layer_derandomizer);
         println!("receiving intermeidate result from user");
         // let sent_message = MsgSend::new(&next_layer_input);

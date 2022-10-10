@@ -265,6 +265,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         rng,
         &mut sa_split1,
     );
+    println!("User A relu done");
 
     // thread::sleep(time::Duration::from_millis(1000));
     let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
