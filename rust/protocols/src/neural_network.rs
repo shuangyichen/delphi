@@ -2089,7 +2089,7 @@ where
         //     .into_shape(dims.output_dimensions())
         //     .expect("shape should be correct")
         //     .into();
-        // next_input.randomize_local_share(&next_layer_derandomizer);
+        next_input.randomize_local_share(&next_layer_derandomizer);
         // println!("receiving intermeidate result from user");
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
