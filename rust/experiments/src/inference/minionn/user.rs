@@ -18,6 +18,23 @@ const RANDOMNESS: [u8; 32] = [
     0x11, 0xe0, 0x8f, 0xbc, 0x89, 0xa7, 0x34, 0x01, 0x45, 0x86, 0x82, 0xb6, 0x51, 0xda, 0xf4, 0x76,
     0x5d, 0xc9, 0x8d, 0xea, 0x23, 0xf2, 0x90, 0x8f, 0x9d, 0x03, 0xf2, 0x77, 0xd3, 0x4a, 0x52, 0xd2,
 ];
+
+pub fn softmax(x: &Input<TenBitExpFP>) -> Input<TenBitExpFP> {
+    let mut max: TenBitExpFP = x[[0, 0, 0, 0]];
+    x.iter().for_each(|e| {
+        max = match max.cmp(e) {
+            cmp::Ordering::Less => *e,
+            _ => max,
+        };
+    });
+    let mut e_x: Input<TenBitExpFP> = x.clone();
+    e_x.iter_mut().for_each(|e| {
+        *e = f64::from(*e - max).exp().into();
+    });
+    let e_x_sum = 1.0 / f64::from(e_x.iter().fold(TenBitExpFP::zero(), |sum, val| sum + *val));
+    e_x.iter_mut().for_each(|e| *e *= e_x_sum.into());
+    return e_x;
+}
 fn get_args() -> ArgMatches<'static> {
     App::new("minionn-user")
         // .arg(
