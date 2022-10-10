@@ -411,12 +411,12 @@ where
                         Output::zeros(output_dims)
                     }
             };
-            println!("old current_layer_shares {:?}",state.relu_current_layer_output_shares);
+            // println!("old current_layer_shares {:?}",state.relu_current_layer_output_shares);
             let mut current_layer_shares = Vec::new();
             current_layer_shares.extend_from_slice(out_share.as_slice().unwrap());
             current_layer_shares.extend_from_slice(&state.relu_current_layer_output_shares);
             state.relu_current_layer_output_shares = current_layer_shares;
-            println!("new current_layer_shares {:?}",state.relu_current_layer_output_shares);
+            // println!("new current_layer_shares {:?}",state.relu_current_layer_output_shares);
             // println!("new current_layer_shares {:?}",current_layer_shares);
             // state.relu_current_layer_output_shares = .splice(0..0, out_share.as_slice().unwrap().iter().cloned());
             state.linear_post_application_share.insert(0,out_share);
@@ -1021,6 +1021,13 @@ where
         println!("linear_randomizer len {}",server_a_state.linear_randomizer.len());
         println!("linear_post_application_share {}",server_a_state.linear_post_application_share.len());
         println!("num relu {}",server_a_state.num_relu);
+
+        for (idx, _) in &server_a_state.linear_randomizer{
+            println!("linear_randomizer {}", idx);
+        }
+        for (idx, _) in &server_a_state.linear_post_application_share{
+            println!("linear_post_application_share {}", idx);
+        }
     }
 
     pub fn offline_server_c_protocol_r3<W: Write +Send>(
