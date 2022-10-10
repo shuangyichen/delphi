@@ -944,6 +944,24 @@ where
             current_layer_shares,//.as_slice(),
             rng,
         ).unwrap();
+        // let (relu_share_a_labels, relu_rb_labels) = if num_relu != 0 {
+        //     let size_of_a_input = gc_server_a_state.ra_labels.len() / num_relu;
+        //     let size_of_rb_input = gc_server_a_state.server_b_randomizer_labels.len() / num_relu;
+
+        //     let a_labels = gc_server_a_state.ra_labels
+        //         .chunks(size_of_a_input)
+        //         .map(|chunk| chunk.to_vec())
+        //         .collect();
+        //     let b_labels = gc_server_a_state.server_b_randomizer_labels
+        //         .chunks(size_of_rb_input)
+        //         .map(|chunk| chunk.to_vec())
+        //         .collect();
+        //     (a_labels, b_labels)
+        // }else {
+        //     (vec![], vec![])
+        // };
+
+
         server_a_state.relu_circuits = Some(gc_server_a_state.gc_s);
         server_a_state.relu_server_a_labels = Some(gc_server_a_state.ra_labels);
         server_a_state.relu_server_b_labels = Some(gc_server_a_state.server_b_randomizer_labels);
@@ -1011,6 +1029,17 @@ where
             // server_a_state.gc_server_a_state.as_ref().unwrap(),
             // &mut gc_server_a_state,
         );
+
+        
+            // let size_of_c_input = rc_wires.len() / num_relu;
+
+            // let c_labels = rc_wires
+            //     .chunks(size_of_c_input)
+            //     .map(|chunk| chunk.to_vec())
+            //     .collect();
+           
+
+
         server_a_state.relu_server_c_labels = Some(rc_wires);
         println!("relu_server_c_labels len {}",server_a_state.relu_server_c_labels.as_ref().unwrap().len());
         println!("relu_server_a_labels len {}",server_a_state.relu_server_a_labels.as_ref().unwrap().len());
@@ -1022,12 +1051,12 @@ where
         println!("linear_post_application_share {}",server_a_state.linear_post_application_share.len());
         println!("num relu {}",server_a_state.num_relu);
 
-        for (idx, _) in &server_a_state.linear_randomizer{
-            println!("linear_randomizer {}", idx);
-        }
-        for (idx, _) in &server_a_state.linear_post_application_share{
-            println!("linear_post_application_share {}", idx);
-        }
+        // for (idx, _) in &server_a_state.linear_randomizer{
+        //     println!("linear_randomizer {}", idx);
+        // }
+        // for (idx, _) in &server_a_state.linear_post_application_share{
+        //     println!("linear_post_application_share {}", idx);
+        // }
     }
 
     pub fn offline_server_c_protocol_r3<W: Write +Send>(
@@ -1110,9 +1139,9 @@ where
                                 [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
                             let layer_rc_labels = &state.relu_server_c_labels.as_ref().unwrap()
                                 [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
-                            let next_layer_randomizers = &state.relu_next_layer_randomizers
-                                [num_consumed_relus..(num_consumed_relus + layer_size)];
-                            // let next_layer_randomizers = state.linear_randomizer.get(&i).unwrap();
+                            // let next_layer_randomizers = &state.relu_next_layer_randomizers
+                            //     [num_consumed_relus..(num_consumed_relus + layer_size)];
+                            let next_layer_randomizers = state.linear_randomizer.get(&(i+1)).unwrap().as_slice().unwrap();
                             let relu_circuits = &state.relu_circuits.as_ref().unwrap()
                                 [num_consumed_relus..(num_consumed_relus + layer_size)];
 
