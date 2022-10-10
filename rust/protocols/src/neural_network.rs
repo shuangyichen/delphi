@@ -411,7 +411,11 @@ where
                         Output::zeros(output_dims)
                     }
             };
-            state.relu_current_layer_output_shares.splice(0..0, out_share.as_slice().unwrap().iter().cloned());
+            let mut current_layer_shares = Vec::new();
+            current_layer_shares.extend_from_slice(out_share.as_slice().unwrap());
+            current_layer_shares.extend_from_slice(&state.relu_current_layer_output_shares);
+            state.relu_current_layer_output_shares = current_layer_shares;
+            // state.relu_current_layer_output_shares = .splice(0..0, out_share.as_slice().unwrap().iter().cloned());
             state.linear_post_application_share.insert(0,out_share);
             // state.relu_next_layer_randomizers.splice(0..0,state.linear_randomizer[&0].as_slice().unwrap().iter().clone());
             state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
