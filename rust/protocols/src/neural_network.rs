@@ -2195,7 +2195,7 @@ where
         //     .into_shape(input_dims)
         //     .expect("shape should be correct")
         //     .into();
-        next_input.randomize_local_share(&next_layer_derandomizer);
+        // next_input.randomize_local_share(&next_layer_derandomizer);
         println!("receiving intermeidate result from user");
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
@@ -2485,7 +2485,7 @@ where
     )->Output<FixedPoint<P>>{
         let result = crate::result_decrypt::<R, P>(reader_u,&cfhe,output_size);
         let mut output:Output<FixedPoint<P>> = Output::zeros((1,output_size,1,1));
-        println!("length {}",result.len());
+        // println!("length {}",result.len());
         for idx in 0..output_size{
             println!("{}",idx);
             println!("{}",result[idx]);
