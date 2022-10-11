@@ -51,7 +51,7 @@ pub struct ServerState<P: FixedPointParameters> {
     pub approx_state: Vec<Triple<P::Field>>,
 }
 pub struct RootServerState<P: FixedPointParameters> {
-    pub linear_state: BTreeMap<usize, Output<P::Field>>,
+    pub linear_state: BTreeMap<usize, Output<P::Field>>,  //s
     pub relu_encoders: Option<Vec<Encoder>>,
     pub relu_output_randomizers: Option<Vec<P::Field>>,
     pub num_relu: usize,
@@ -683,6 +683,8 @@ where
 
         let mut current_layer_shares = Vec::new(); //Fr-s
         let mut relu_next_layer_randomizers = Vec::new(); //ra'
+
+        //2 is linear?
         let next_layer_randomizers_0 = in_shares
                 .get(&2)
                 .expect("should exist because every ReLU should be succeeded by a linear layer");
@@ -1075,12 +1077,6 @@ where
         server_a_addr: &str,
         server_b_addr: &str,
         server_c_addr: &str,
-        // reader_b: &mut IMuxSync<R>,
-        // writer_b: &mut IMuxSync<W>,
-        // reader_c: &mut IMuxSync<R>,
-        // writer_c: &mut IMuxSync<W>,
-        // reader_a: &mut IMuxSync<R>,
-        // writer_a: &mut IMuxSync<W>,
         input: &Input<AdditiveShare<P>>,
         architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerAState<P>,
@@ -1119,20 +1115,12 @@ where
                             let output_dims = dims.output_dimensions();
                             let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;//next_layer_input.len();
                             let mut rb_garbler_wires : Vec<Vec<Wire>>  = Vec::with_capacity(layer_size);
-                            // let servera_listener = TcpListener::bind(server_a_addr).unwrap();
-                            // for stream in servera_listener.incoming() {
-                                // let stream = stream.expect("server connection failed!");
-                                // let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
-                                // let mut write_stream = IMuxSync::new(vec![stream]);
-                                rb_garbler_wires =  ReluProtocol::<P>::online_server_a_protocol(&mut reader_b);
-                                // break;
-                            // }
+                         
+                            rb_garbler_wires =  ReluProtocol::<P>::online_server_a_protocol(&mut reader_b);
 
-                            
 
                             //AC interaction + final evaluation
-                            // let stream_c = TcpStream::connect(server_c_addr).expect("connecting to server failed");
-                            // let mut read_stream = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
+                           
                             let layer_ra_labels = &state.relu_server_a_labels.as_ref().unwrap()
                                 [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
                             let layer_rb_labels = &state.relu_server_b_labels.as_ref().unwrap()
@@ -1148,20 +1136,7 @@ where
                             num_consumed_relus += layer_size;
                             // let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
                             let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
-                            // let layer_ra_labels = layer_ra_labels
-                            //     .into_iter()
-                            //     .flat_map(|l| l.clone())
-                            //     .collect::<Vec<_>>();
-                            // let layer_rb_labels = layer_rb_labels
-                            //     .into_iter()
-                            //     .flat_map(|l| l.clone())
-                            //     .collect::<Vec<_>>();
-                            // let layer_rc_labels = layer_rc_labels
-                            //     .into_iter()
-                            //     .flat_map(|l| l.clone())
-                            //     .collect::<Vec<_>>();
-                            // thread::sleep(time::Duration::from_millis(1000));
-                            // println!("ReLU r2");
+                          
                             let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
                             // println!("ReLU r2");
                             let output =ReluProtocol::eval_server_a_protocol(
@@ -1178,14 +1153,7 @@ where
                             .into_shape(dims.output_dimensions())
                             .expect("shape should be correct")
                             .into();
-                            // let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.output_dimensions()); 
-                            // next_layer_input.iter_mut().zip(input.iter_mut())
-                            // .for_each(|(a,b)|{
-                            //     *b = AdditiveShare::new(*a)
-                            // });
-                            // // let input = next_layer_input;
-                            // println!("Relu output {} {} {} {},", input.dim().0,input.dim().1,input.dim().2,input.dim().3);
-
+                           
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {}
                     }
@@ -2193,7 +2161,7 @@ where
                     )?;
                     let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
                         [num_consumed_relus..(num_consumed_relus + layer_size)]
-                        .to_vec();
+                        .to_vec(); //OTP
                     num_consumed_relus += layer_size;
                     next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
                         .into_shape(dims.output_dimensions())
@@ -2243,15 +2211,15 @@ where
         let layer = neural_network.layers.last().unwrap();
         let input_dims = layer.input_dimensions();
         let mut next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
-        // let layer_size = next_input.len();
-        // let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
-        //                 [num_consumed_relus..(num_consumed_relus + layer_size)]
-        //                 .to_vec();
-        // // num_consumed_relus += layer_size;
-        // next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
-        //     .into_shape(input_dims)
-        //     .expect("shape should be correct")
-        //     .into();
+        let layer_size = next_input.len();
+        let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
+                        [num_consumed_relus..(num_consumed_relus + layer_size)]
+                        .to_vec();
+        // num_consumed_relus += layer_size;
+        next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
+            .into_shape(input_dims)
+            .expect("shape should be correct")
+            .into();
         next_input.randomize_local_share(&next_layer_derandomizer);
         println!("receiving intermeidate result from user");
         // let sent_message = MsgSend::new(&next_layer_input);
