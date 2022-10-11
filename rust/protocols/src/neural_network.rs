@@ -102,8 +102,8 @@ pub struct ServerAState<P: FixedPointParameters> {
 
 pub struct ServerBState<P: FixedPointParameters> {
     pub relu_next_layer_randomizers: Vec<AdditiveShare<P>>,
-    pub input_randomizer: BTreeMap<usize, Input<AdditiveShare<P>>>,
-    pub output_randomizer: BTreeMap<usize, Output<P::Field>>,
+    pub input_randomizer: BTreeMap<usize, Input<AdditiveShare<P>>>, //r
+    pub output_randomizer: BTreeMap<usize, Output<P::Field>>, //s
     pub relu_encoder: Option<Vec<Encoder>>,
     pub gc_server_b_state: Option<crate::gc::ServerBState>,
     pub rc_01_labels: Option<Vec<(Block,Block)>>,
@@ -1081,7 +1081,7 @@ where
         architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerAState<P>,
         // num_relus: usize,
-    )->Output<FixedPoint<P>>{
+    )->Output<AdditiveShare<P>>{
         let num_relus = state.num_relu;
         let first_layer_in_dims = {
             let layer = architecture.layers.first().unwrap();
@@ -1213,7 +1213,8 @@ where
                 }
                 // let input = next_layer_input;
             }
-            next_layer_input
+            let total_layers = architecture.layers.len();
+            state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
         }
 
         // let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
@@ -2476,13 +2477,16 @@ where
         reader_c: &mut IMuxSync<R>,
         writer_c: &mut IMuxSync<W>,
         pk: Vec<std::os::raw::c_char>,
-        share: Output<FixedPoint<P>>,
+        share: Output<AdditiveShare<P>>,
         sfhe: ServerFHE,
         out_channel: usize,
     ){
         crate::deliver_pk(writer_b,writer_c,pk);
+        let size = share.shape();
+        let shape:(usize,usize,usize,usize) = (size[0],size[1],size[2],size[3]);
+        let share_fp = NNProtocol::transform_fp(&share,shape);
 
-        crate::eval_output(reader_b,reader_c,writer_u,&sfhe,&share.to_repr(),out_channel);
+        crate::eval_output(reader_b,reader_c,writer_u,&sfhe,&share_fp.to_repr(),out_channel);
         // crate::deliver_cpk(writer_c,pk);
         
     }
