@@ -620,6 +620,31 @@ where
         Ok(())
     }
 
+    pub fn online_leaf_server_protocol<R: Read + Send>(
+        reader: &mut IMuxSync<R>,
+        layer: &LinearLayer<AdditiveShare<P>, FixedPoint<P>>,
+        output_rerandomizer: &Output<P::Field>,
+        input_dim: (usize,usize,usize,usize),
+        output: &mut Output<AdditiveShare<P>>,
+    ) -> Result<(), bincode::Error> {
+        let start = timer_start!(|| "Linear online protocol");
+        // Receive client share and compute layer if conv or fc
+        let mut input: Input<AdditiveShare<P>> = match &layer {
+            LinearLayer::Conv2d { .. } | LinearLayer::FullyConnected { .. } => {
+                let recv: MsgRcv<P> = crate::bytes::deserialize(reader).unwrap();
+                recv.msg()
+            }
+            _ => Input::zeros(input_dim),
+        };
+        *output = layer.evaluate(&input);
+        output.zip_mut_with(output_rerandomizer, |out, s| {
+            *out = FixedPoint::randomize_local_share(out, s)
+        });
+        timer_end!(start);
+        Ok(())
+    }
+
+
     pub fn online_server_receive_intermediate<R: Read + Send>(
         reader: &mut IMuxSync<R>,
     ) -> Result<Input<AdditiveShare<P>>, bincode::Error> {

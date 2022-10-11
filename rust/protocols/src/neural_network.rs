@@ -1224,18 +1224,12 @@ where
         server_a_addr: &str,
         server_b_addr: &str,
         server_c_addr: &str,
-        // reader_b: &mut IMuxSync<R>,
-        // writer_b: &mut IMuxSync<W>,
-        // reader_c: &mut IMuxSync<R>,
-        // writer_c: &mut IMuxSync<W>,
-        // reader_a: &mut IMuxSync<R>,
-        // writer_a: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerBState<P>,
         rng: &mut RNG,
         // num_relus: usize,
     )->Output<AdditiveShare<P>>{
-        let num_relus = state.num_relu;
+
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
             assert!(
@@ -1248,7 +1242,7 @@ where
         let mut num_consumed_relus = 0;
 
         let mut next_layer_input = Output::zeros(first_layer_out_dims);
-        let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
+        // let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
         // let serverb_listener = TcpListener::bind(server_b_addr).unwrap();
 
         for (i, layer) in neural_network.layers.iter().enumerate() {
@@ -1256,20 +1250,11 @@ where
             match layer {
             Layer::NLL(NonLinearLayer::ReLU(dims)) => {
                 println!("ReLU");
-                // let stream_a = TcpStream::connect(server_a_addr).expect("connecting to server failed");
-                // let stream_c = TcpStream::connect(server_c_addr).expect("connecting to server failed");
-                // let mut read_stream_a = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
-                // let mut write_stream_a = IMuxSync::new(vec![stream_a]);
-                // let mut read_stream_c = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
-                // let mut write_stream_c = IMuxSync::new(vec![stream_c]);
-                // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
+
                 let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
                 // println!("b connected");
                 let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-                // println!("c connected");
-                // let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
-                // println!("b connected");
-                // let layer_size = next_layer_input.len();
+                
                 let output_dims = dims.output_dimensions();
                 let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;
                 let layer_encoders =
@@ -1302,21 +1287,21 @@ where
                 //             *l_r += &inp.inner.inner;
                 //         });
                 // }
-                let (b, c, h, w) = layer.input_dimensions();
+                let input_dim = layer.input_dimensions();
                 // println!("input dimension {} {} {} {}",b,c,h,w);
                 next_layer_input = Output::zeros(layer.output_dimensions());
                 // for stream in serverb_listener.incoming() {
                     // let mut read_stream =
                     // IMuxSync::new(vec![stream.expect("server connection failed!")]);
-                    LinearProtocol::online_server_protocol(
+                    LinearProtocol::online_leaf_server_protocol(
                         &mut reader_b,       // we only receive here, no messages to client
                         &layer, // layer parameters
                         layer_randomizer,       // this is our `s` from above.
-                        &next_layer_derandomizer,
+                        input_dim,
                         &mut next_layer_input, // this is where the result will go.
                     ).unwrap();
                     // println!("next layer input length b {}", next_layer_input.len());
-                    next_layer_derandomizer = Output::zeros(layer.output_dimensions());
+                    // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
 
                     for share in next_layer_input.iter_mut() {
                         share.inner.signed_reduce_in_place();
@@ -1363,7 +1348,7 @@ where
             let mut num_consumed_relus = 0;
 
             let mut next_layer_input = Output::zeros(first_layer_out_dims);
-            let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
+            // let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
             // let serverc_listener = TcpListener::bind(server_c_addr).unwrap();
 
             for (i, layer) in neural_network.layers.iter().enumerate() {
@@ -1416,21 +1401,21 @@ where
                     //             *l_r += &inp.inner.inner;
                     //         });
                     // }
-                    let (b, c, h, w) = layer.input_dimensions();
+                    let input_dim = layer.input_dimensions();
                     // println!("input dimension {} {} {} {}",b,c,h,w);
                     next_layer_input = Output::zeros(layer.output_dimensions());
                     // for stream in serverc_listener.incoming() {
                     //     let mut read_stream =
                     //     IMuxSync::new(vec![stream.expect("server connection failed!")]);
-                        LinearProtocol::online_server_protocol(
+                        LinearProtocol::online_leaf_server_protocol(
                             &mut reader_c,       // we only receive here, no messages to client
                             &layer, // layer parameters
                             layer_randomizer,       // this is our `s` from above.
-                            &next_layer_derandomizer,
+                            input_dim,
                             &mut next_layer_input, // this is where the result will go.
                         ).unwrap();
                         // println!("next layer input length c {}", next_layer_input.len());
-                        next_layer_derandomizer = Output::zeros(layer.output_dimensions());
+                        // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
 
                         for share in next_layer_input.iter_mut() {
                             share.inner.signed_reduce_in_place();
@@ -2211,15 +2196,15 @@ where
         let layer = neural_network.layers.last().unwrap();
         let input_dims = layer.input_dimensions();
         let mut next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
-        let layer_size = next_input.len();
-        let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
-                        [num_consumed_relus..(num_consumed_relus + layer_size)]
-                        .to_vec();
-        // num_consumed_relus += layer_size;
-        next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
-            .into_shape(input_dims)
-            .expect("shape should be correct")
-            .into();
+        // let layer_size = next_input.len();
+        // let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
+        //                 [num_consumed_relus..(num_consumed_relus + layer_size)]
+        //                 .to_vec();
+        // // num_consumed_relus += layer_size;
+        // next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
+        //     .into_shape(input_dims)
+        //     .expect("shape should be correct")
+        //     .into();
         next_input.randomize_local_share(&next_layer_derandomizer);
         println!("receiving intermeidate result from user");
         // let sent_message = MsgSend::new(&next_layer_input);
