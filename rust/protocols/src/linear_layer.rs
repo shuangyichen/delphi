@@ -75,7 +75,7 @@ pub type MsgRcv<P> = InMessage<Input<AdditiveShare<P>>, LinearProtocolType>;
 fn generate_random_number<R: Rng>(rng: &mut R) -> (f64, f64) {
     let is_neg: bool = rng.gen();
     let mul = if is_neg { -10.0 } else { 10.0 };
-    let mut float: f64 = rng.gen_range(-100.0,100.0);
+    let mut float: f64 = 0.01;//rng.gen_range(-100.0,100.0);
     // float += 1.0;
     let mut float_ = -1.0*float;
     let f = TenBitExpFP::truncate_float(float);//* mul);
