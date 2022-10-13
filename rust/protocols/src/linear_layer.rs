@@ -75,7 +75,35 @@ pub type MsgRcv<P> = InMessage<Input<AdditiveShare<P>>, LinearProtocolType>;
 fn generate_random_number<R: Rng>(rng: &mut R) -> (f64, f64) {
     let is_neg: bool = rng.gen();
     let mul = if is_neg { -10.0 } else { 10.0 };
-    let mut float: f64 = 0.01;//rng.gen_range(-100.0,100.0);
+    let mut float: f64 = 1.0;//rng.gen_range(-100.0,100.0);
+    // float += 1.0;
+    let mut float_ = -1.0*float;
+    let f = TenBitExpFP::truncate_float(float);//* mul);
+    let f_ = TenBitExpFP::truncate_float(float_);
+    // let n = TenBitExpFP::from(f);
+    // println!("f:{}",float);
+    // println!("n:{}",n);
+    (f, f_)
+}
+
+fn generate_random_number_r<R: Rng>(rng: &mut R) -> (f64, f64) {
+    let is_neg: bool = rng.gen();
+    let mul = if is_neg { -10.0 } else { 10.0 };
+    let mut float: f64 = 3.0;//rng.gen_range(-100.0,100.0);
+    // float += 1.0;
+    let mut float_ = -1.0*float;
+    let f = TenBitExpFP::truncate_float(float);//* mul);
+    let f_ = TenBitExpFP::truncate_float(float_);
+    // let n = TenBitExpFP::from(f);
+    // println!("f:{}",float);
+    // println!("n:{}",n);
+    (f, f_)
+}
+
+fn generate_random_number_s<R: Rng>(rng: &mut R) -> (f64, f64) {
+    let is_neg: bool = rng.gen();
+    let mul = if is_neg { -10.0 } else { 10.0 };
+    let mut float: f64 = 2.0;//rng.gen_range(-100.0,100.0);
     // float += 1.0;
     let mut float_ = -1.0*float;
     let f = TenBitExpFP::truncate_float(float);//* mul);
@@ -332,12 +360,12 @@ where
           .for_each(|(a,b)|{
               *a = AdditiveShare::new(FixedPoint::from(*b))
           });
-        println!("r u preprocessing ");
+        // println!("r u preprocessing ");
         let mut r_u = user_cg.preprocess(&r1.to_repr());
 
         let sent_message = OfflineServerMsgSend::new(&r_u);
         crate::bytes::serialize(writer, &sent_message).unwrap();
-        println!("r u sent ");
+        // println!("r u sent ");
 
         let layer_randomness = r2
             .iter()
@@ -446,12 +474,33 @@ where
         let start_time = timer_start!(|| "Server linear offline protocol");
         let preprocess_time = timer_start!(|| "Preprocessing");
 
-        // Sample server's randomness `s` for randomizing the i+1-th layer's share.
+
+
+        let mut server_r: Output<FixedPoint<P>> = Output::zeros(output_dims);
+        server_r.iter_mut()
+        .for_each(|s_r|{
+          *s_r  = FixedPoint::from(generate_random_number_s(rng).0)
+        });
+        
         let mut server_randomness: Output<P::Field> = Output::zeros(output_dims);
         // TODO
-        for r in &mut server_randomness {
-            *r = P::Field::uniform(rng);
-        }
+        // for r in &mut server_randomness {
+        //     *r = P::Field::uniform(rng);
+        // }
+
+        server_randomness.iter_mut()
+        .zip(server_r.iter_mut())
+        .for_each(|(s_ra,s_r)|{
+            *s_ra = (*s_r).inner
+        });
+        //***********************************
+        // Sample server's randomness `s` for randomizing the i+1-th layer's share.
+        // let mut server_randomness: Output<P::Field> = Output::zeros(output_dims);
+        // // TODO
+        // for r in &mut server_randomness {
+        //     *r = P::Field::uniform(rng);
+        // }
+        //***********************************
 
         // Convert the secret share from P::Field -> u64
         let mut server_randomness_c = Output::zeros(output_dims);
@@ -505,9 +554,36 @@ where
         let start_time = timer_start!(|| "Linear offline protocol");
         let preprocess_time = timer_start!(|| "Client preprocessing");
 
+
+        let mut r1_ = Input::zeros(input_dims);
+        let mut r2_ = Input::zeros(input_dims);
+        // let (n1, n2) = generate_random_number(rng);
+        r1_.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(r_1,r_2)|{
+            (*r_1, *r_2) = generate_random_number_r(rng)
+          });
+
+        
+
+        let mut r1: Input<AdditiveShare<P>>  = Input::zeros(input_dims); 
+        let mut r2: Input<AdditiveShare<P>>  = Input::zeros(input_dims);
+
+        r1.iter_mut()
+          .zip(r1_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+        r2.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+        //***************************************
         // Generate random share -> r2 = -r1 (because the secret being shared is zero).
-        let client_share: Input<FixedPoint<P>> = Input::zeros(input_dims);
-        let (r1, r2) = client_share.share(rng);
+        // let client_share: Input<FixedPoint<P>> = Input::zeros(input_dims);
+        // let (r1, r2) = client_share.share(rng);
+        //***************************************
 
         // Preprocess and encrypt client secret share for sending
         let ct_vec = client_cg.preprocess(&r2.to_repr());
@@ -612,6 +688,11 @@ where
             _ => Input::zeros(input_derandomizer.dim()),
         };
         input.randomize_local_share(input_derandomizer);
+        for (i,inp) in input.iter().enumerate(){
+            if i <10{
+                println!("{}", *inp);
+            }
+        }
         *output = layer.evaluate(&input);
         output.zip_mut_with(output_rerandomizer, |out, s| {
             *out = FixedPoint::randomize_local_share(out, s)
@@ -636,6 +717,11 @@ where
             }
             _ => Input::zeros(input_dim),
         };
+        for (i,inp) in input.iter().enumerate(){
+            if i <10{
+                println!("{}", *inp);
+            }
+        }
         *output = layer.evaluate(&input);
         output.zip_mut_with(output_rerandomizer, |out, s| {
             *out = FixedPoint::randomize_local_share(out, s)

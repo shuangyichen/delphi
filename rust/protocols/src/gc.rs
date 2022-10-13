@@ -787,14 +787,14 @@ where
                     labels
                 };
                 rc_labels.extend(labels);
-                println!("c OT finished");
+                // println!("c OT finished");
             // }
             } //else {
             //     rc_labels.push(Vec::new());
             // }
         //     server_c_state.rc_labels = Some(rc_labels);
         // println!("Server C receive rc labels via OT");
-        println!("rc labels {}", rc_labels.len());
+        // println!("rc labels {}", rc_labels.len());
         rc_labels
     }
        

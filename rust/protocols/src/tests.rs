@@ -329,7 +329,7 @@ mod gc {
     }
 
 
-    // #[test]
+    #[test]
     fn test_gc_relu_three_servers() {
         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
         let mut plain_x_s = Vec::with_capacity(1001);
@@ -340,6 +340,9 @@ mod gc {
         let mut randomizer_a = Vec::with_capacity(1001);
         let mut randomizer_b = Vec::with_capacity(1001);
         let mut randomizer_c = Vec::with_capacity(1001);
+        let mut randomizer_a_ = Vec::with_capacity(1001);
+        let mut randomizer_b_ = Vec::with_capacity(1001);
+        let mut randomizer_c_ = Vec::with_capacity(1001);
 
         // Shares for client
         // let mut server_a_x_s = Vec::with_capacity(1001);
@@ -373,10 +376,12 @@ mod gc {
             let (s2221, s2222) = (s222).inner.share(&mut rng);
 
 
-            randomizer_a.push(-s22.inner.inner);
-            // randomizer_a.push(AdditiveShare::from(-s22));
-            // randomizer_b.push(s2221);
-            // randomizer_c.push(AdditiveShare::from(s2222));
+            randomizer_a.push(TenBitExpFP::from(5.0).inner);
+            randomizer_a_.push(AdditiveShare::from(TenBitExpFP::from(-5.0)));
+            randomizer_b.push(AdditiveShare::from(TenBitExpFP::from(5.0)));
+            randomizer_b_.push(AdditiveShare::from(TenBitExpFP::from(-5.0)));
+            randomizer_c.push(AdditiveShare::from(TenBitExpFP::from(5.0)));
+            randomizer_c_.push(AdditiveShare::from(TenBitExpFP::from(-5.0)));
             server_a_results.push(s22);
         }
 
@@ -423,7 +428,7 @@ mod gc {
                         &mut write_stream,
                         num_relus,
                         &mut rng,
-                        &server_c_x_s,
+                        &randomizer_c,
                     );
                 }
                 unreachable!("we should never exit server's loop")
@@ -448,7 +453,7 @@ mod gc {
                         &mut write_stream_c,
                         num_relus,
                         &mut rng,
-                        &server_b_x_s,
+                        &randomizer_b,
                     );
 
                 
@@ -471,7 +476,7 @@ mod gc {
 
 
         // Server C sending labels of rc_next to server A
-        let (mut r_next) =
+        let mut r_next =
         crossbeam::thread::scope(|s| {
 
             //Server A
@@ -506,24 +511,27 @@ mod gc {
             )
 
         }).unwrap();
+        server_a_offline.server_c_randomizer_labels = Some(r_next.0);
         // .unwrap();
 
 
 
         //Online processing
-        let (share_b,share_c) = crossbeam::thread::scope(|s| {
+        let (mut share_b,mut share_c) = crossbeam::thread::scope(|s| {
             //Server A
-            let share_b = s.spawn(|_| {
+            let mut share_b = s.spawn(|_| {
                 // let mut rng = ChaChaRng::from_seed(RANDOMNESS);
                 for stream in servera_listener.incoming() {
                     let stream = stream.expect("server connection failed!");
                     let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
                     let mut write_stream = IMuxSync::new(vec![stream]);
-                    return ReluProtocol::<TenBitExpParams>::online_server_a_protocol(
+                    return  ReluProtocol::<TenBitExpParams>::online_server_a_protocol(
                         &mut read_stream,
                         // &mut server_a_offline_,
                     );
+
                 }
+                unreachable!("we should never exit server's loop")
             
             });
 
@@ -550,7 +558,7 @@ mod gc {
 
             });
 
-            let share_c = s.spawn(|_| {
+            let mut share_c = s.spawn(|_| {
                 let mut rng = ChaChaRng::from_seed(RANDOMNESS);
                 for stream in serverc_listener.incoming() {
                     let stream = stream.expect("server connection failed!");
@@ -564,15 +572,18 @@ mod gc {
                         &mut rng,
                         // &mut server_c_offline,
                     );
+                    
                 }
+                unreachable!("we should never exit server's loop")
 
             }
             );
-            {
+            (
+                // share_b,share_c
                 share_b.join().unwrap(),
                 share_c.join().unwrap(),
-            }
-        });
+            )
+        }).unwrap();
 
         //Final eval
         let server_a_online = crossbeam::thread::scope(|s| {
@@ -583,14 +594,14 @@ mod gc {
                     let stream = stream.expect("server connection failed!");
                     let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
                     let mut write_stream = IMuxSync::new(vec![stream]);
-                    let mut rb_garbler_wires = server_a_offline_.rb_garbler_wires.unwrap();
+                    // let mut rb_garbler_wires = server_a_offline_.rb_garbler_wires.unwrap();
                     return ReluProtocol::<TenBitExpParams>::eval_server_a_protocol(
                         &mut read_stream,
-                        &mut rb_garbler_wires,
-                        &server_a_offline_.ra_labels,
-                        &server_a_offline_.server_b_randomizer_labels,
-                        &(server_a_offline_.server_c_randomizer_labels.unwrap()),
-                        &server_a_offline_.gc_s,
+                        &mut share_b,
+                        &server_a_offline.ra_labels,
+                        &server_a_offline.server_b_randomizer_labels,
+                        &(server_a_offline.server_c_randomizer_labels.unwrap()),
+                        &server_a_offline.gc_s,
                         &randomizer_a,
                         num_relus,
                     );
@@ -606,7 +617,7 @@ mod gc {
                 let mut write_stream_a = IMuxSync::new(vec![stream_a]);
                     return ReluProtocol::<TenBitExpParams>::eval_server_c_protocol(
                         &mut write_stream_a,
-                        &server_c_offline.rc_labels,
+                        &Some(share_c),
                     );
 
             }
@@ -618,18 +629,24 @@ mod gc {
         for i in 0..1000{
 
             //server_a_online = x'-ra'-rb'-rc'
-            //
-            let server_b_randomizer = server_b_offline.output_randomizers[i];
-            let server_c_randomizer = server_c_offline.output_randomizers[i];
-            let server_share_bc =
-                TenBitExpFP::randomize_local_share(&server_a_online[i], &server_b_randomizer);
-            let server_share =
-                TenBitExpFP::randomize_local_share(&server_share_bc, &server_c_randomizer);
-            let r_a = server_a_results[i];
+            println!("{}",i);
+            let server_b_randomizer = randomizer_b_[i];
+            let server_c_randomizer = randomizer_c_[i];
+            let a_result = server_a_online[i];
+            println!("{}",a_result.inner);
+            // let server_share_bc =
+            //     TenBitExpFP::randomize_local_share(&server_a_online[i], &server_b_randomizer);
+            let a_result_ = a_result.combine(&server_b_randomizer);
+            let a_result2 = server_c_randomizer.combine(&AdditiveShare::from(a_result_));
+            // let server_share =
+            //     TenBitExpFP::randomize_local_share(&server_share_bc, &server_c_randomizer);
+            let r_a = randomizer_a_[i];
+            let a_result2 = r_a.combine(&AdditiveShare::from(a_result2));
             // let fx = TenBitExpFP::randomize_local_share(&server_share, &r_a);
             let result = plain_results[i];
             // let r_a = server_a_results[i];
-            assert_eq!(server_share.combine(&r_a), result);
+            // assert_eq!(server_b_randomizer.combine(&r_a), result);
+            assert_eq!(a_result2, result);
 
         }
 
@@ -897,7 +914,7 @@ mod linear {
     }
 
 
-    #[test]
+    // #[test]
     fn test_mphe_conv(){
         use neural_network::layers::convolution::*;
 
