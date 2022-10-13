@@ -690,7 +690,7 @@ where
         input.randomize_local_share(input_derandomizer);
         for (i,inp) in input.iter().enumerate(){
             if i <10{
-                println!("{}", *inp);
+                println!("{}", inp.inner);
             }
         }
         *output = layer.evaluate(&input);
@@ -719,7 +719,7 @@ where
         };
         for (i,inp) in input.iter().enumerate(){
             if i <10{
-                println!("{}", *inp);
+                println!("{}", inp.inner);
             }
         }
         *output = layer.evaluate(&input);
