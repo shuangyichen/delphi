@@ -687,7 +687,7 @@ where
             }
             _ => Input::zeros(input_derandomizer.dim()),
         };
-        println!("************************receiving result***************************");
+        // println!("************************receiving result***************************");
         input.randomize_local_share(input_derandomizer);
         for (i,inp) in input.iter().enumerate(){
             if i <10{

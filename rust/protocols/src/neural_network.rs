@@ -2133,7 +2133,7 @@ where
         let mut num_consumed_triples = 0;
 
         let mut next_layer_input = Output::zeros(first_layer_out_dims);
-        let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
+        let mut next_layer_derandomizer= Input::zeros(first_layer_in_dims);
         let start_time = timer_start!(|| "Server online phase");
         for (i, layer) in neural_network.layers.iter().enumerate() {
             match layer {
@@ -2158,6 +2158,10 @@ where
                         .into_shape(dims.output_dimensions())
                         .expect("shape should be correct")
                         .into();
+                    // println!("***************next_layer_derandomizer*********************");
+                    // for (i,nl_inp) in  next_layer_derandomizer.iter().enumerate(){
+                    //     println!("{}",nl_inp.inner);
+                    // }
                     timer_end!(start_time);
                 }
                 Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {
@@ -2202,22 +2206,27 @@ where
         let layer = neural_network.layers.last().unwrap();
         let input_dims = layer.input_dimensions();
         let mut next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
-        // let layer_size = next_input.len();
-        // let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
-        //                 [num_consumed_relus..(num_consumed_relus + layer_size)]
-        //                 .to_vec();
-        // // num_consumed_relus += layer_size;
-        // next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
-        //     .into_shape(input_dims)
-        //     .expect("shape should be correct")
-        //     .into();
-        next_input.randomize_local_share(&next_layer_derandomizer);
-        println!("receiving intermeidate result from user");
-        // for (i,inp) in next_input.iter().enumerate(){
-        //     if i <10{
-        //         println!("{}", inp.inner);
-        //     }
-        // }
+        let layer_size = next_input.len();
+        let total_num = state.relu_output_randomizers.iter().count();
+        let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
+                        [total_num-layer_size..total_num]
+                        .to_vec();
+        // num_consumed_relus += layer_size;
+        let mut next_layer_derand:Input<P::Field> = ndarray::Array1::from_iter(relu_output_randomizers)
+            .into_shape(input_dims)
+            .expect("shape should be correct")
+            .into();
+        println!("***************next_layer_derandomizer 222 *********************");
+                    for (i,nl_inp) in  next_layer_derand.iter().enumerate(){
+                        println!("{}",nl_inp);
+                    }
+        next_input.randomize_local_share(&next_layer_derand);
+        println!("********************receiving intermeidate result from user*********");
+        for (i,inp) in next_input.iter().enumerate(){
+            if i <10{
+                println!("{}", inp.inner);
+            }
+        }
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
         // timer_end!(start_time);
