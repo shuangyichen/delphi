@@ -1153,6 +1153,11 @@ where
                             .into_shape(dims.output_dimensions())
                             .expect("shape should be correct")
                             .into();
+                            for (i,inp) in input.iter().enumerate(){
+                                if i <10{
+                                    println!("{}", inp.inner);
+                                }
+                            }
                            
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {}
@@ -2420,6 +2425,11 @@ where
                                 .into_shape(dims.output_dimensions())
                                 .expect("shape should be correct")
                                 .into();
+                                for (i,inp) in next_layer_input.iter().enumerate(){
+                                    if i <10{
+                                        println!("{}", inp.inner);
+                                    }
+                                }
                             timer_end!(start_time);
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {
