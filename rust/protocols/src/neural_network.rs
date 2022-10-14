@@ -2207,7 +2207,7 @@ where
         let input_dims = layer.input_dimensions();
         let mut next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
         let layer_size = next_input.len();
-        let total_num = state.relu_output_randomizers.iter().count();
+        let total_num = state.relu_output_randomizers.as_ref().unwrap().iter().count();
         let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
                         [total_num-layer_size..total_num]
                         .to_vec();
