@@ -725,6 +725,7 @@ where
         //     }
         // }
         *output = layer.evaluate(&input);
+        println!("************************linear evaluation result***************************");
         output.zip_mut_with(output_rerandomizer, |out, s| {
             *out = FixedPoint::randomize_local_share(out, s);
             println!("{}",out.inner);
