@@ -688,15 +688,17 @@ where
             _ => Input::zeros(input_derandomizer.dim()),
         };
         input.randomize_local_share(input_derandomizer);
-        for (i,inp) in input.iter().enumerate(){
-            if i <10{
-                println!("{}", inp.inner);
-            }
-        }
+        // for (i,inp) in input.iter().enumerate(){
+        //     if i <10{
+        //         println!("{}", inp.inner);
+        //     }
+        // }
         *output = layer.evaluate(&input);
         output.zip_mut_with(output_rerandomizer, |out, s| {
-            *out = FixedPoint::randomize_local_share(out, s)
+            *out = FixedPoint::randomize_local_share(out, s);
+            println!("{}",out.inner);
         });
+
         timer_end!(start);
         Ok(())
     }
@@ -717,14 +719,15 @@ where
             }
             _ => Input::zeros(input_dim),
         };
-        for (i,inp) in input.iter().enumerate(){
-            if i <10{
-                println!("{}", inp.inner);
-            }
-        }
+        // for (i,inp) in input.iter().enumerate(){
+        //     if i <10{
+        //         println!("{}", inp.inner);
+        //     }
+        // }
         *output = layer.evaluate(&input);
         output.zip_mut_with(output_rerandomizer, |out, s| {
-            *out = FixedPoint::randomize_local_share(out, s)
+            *out = FixedPoint::randomize_local_share(out, s);
+            println!("{}",out.inner);
         });
         timer_end!(start);
         Ok(())

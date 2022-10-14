@@ -994,15 +994,15 @@ where
                 FixedPoint::new(P::Field::from_repr(u64::try_from(result).unwrap().into())).into()
             })
             .collect::<Vec<AdditiveShare<P>>>();
-        for (i,res) in results.iter().enumerate(){
-            // if i==0{
-            //     for (j,re) in res.iter().enumerate(){
-                    if i<10{
-                        println!("{}",res.inner);
-                    }
-                // }
-            // }
-        }
+        // for (i,res) in results.iter().enumerate(){
+        //     // if i==0{
+        //     //     for (j,re) in res.iter().enumerate(){
+        //             if i<10{
+        //                 println!("{}",res.inner);
+        //             }
+        //         // }
+        //     // }
+        // }
         results
             .iter_mut()
             .zip(next_layer_randomizers)
