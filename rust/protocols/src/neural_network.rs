@@ -2207,9 +2207,9 @@ where
         let input_dims = layer.input_dimensions();
         let mut next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
         let layer_size = next_input.len();
-        let total_num = state.relu_output_randomizers.as_ref().unwrap().iter().count();
+        // let total_num = state.relu_output_randomizers.as_ref().unwrap().iter().count();
         let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
-                        [total_num-layer_size..total_num]
+                        [state.num_relu-layer_size..state.num_relu]
                         .to_vec();
         // num_consumed_relus += layer_size;
         let mut next_layer_derand:Input<P::Field> = ndarray::Array1::from_iter(relu_output_randomizers)

@@ -289,10 +289,10 @@ where
 
         let relu_res = BinaryBundle::new(relu_res);
 
-        let res = b.bin_addition_no_carry(&relu_res, &s2_next)?;
-        let next_share = mod_p_helper(b, &neg_p, &res)?;
-
-        b.output_bundle(&next_share)?;
+        // let res = b.bin_addition_no_carry(&relu_res, &s2_next)?;
+        // let next_share = mod_p_helper(b, &neg_p, &res)?;
+        b.output_bundle(&relu_res)?;
+        // b.output_bundle(&next_share)?;
     }
     Ok(())
 }
