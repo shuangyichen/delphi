@@ -1153,11 +1153,11 @@ where
                             .into_shape(dims.output_dimensions())
                             .expect("shape should be correct")
                             .into();
-                            for (i,inp) in next_layer_input.iter().enumerate(){
-                                if i <10{
-                                    println!("{}", inp.inner);
-                                }
-                            }
+                            // for (i,inp) in next_layer_input.iter().enumerate(){
+                            //     if i <10{
+                            //         println!("{}", inp.inner);
+                            //     }
+                            // }
                            
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {}
@@ -2213,11 +2213,11 @@ where
         //     .into();
         next_input.randomize_local_share(&next_layer_derandomizer);
         println!("receiving intermeidate result from user");
-        for (i,inp) in next_input.iter().enumerate(){
-            if i <10{
-                println!("{}", inp.inner);
-            }
-        }
+        // for (i,inp) in next_input.iter().enumerate(){
+        //     if i <10{
+        //         println!("{}", inp.inner);
+        //     }
+        // }
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
         // timer_end!(start_time);
