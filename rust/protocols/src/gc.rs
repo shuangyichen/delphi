@@ -690,17 +690,17 @@ where
         // println!("Sending rb labels");
 
         if number_of_relus != 0 {
-            println!("OT to server C online");
+            // println!("OT to server C online");
             let r_c = reader_c.get_mut_ref().remove(0);
             let w_c = writer_c.get_mut_ref().remove(0);
 
 
             let mut channel_c = Channel::new(r_c, w_c);
             let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
-            println!("Ready to send to server C ");
+            // println!("Ready to send to server C ");
             // ot_c.send(&mut channel_c, rc_labels.as_slice(), rng).unwrap();    //rc_next
             ot_c.send(&mut channel_c, rc_labels, rng).unwrap(); 
-            println!("OT to server C online");
+            // println!("OT to server C online");
             // timer_end!(ot_time);
         }
         let num_garbler_inputs = 84;
@@ -727,7 +727,7 @@ where
         let sent_message = ServerLabelMsgSend::new(rb_labels.as_slice());
         crate::bytes::serialize(writer_a, &sent_message).unwrap();
 
-        println!("Sending rb labels");
+        // println!("Sending rb labels");
 
         // OT with server c 
         // if number_of_relus != 0 {
@@ -758,7 +758,7 @@ where
         rng: &mut RNG,
         // server_c_state: &mut ServerCState<P>,
     )->Vec<Wire>{
-        println!("c num relu {}",number_of_relus);
+        // println!("c num relu {}",number_of_relus);
         let p = u128::from(u64::from(P::Field::characteristic()));
         let field_size = (p.next_power_of_two() * 2).trailing_zeros() as usize;
         let mut rc_labels: Vec<Wire>= Vec::with_capacity(number_of_relus); 
@@ -767,7 +767,7 @@ where
             let w = writer.get_mut_ref().remove(0);
             let mut channel = Channel::new(r, w);
             let mut ot = OTReceiver::init(&mut channel, rng).expect("should work");
-            println!("c OT work");
+            // println!("c OT work");
             // for index in (0..number_of_relus) { 
                 // let share = shares[index];
                 let labels = {
@@ -874,15 +874,15 @@ where
                 FixedPoint::new(P::Field::from_repr(u64::try_from(result).unwrap().into())).into()
             })
             .collect::<Vec<AdditiveShare<P>>>();
-            for (i,res) in results.iter().enumerate(){
-                // if i==0{
-                //     for (j,re) in res.iter().enumerate(){
-                        if i<10{
-                            println!("{}",res.inner);
-                        }
-                    // }
-                // }
-            }
+            // for (i,res) in results.iter().enumerate(){
+            //     // if i==0{
+            //     //     for (j,re) in res.iter().enumerate(){
+            //             if i<10{
+            //                 println!("{}",res.inner);
+            //             }
+            //         // }
+            //     // }
+            // }
         results
             .iter_mut()
             .zip(next_layer_randomizers)
@@ -994,15 +994,15 @@ where
                 FixedPoint::new(P::Field::from_repr(u64::try_from(result).unwrap().into())).into()
             })
             .collect::<Vec<AdditiveShare<P>>>();
-        for (i,res) in results.iter().enumerate(){
-            // if i==0{
-            //     for (j,re) in res.iter().enumerate(){
-                    if i<10{
-                        println!("{}",res.inner);
-                    }
-                // }
-            // }
-        }
+        // for (i,res) in results.iter().enumerate(){
+        //     // if i==0{
+        //     //     for (j,re) in res.iter().enumerate(){
+        //             if i<10{
+        //                 println!("{}",res.inner);
+        //             }
+        //         // }
+        //     // }
+        // }
         results
             .iter_mut()
             .zip(next_layer_randomizers)

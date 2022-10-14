@@ -258,7 +258,7 @@ where
         rserver_cg:&mut SealRootServerCG,
         output_dims: (usize, usize, usize, usize),
     )-> Result<Output<AdditiveShare<P>>, bincode::Error>{
-        println!("offline_root_server_l_protocol ");
+        // println!("offline_root_server_l_protocol ");
         let r_u: OfflineClientMsgRcv = crate::bytes::deserialize(readera).unwrap();
         let lserver_share_b: OfflineRootServerMsgRcv = crate::bytes::deserialize(readerb).unwrap();
         let lserver_share_c: OfflineRootServerMsgRcv = crate::bytes::deserialize(readerc).unwrap();
@@ -266,10 +266,10 @@ where
         let lserver_share_c_vec  = lserver_share_c.msg();
 
 
-        println!("offline_root_server_l_protocol 2");
+        // println!("offline_root_server_l_protocol 2");
         // let r_u: OfflineClientMsgRcv = crate::bytes::deserialize(readera).unwrap();
         let result_ct = rserver_cg.l_online_process(lserver_share_b_vec[0].clone(),lserver_share_b_vec[1].clone(),lserver_share_c_vec[0].clone(),lserver_share_c_vec[1].clone(),r_u.msg());
-        println!("l online processing ");
+        // println!("l online processing ");
         rserver_cg.dis_decrypt(result_ct.clone());
         // println!("l online processing ")
         let sent_message = OfflineServerMsgSend::new(&result_ct);
@@ -278,7 +278,7 @@ where
         let pd_b: OfflineServerMsgRcv = crate::bytes::deserialize(readerb).unwrap();
         let pd_c: OfflineServerMsgRcv = crate::bytes::deserialize(readerc).unwrap();
         rserver_cg.final_decrypt(pd_b.msg(), pd_c.msg());
-        println!("l final decrypt ");
+        // println!("l final decrypt ");
         let mut share_next = Input::zeros(output_dims);
         rserver_cg.postprocess(&mut share_next);
         Ok(share_next)
@@ -429,7 +429,7 @@ where
         let lserver_share_b_vec  = lserver_share_b.msg();
         let lserver_share_c_vec  = lserver_share_c.msg();
         let result_ct = rserver_cg.online_process(lserver_share_b_vec[0].clone(),lserver_share_b_vec[1].clone(),lserver_share_b_vec[2].clone(),lserver_share_c_vec[0].clone(),lserver_share_c_vec[1].clone(),lserver_share_c_vec[2].clone());
-        println!("online evaluation done");
+        // println!("online evaluation done");
         rserver_cg.dis_decrypt(result_ct.clone());
         let sent_message = OfflineServerMsgSend::new(&result_ct);
         crate::bytes::serialize(writer1, &sent_message).unwrap();
@@ -438,10 +438,10 @@ where
         let pd_b: OfflineServerMsgRcv = crate::bytes::deserialize(reader1).unwrap();
         let pd_c: OfflineServerMsgRcv = crate::bytes::deserialize(reader2).unwrap();
 
-        println!("receive bc pd");
+        // println!("receive bc pd");
 
         rserver_cg.final_decrypt(pd_b.msg(), pd_c.msg());
-        println!("aggregating pd");
+        // println!("aggregating pd");
         // let mut share_next : Input<AdditiveShare<P>>  = Input::zeros(output_dims);
         let mut share_next = Input::zeros(output_dims);
         rserver_cg.postprocess(&mut share_next);
@@ -720,11 +720,11 @@ where
             }
             _ => Input::zeros(input_dim),
         };
-        // for (i,inp) in input.iter().enumerate(){
-        //     if i <10{
-        //         println!("{}", inp.inner);
-        //     }
-        // }
+        for (i,inp) in input.iter().enumerate(){
+            if i <10{
+                println!("{}", inp.inner);
+            }
+        }
         *output = layer.evaluate(&input);
         // println!("************************linear evaluation result***************************");
         output.zip_mut_with(output_rerandomizer, |out, s| {

@@ -1166,7 +1166,7 @@ where
 
                 LayerInfo::LL(dims, layer_info) => {
                     thread::sleep(time::Duration::from_millis(2000));
-                    println!("Linear");
+                    println!("Linear {}",i);
                     let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
                     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
 
@@ -2168,6 +2168,7 @@ where
                     
                 }
                 Layer::LL(layer) => {
+                    println!("Linear {}",i);
                     let start_time = timer_start!(|| "Linear layer");
                     // Input for the next layer.
                     let layer_randomizer = state.linear_state.get(&i).unwrap();
@@ -2216,17 +2217,17 @@ where
             .into_shape(input_dims)
             .expect("shape should be correct")
             .into();
-        println!("***************next_layer_derandomizer 222 *********************");
-                    for (i,nl_inp) in  next_layer_derand.iter().enumerate(){
-                        println!("{}",nl_inp);
-                    }
+        // println!("***************next_layer_derandomizer 222 *********************");
+        //             for (i,nl_inp) in  next_layer_derand.iter().enumerate(){
+        //                 println!("{}",nl_inp);
+        //             }
         next_input.randomize_local_share(&next_layer_derand);
         println!("********************receiving intermeidate result from user*********");
-        for (i,inp) in next_input.iter().enumerate(){
-            if i <10{
-                println!("{}", inp.inner);
-            }
-        }
+        // for (i,inp) in next_input.iter().enumerate(){
+        //     if i <10{
+        //         println!("{}", inp.inner);
+        //     }
+        // }
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
         // timer_end!(start_time);
