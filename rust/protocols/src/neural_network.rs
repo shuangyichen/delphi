@@ -1395,7 +1395,7 @@ where
                 }
                 Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
                 Layer::LL(layer) => {
-                    println!("Linear");
+                    println!("Linear {}", i);
                     let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
                     // println!("Linear");
                     let layer_randomizer = state.output_randomizer.get(&i).unwrap();

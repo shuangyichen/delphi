@@ -690,7 +690,7 @@ where
         // println!("************************receiving result***************************");
         input.randomize_local_share(input_derandomizer);
         for (i,inp) in input.iter().enumerate(){
-            if i <10{
+            if i >100 && i<110{
                 println!("{}", inp.inner);
             }
         }
@@ -721,7 +721,7 @@ where
             _ => Input::zeros(input_dim),
         };
         for (i,inp) in input.iter().enumerate(){
-            if i <10{
+            if i >100 && i<110{
                 println!("{}", inp.inner);
             }
         }
