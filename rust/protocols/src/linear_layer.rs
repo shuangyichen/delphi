@@ -213,7 +213,7 @@ where
         // for s in &server_randomness{
         //     println!("SSSS:{}",*s);
         // }
-        let (mut weight_ct_vec,mut r_ct_vec, mut s_ct_vec) = lserver_cg.preprocess(kernel, &r1.to_repr(), &server_randomness_c);
+        let (mut weight_ct_vec,mut r_ct_vec, mut s_ct_vec) = lserver_cg.preprocess(kernel, &r2.to_repr(), &server_randomness_c);
         let  ct_send = vec![weight_ct_vec, r_ct_vec, s_ct_vec];
 
         // println!("sending ct");
@@ -246,7 +246,7 @@ where
         //     .into_shape(input_dims)
         //     .unwrap();
         // Ok((layer_randomness.into(),server_randomness))
-        Ok((r2,server_randomness))
+        Ok((r1,server_randomness))
     }
 
     pub fn offline_root_server_l_protocol<'a,R: Read + Send, W: Write + Send>(
@@ -361,13 +361,13 @@ where
               *a = AdditiveShare::new(FixedPoint::from(*b))
           });
         // println!("r u preprocessing ");
-        let mut r_u = user_cg.preprocess(&r1.to_repr());
+        let mut r_u = user_cg.preprocess(&r2.to_repr());
 
         let sent_message = OfflineServerMsgSend::new(&r_u);
         crate::bytes::serialize(writer, &sent_message).unwrap();
         // println!("r u sent ");
 
-        let layer_randomness = r2
+        let layer_randomness = r1
             .iter()
             .map(|r: &AdditiveShare<P>| r.inner.inner)
             .collect::<Vec<_>>();
