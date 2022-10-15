@@ -1282,7 +1282,7 @@ where
             }
             Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
             Layer::LL(layer) => {
-                println!("Linear");
+                println!("Linear {}", i);
                 let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
                 let layer_randomizer = state.output_randomizer.get(&i).unwrap(); //s
                 // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
