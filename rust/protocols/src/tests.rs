@@ -45,11 +45,11 @@ fn generate_random_number<R: Rng>(rng: &mut R) -> (f64, TenBitExpFP) {
     (f, n)
 }
 
-fn generate_random_weight<R: Rng>(rng: &mut R) -> (f64, TenBitExpFP) {
+fn generate_random_weight_r<R: Rng>(rng: &mut R) -> (f64, TenBitExpFP) {
     let is_neg: bool = rng.gen();
     let mul = if is_neg { -10.0 } else { 10.0 };
-    let float: f64 = rng.gen_range(-0.9, 0.9);
-    let f = TenBitExpFP::truncate_float(float * mul);
+    let float: f64 = 2.0;//rng.gen_range(-0.9, 0.9);
+    let f = TenBitExpFP::truncate_float(float);
     let n = TenBitExpFP::from(f);
     (f, n)
 }
@@ -667,7 +667,7 @@ mod linear {
     use neural_network::{layers::*, tensors::*, Evaluate};
     use std::io::{BufReader, BufWriter};
 
-    // #[test]
+    #[test]
     fn test_convolution() {
         use neural_network::layers::convolution::*;
 
@@ -689,9 +689,9 @@ mod linear {
         let mut bias = Kernel::zeros((kernel_dims.0, 1, 1, 1));
         kernel
             .iter_mut()
-            .for_each(|ker_i| *ker_i = generate_random_number(&mut rng).1);
+            .for_each(|ker_i| *ker_i =generate_random_weight_r(&mut rng).1);
         bias.iter_mut()
-            .for_each(|bias_i| *bias_i = generate_random_number(&mut rng).1);
+            .for_each(|bias_i| *bias_i = generate_random_weight_r(&mut rng).1);
 
         let layer_params =
             Conv2dParams::<TenBitAS, _>::new(padding, stride, kernel.clone(), bias.clone());
@@ -890,15 +890,15 @@ mod linear {
                                     out
                                 );
                                 let delta = f64::from(*r) - f64::from(*out);
-                                if delta.abs() > 0.5 {
-                                    println!(
-                                        "{:?}-th index failed {:?} {:?} {} {}",
-                                        i,
-                                        r.signed_reduce(),
-                                        out.signed_reduce(),
-                                        r,
-                                        out
-                                    );
+                                // if delta.abs() > 0.5 {
+                                    // println!(
+                                    //     "{:?}-th index failed {:?} {:?} {} {}",
+                                    //     i,
+                                    //     r.signed_reduce(),
+                                    //     out.signed_reduce(),
+                                    //     r,
+                                    //     out
+                                    // );
                                     println!(
                                         "{} + {} = {}",
                                         client_next_layer_share[[0, chan_idx, inp_idx, i]].inner,
@@ -906,7 +906,7 @@ mod linear {
                                         r
                                     );
                                     success = false;
-                                }
+                                // }
                             });
                     });
             });
@@ -914,7 +914,7 @@ mod linear {
     }
 
 
-    // #[test]
+    #[test]
     fn test_mphe_conv(){
         use neural_network::layers::convolution::*;
 
@@ -1123,7 +1123,9 @@ mod linear {
                     r_a.inner += r_b.inner;
                     r_a.inner += r_c.inner;
                 });
-          
+            // let res= server_a_r.combine(&server_b_r);
+            // // let res1 = server_c_r.combine(&AdditiveShare::from(res));
+            // let randomizer = TenBitExpFP::randomize_local_share(&server_c_r, &res);
         
             // let r_ = layer_randomizer.combine(server_b_r); 
             let layer_randomizer = LinearProtocol::<TenBitExpParams>::transform(&server_a_r,layer_input_dims);

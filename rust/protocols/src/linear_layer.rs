@@ -420,7 +420,7 @@ where
 
 
 
-        let mut r_a = rserver_cg.preprocess(&r1.to_repr());
+        let mut r_a = rserver_cg.preprocess(&r2.to_repr());
 
         //online
         let lserver_share_b: OfflineRootServerMsgRcv = crate::bytes::deserialize(reader1).unwrap();
@@ -454,7 +454,7 @@ where
         //     .into_shape(input_dims)
             // .unwrap();
         // Ok((layer_randomness.into(), share_next))
-        Ok((r2, share_next))
+        Ok((r1, share_next))
 
     }
 
