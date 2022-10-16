@@ -335,14 +335,14 @@ where
             state.linear_randomizer.insert(total_layer-2,input_share);
         }
     }
-    let inshare_num = state.relu_next_layer_randomizers.iter().count();
-    println!("relu_next_layer_randomizers {}",inshare_num);
-    let outshare_num = state.relu_current_layer_randomizers.iter().count();
-    println!("relu_current_layer_randomizers {}",outshare_num);
-    let inshare_num = state.linear_randomizer.iter().count();
-    let outshare_num = state.linear_post_application_share.iter().count();
-    println!("inshare_num {}",inshare_num);
-    println!("outshare_num {}",outshare_num);
+    // let inshare_num = state.relu_next_layer_randomizers.iter().count();
+    // println!("relu_next_layer_randomizers {}",inshare_num);
+    // let outshare_num = state.relu_current_layer_randomizers.iter().count();
+    // println!("relu_current_layer_randomizers {}",outshare_num);
+    // let inshare_num = state.linear_randomizer.iter().count();
+    // let outshare_num = state.linear_post_application_share.iter().count();
+    // println!("inshare_num {}",inshare_num);
+    // println!("outshare_num {}",outshare_num);
 }
 
     pub fn offline_server_a_l_protocol<'a,R: Read + Send, W: Write + Send>(
@@ -424,6 +424,15 @@ where
             state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
             println!("{} {} {} {}",b,c,h,w);
             println!("{} ",b*c*h*w);
+
+            for (key, value) in &state.linear_post_application_share{
+                println!("key {}", key);
+                for (i, op) in value.iter().enumerate(){
+                    if i>100 && i<110{
+                        println!("{}",op.inner);
+                    }
+                }
+            }
         }
     }
     // let layer = &neural_network_architecture.layers[1];
@@ -1808,9 +1817,18 @@ where
         } else {
             (vec![], vec![])
         };
+        for (key, value) in &state.linear_post_application_share{
+            println!("key {}", key);
+            for (i, op) in value.iter().enumerate(){
+                if i>100 && i<110{
+                    println!("{}",op.inner);
+                }
+            }
+        }
         state.relu_circuits = Some(relu_circuits);
         state.relu_server_labels = Some(relu_server_labels);
         state.relu_client_labels = Some(relu_client_labels);
+        
         
     }
 
