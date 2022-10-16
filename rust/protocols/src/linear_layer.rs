@@ -296,7 +296,7 @@ where
         let mut server_r: Output<FixedPoint<P>> = Output::zeros(output_dims);
         server_r.iter_mut()
         .for_each(|s_r|{
-          *s_r  = FixedPoint::from(generate_random_number_s(rng).0)
+          *s_r  = FixedPoint::from(generate_random_number(rng).0)
         });
 
 
