@@ -2573,7 +2573,7 @@ where
             println!("{}",result[idx]);
             output[[0, idx, 0, 0]] = FixedPoint::with_num_muls(
                 P::Field::from_repr(algebra::BigInteger64(result[idx])),
-                1,
+                0,
             );
             println!("{}",output[[0, idx, 0, 0]]);
         }
