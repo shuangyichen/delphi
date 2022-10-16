@@ -1331,8 +1331,9 @@ where
         }
     }
     println!("final output");
+    println!("final output {}",next_layer_input.iter().count());
     for (i,out) in next_layer_input.iter().enumerate(){
-        if i >300 && i<310{
+        if i<10{
             println!("{}", out.inner);
         }
     }
@@ -1451,8 +1452,9 @@ where
             // }
     }
     println!("final output");
+    println!("final output {}",next_layer_input.iter().count());
     for (i,out) in next_layer_input.iter().enumerate(){
-        if i >300 && i<310{
+        if i<10{
             println!("{}", out.inner);
         }
     }
