@@ -1228,6 +1228,7 @@ where
                 // let input = next_layer_input;
             }
             let total_layers = architecture.layers.len();
+            println!("Last layer index {}",total_layers-1);
             state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
         }
 
