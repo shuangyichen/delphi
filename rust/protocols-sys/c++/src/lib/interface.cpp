@@ -113,7 +113,7 @@ SerialCT evaluate_result(const ServerFHE* sfhe,SerialCT b_ct, SerialCT c_ct,cons
     Evaluator *evaluator = reinterpret_cast<Evaluator*>(sfhe->evaluator);
 
     auto pt_share = encode_vec(share,share_size,*encoder);
-    printf("Encoding \n");
+    // printf("Encoding \n");
     istringstream is_b;
     is_b.rdbuf()->pubsetbuf(b_ct.inner, b_ct.size);
     vector<Ciphertext> ct_out_b(outchannel);
@@ -126,9 +126,9 @@ SerialCT evaluate_result(const ServerFHE* sfhe,SerialCT b_ct, SerialCT c_ct,cons
          ct_out_b[ct_idx].load(*context,is_b);
          ct_out_c[ct_idx].load(*context,is_c);
          evaluator->add_inplace(ct_out_b[ct_idx],ct_out_c[ct_idx]);
-         printf("Adding ct \n");
+        //  printf("Adding ct \n");
          evaluator->add_plain_inplace(ct_out_b[ct_idx],pt_share[ct_idx]);
-         printf("Adding pt \n");
+        //  printf("Adding pt \n");
      }
 
     SerialCT ct = serialize_ct(ct_out_b);

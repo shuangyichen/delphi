@@ -2532,11 +2532,11 @@ where
     ){
 
         let (sfhe,_) = crate::server_keygen(reader).unwrap();
-        for (i, op) in nn_output.iter().enumerate(){
-                    if i<10{
-                        println!("{}",op.inner);
-                    }
-                }
+        // for (i, op) in nn_output.iter().enumerate(){
+        //             if i<10{
+        //                 println!("{}",op.inner);
+        //             }
+        //         }
         crate::encrypt_output(&sfhe,&nn_output.to_repr(),writer);
 
 
@@ -2557,11 +2557,11 @@ where
         crate::deliver_pk(writer_b,writer_c,pk);
         let size = share.shape();
         let shape:(usize,usize,usize,usize) = (size[0],size[1],size[2],size[3]);
-        for (i, op) in share.iter().enumerate(){
-                    if i<10{
-                        println!("{}",op.inner);
-                    }
-                }
+        // for (i, op) in share.iter().enumerate(){
+        //             if i<10{
+        //                 println!("{}",op.inner);
+        //             }
+        //         }
         let share_fp = NNProtocol::transform_fp(&share,shape);
 
         crate::eval_output(reader_b,reader_c,writer_u,&sfhe,&share_fp.to_repr(),out_channel);
