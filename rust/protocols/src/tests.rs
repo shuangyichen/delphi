@@ -14,6 +14,13 @@ use rand_chacha::ChaChaRng;
 use std::net::{TcpListener, TcpStream};
 use std::{thread, time};
 use algebra::PrimeField;
+use crate::neural_network::NNProtocol;
+use std::io::BufWriter;
+use std::io::BufReader;
+use algebra::Field;
+use neural_network::tensors::Output;
+use neural_network::tensors::Input;
+
 struct TenBitExpParams {}
 impl FixedPointParameters for TenBitExpParams {
     type Field = F;
@@ -327,27 +334,105 @@ mod gc {
             assert_eq!(server_share.combine(&client_share), result);
         }
     }
-    #[test]
-    fn test_output(){
-        let input_dims:(usize,usize,usize,usize) = (1,10,1,1);
-        let mut share_a = Input::zeros(input_dims);
-        let mut share_b = Input::zeros(input_dims);
-        let mut share_c = Input::zeros(input_dims);
-        share_a.iter_mut()
-        .zip(share_b)
-        .zip(share_c)
-        .for_each(|((r_a,r_b),r_c)|{
-            let r = generate_random_number(rng).0;
-            *r_a = AdditiveShare::new(FixedPoint::from(r))
-            *r_b = AdditiveShare::new(FixedPoint::from(r))
-            *r_c = AdditiveShare::new(FixedPoint::from(r))
-        }
-        );
-        let servera_addr = "127.0.0.1:8007";
-        let serverb_addr = "127.0.0.1:8008";
-        let serverb_addr = "127.0.0.1:8009";
+    // #[test]
+    // fn test_output(){
+    //     let input_dims:(usize,usize,usize,usize) = (1,10,1,1);
+    //     let mut share_a: Input<TenBitAS> = Input::zeros(input_dims);
+    //     let mut share_b: Input<TenBitAS> = Input::zeros(input_dims);
+    //     let mut share_c : Input<TenBitAS>= Input::zeros(input_dims);
+    //     share_a.iter_mut()
+    //     .zip(share_b)
+    //     .zip(share_c)
+    //     .for_each(|((r_a,r_b),r_c)|{
+    //         let r = generate_random_number(rng).0;
+    //         *r_a = AdditiveShare::new(FixedPoint::from(r));
+    //         *r_b = AdditiveShare::new(FixedPoint::from(r));
+    //         *r_c = AdditiveShare::new(FixedPoint::from(r));
+    //     }
+    //     );
+    //     let serveru_addr = "127.0.0.1:8007";
+    //     let serverb_addr = "127.0.0.1:8008";
+    //     let serverc_addr = "127.0.0.1:8009";
+    //     let server_u_listener = TcpListener::bind(serveru_addr).unwrap();
+    //     let server_b_listener = TcpListener::bind(serverb_addr).unwrap();
+    //     let server_c_listener = TcpListener::bind(serverc_addr).unwrap();
 
-    }
+    //     crossbeam::thread::scope(|s| {
+    //         s.spawn(|_| {
+    //             for stream in server_u_listener.incoming() {
+    //                 let stream = stream.expect("server connection failed!");
+    //                 let mut reader = IMuxSync::new(vec![BufReader::new(&stream)]);
+    //                 let mut writer = IMuxSync::new(vec![BufWriter::new(&stream)]);
+    //                 let cfhe: ClientFHE = crate::client_keygen(&mut writer).unwrap();
+
+    //                 let result = crate::result_decrypt::<R, P>(&mut reader_u,&cfhe,output_size);
+    //                 let mut output:Output<FixedPoint<P>> = Output::zeros((1,output_size,1,1));
+    //                 // println!("length {}",result.len());
+    //                 for idx in 0..output_size{
+    //                     println!("{}",idx);
+    //                     println!("{}",result[idx]);
+    //                     output[[0, idx, 0, 0]] = FixedPoint::with_num_muls(
+    //                         P::Field::from_repr(algebra::BigInteger64(result[idx])),
+    //                         0,
+    //                     );
+    //                     println!("{}",output[[0, idx, 0, 0]]);
+    //                 }
+    //             }
+
+    //         });
+    //         s.spawn(|_| {
+    //             for stream in server_b_listener.incoming() {
+    //                 let stream = stream.expect("server connection failed!");
+    //                 let mut reader = IMuxSync::new(vec![BufReader::new(&stream)]);
+    //                 let mut writer = IMuxSync::new(vec![BufWriter::new(&stream)]);
+    //                 let (sfhe,_) = crate::server_keygen(&mut reader).unwrap();
+    //                 crate::encrypt_output(&sfhe,&share_b.to_repr(),&mut writer);
+    //             }
+
+    //         });
+    //         s.spawn(|_| {
+    //             for stream in server_c_listener.incoming() {
+    //                 let stream = stream.expect("server connection failed!");
+    //                 let mut reader = IMuxSync::new(vec![BufReader::new(&stream)]);
+    //                 let mut writer = IMuxSync::new(vec![BufWriter::new(&stream)]);
+    //                 let (sfhe,_) = crate::server_keygen(&mut reader).unwrap();
+    //                 crate::encrypt_output(&sfhe,&share_c.to_repr(),&mut writer);
+    //             }
+
+    //         });
+    //         s.spawn(|_| {
+    //             let stream_u =
+    //             TcpStream::connect(serveru_addr).expect("connecting to server failed");
+    //         let mut reader_u = IMuxSync::new(vec![stream_u.try_clone().unwrap()]);
+    //         let mut writer_u = IMuxSync::new(vec![stream_u]);
+
+    //         let stream_b =
+    //             TcpStream::connect(serverb_addr).expect("connecting to server failed");
+    //         let mut reader_b = IMuxSync::new(vec![stream_b.try_clone().unwrap()]);
+    //         let mut writer_b = IMuxSync::new(vec![stream_b]);
+
+    //         let stream_c =
+    //             TcpStream::connect(serverc_addr).expect("connecting to server failed");
+    //         let mut reader_c = IMuxSync::new(vec![stream_c.try_clone().unwrap()]);
+    //         let mut writer_c = IMuxSync::new(vec![stream_c]);
+
+    //         let (sfhe,pk) = crate::server_keygen(&mut reader_u).unwrap();
+    //         crate::deliver_pk(&mut writer_b,&mut writer_c,pk);
+    //         let size = share_a.shape();
+    //         let shape:(usize,usize,usize,usize) = (size[0],size[1],size[2],size[3]);
+    //         for (i, op) in share_a.iter().enumerate(){
+    //                     if i<10{
+    //                         println!("{}",op.inner);
+    //                     }
+    //                 }
+    //         let share_fp = NNProtocol::transform_fp(&share_a,shape);
+    //         let out_channel:usize = 1;
+
+    //         crate::eval_output(&mut reader_b,&mut reader_c,&mut writer_u,&sfhe,&share_fp.to_repr(),out_channel);
+            
+    //         });
+    //     });
+    // }
 
 
     // #[test]

@@ -2530,8 +2530,13 @@ where
         writer: &mut IMuxSync<W>,
         nn_output: Output<AdditiveShare<P>>,
     ){
-        let (sfhe,_) = crate::server_keygen(reader).unwrap();
 
+        let (sfhe,_) = crate::server_keygen(reader).unwrap();
+        for (i, op) in nn_output.iter().enumerate(){
+                    if i<10{
+                        println!("{}",op.inner);
+                    }
+                }
         crate::encrypt_output(&sfhe,&nn_output.to_repr(),writer);
 
 

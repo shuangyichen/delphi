@@ -87,6 +87,8 @@ vector<Plaintext> encode_vec(const u64* shares, u64 num, BatchEncoder& encoder) 
     return result;
 }
 
+
+
 SerialCT encrypt_vec_out(const ServerFHE* sfhe, const u64* vec, u64 vec_size) {
     // Recast the needed fhe helpers
     Encryptor *encryptor = reinterpret_cast<Encryptor*>(sfhe->encryptor);
@@ -123,7 +125,9 @@ SerialCT evaluate_result(const ServerFHE* sfhe,SerialCT b_ct, SerialCT c_ct,cons
          ct_out_b[ct_idx].load(*context,is_b);
          ct_out_c[ct_idx].load(*context,is_c);
          evaluator->add_inplace(ct_out_b[ct_idx],ct_out_c[ct_idx]);
+         cout << "Adding ct "<<endl;
          evaluator->add_plain_inplace(ct_out_b[ct_idx],pt_share[ct_idx]);
+         cout << "Adding pt "<<endl;
      }
 
     SerialCT ct = serialize_ct(ct_out_b);
