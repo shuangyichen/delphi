@@ -126,7 +126,7 @@ SerialCT evaluate_result(const ServerFHE* sfhe,SerialCT b_ct, SerialCT c_ct,cons
          evaluator->add_plain_inplace(ct_out_b[ct_idx],pt_share[ct_idx]);
      }
 
-    SerialCT ct = serialize_ct(ct_out_c);
+    SerialCT ct = serialize_ct(ct_out_b);
     return ct;
 }
 /* Encrypts and serializes a vector */
