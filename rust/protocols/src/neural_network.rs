@@ -425,14 +425,14 @@ where
             println!("{} {} {} {}",b,c,h,w);
             println!("{} ",b*c*h*w);
 
-            for (key, value) in &state.linear_post_application_share{
-                println!("key {}", key);
-                for (i, op) in value.iter().enumerate(){
-                    if i>100 && i<110{
-                        println!("{}",op.inner);
-                    }
-                }
-            }
+            // for (key, value) in &state.linear_post_application_share{
+            //     println!("key {}", key);
+            //     for (i, op) in value.iter().enumerate(){
+            //         if i>100 && i<110{
+            //             println!("{}",op.inner);
+            //         }
+            //     }
+            // }
         }
     }
     // let layer = &neural_network_architecture.layers[1];
@@ -1817,14 +1817,14 @@ where
         } else {
             (vec![], vec![])
         };
-        for (key, value) in &state.linear_post_application_share{
-            println!("key {}", key);
-            for (i, op) in value.iter().enumerate(){
-                if i>100 && i<110{
-                    println!("{}",op.inner);
-                }
-            }
-        }
+        // for (key, value) in &state.linear_post_application_share{
+        //     println!("key {}", key);
+        //     for (i, op) in value.iter().enumerate(){
+        //         if i>100 && i<110{
+        //             println!("{}",op.inner);
+        //         }
+        //     }
+        // }
         state.relu_circuits = Some(relu_circuits);
         state.relu_server_labels = Some(relu_server_labels);
         state.relu_client_labels = Some(relu_client_labels);
