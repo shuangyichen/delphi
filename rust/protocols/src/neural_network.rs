@@ -1230,7 +1230,13 @@ where
             // }
         }
             let total_layers = architecture.layers.len();
+            let last_share = state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
             println!("Last layer index {}",total_layers-1);
+            for (i, op) in last_share.iter().enumerate(){
+                if i<10{
+                    println!("{}",op.inner);
+                }
+            }
             state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
         }
 
