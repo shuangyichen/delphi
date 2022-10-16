@@ -646,8 +646,8 @@ fn bindgen_test_layout_ClientFHE() {
     );
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct ServerFHe {
+#[derive(Debug)]
+pub struct ServerFHE {
     pub context:    *mut ::std::os::raw::c_void,
     pub encoder:    *mut ::std::os::raw::c_void,
     pub encryptor:  *mut ::std::os::raw::c_void,
@@ -657,89 +657,88 @@ pub struct ServerFHe {
     pub zero:       *mut ::std::os::raw::c_char,
 }
 #[test]
-fn bindgen_test_layout_ServerFHe() {
+fn bindgen_test_layout_ServerFHE() {
     assert_eq!(
-        ::std::mem::size_of::<ServerFHe>(),
+        ::std::mem::size_of::<ServerFHE>(),
         56usize,
-        concat!("Size of: ", stringify!(ServerFHe))
+        concat!("Size of: ", stringify!(ServerFHE))
     );
     assert_eq!(
-        ::std::mem::align_of::<ServerFHe>(),
+        ::std::mem::align_of::<ServerFHE>(),
         8usize,
-        concat!("Alignment of ", stringify!(ServerFHe))
+        concat!("Alignment of ", stringify!(ServerFHE))
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ServerFHe>())).context as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<ServerFHE>())).context as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(ServerFHe),
+            stringify!(ServerFHE),
             "::",
             stringify!(context)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ServerFHe>())).encoder as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<ServerFHE>())).encoder as *const _ as usize },
         8usize,
         concat!(
             "Offset of field: ",
-            stringify!(ServerFHe),
+            stringify!(ServerFHE),
             "::",
             stringify!(encoder)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ServerFHe>())).encryptor as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<ServerFHE>())).encryptor as *const _ as usize },
         16usize,
         concat!(
             "Offset of field: ",
-            stringify!(ServerFHe),
+            stringify!(ServerFHE),
             "::",
             stringify!(encryptor)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ServerFHe>())).evaluator as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<ServerFHE>())).evaluator as *const _ as usize },
         24usize,
         concat!(
             "Offset of field: ",
-            stringify!(ServerFHe),
+            stringify!(ServerFHE),
             "::",
             stringify!(evaluator)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ServerFHe>())).gal_keys as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<ServerFHE>())).gal_keys as *const _ as usize },
         32usize,
         concat!(
             "Offset of field: ",
-            stringify!(ServerFHe),
+            stringify!(ServerFHE),
             "::",
             stringify!(gal_keys)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ServerFHe>())).relin_keys as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<ServerFHE>())).relin_keys as *const _ as usize },
         40usize,
         concat!(
             "Offset of field: ",
-            stringify!(ServerFHe),
+            stringify!(ServerFHE),
             "::",
             stringify!(relin_keys)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ServerFHe>())).zero as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<ServerFHE>())).zero as *const _ as usize },
         48usize,
         concat!(
             "Offset of field: ",
-            stringify!(ServerFHe),
+            stringify!(ServerFHE),
             "::",
             stringify!(zero)
         )
     );
 }
-pub type ServerFHE = ServerFHe;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct RootServerMPHE {

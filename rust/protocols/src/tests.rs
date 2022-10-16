@@ -327,9 +327,30 @@ mod gc {
             assert_eq!(server_share.combine(&client_share), result);
         }
     }
-
-
     #[test]
+    fn test_output(){
+        let input_dims:(usize,usize,usize,usize) = (1,10,1,1);
+        let mut share_a = Input::zeros(input_dims);
+        let mut share_b = Input::zeros(input_dims);
+        let mut share_c = Input::zeros(input_dims);
+        share_a.iter_mut()
+        .zip(share_b)
+        .zip(share_c)
+        .for_each(|((r_a,r_b),r_c)|{
+            let r = generate_random_number(rng).0;
+            *r_a = AdditiveShare::new(FixedPoint::from(r))
+            *r_b = AdditiveShare::new(FixedPoint::from(r))
+            *r_c = AdditiveShare::new(FixedPoint::from(r))
+        }
+        );
+        let servera_addr = "127.0.0.1:8007";
+        let serverb_addr = "127.0.0.1:8008";
+        let serverb_addr = "127.0.0.1:8009";
+
+    }
+
+
+    // #[test]
     fn test_gc_relu_three_servers() {
         let mut rng = ChaChaRng::from_seed(RANDOMNESS);
         let mut plain_x_s = Vec::with_capacity(1001);
@@ -667,7 +688,7 @@ mod linear {
     use neural_network::{layers::*, tensors::*, Evaluate};
     use std::io::{BufReader, BufWriter};
 
-    #[test]
+    // #[test]
     fn test_convolution() {
         use neural_network::layers::convolution::*;
 
@@ -914,7 +935,7 @@ mod linear {
     }
 
 
-    #[test]
+    // #[test]
     fn test_mphe_conv(){
         use neural_network::layers::convolution::*;
 
