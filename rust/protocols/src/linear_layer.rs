@@ -86,6 +86,20 @@ fn generate_random_number<R: Rng>(rng: &mut R) -> (f64, f64) {
     (f, f_)
 }
 
+fn generate_random_number_0<R: Rng>(rng: &mut R) -> (f64, f64) {
+    let is_neg: bool = rng.gen();
+    let mul = if is_neg { -10.0 } else { 10.0 };
+    let mut float: f64 = 0.0;//rng.gen_range(-100.0,100.0);
+    // float += 1.0;
+    let mut float_ = -1.0*float;
+    let f = TenBitExpFP::truncate_float(float);//* mul);
+    let f_ = TenBitExpFP::truncate_float(float_);
+    // let n = TenBitExpFP::from(f);
+    // println!("f:{}",float);
+    // println!("n:{}",n);
+    (f, f_)
+}
+
 fn generate_random_number_r<R: Rng>(rng: &mut R) -> (f64, f64) {
     let is_neg: bool = rng.gen();
     let mul = if is_neg { -10.0 } else { 10.0 };
@@ -700,7 +714,7 @@ where
             // println!("{}",out.inner);
         });
         for (i,out) in output.iter().enumerate(){
-            if i >100 && i<110{
+            if i >300 && i<310{
                 println!("{}", out.inner);
             }
         }
@@ -737,7 +751,7 @@ where
             // println!("{}",out.inner);
         });
         for (i,out) in output.iter().enumerate(){
-            if i >100 && i<110{
+            if i >300 && i<310{
                 println!("{}", out.inner);
             }
         }

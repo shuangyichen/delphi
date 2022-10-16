@@ -1113,6 +1113,7 @@ where
             thread::sleep(time::Duration::from_millis(2000));
             // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
             // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+            // if i<2{
             match layer {
                 LayerInfo::NLL(dims, nll_info) => {
                     match nll_info {
@@ -1226,7 +1227,8 @@ where
                     }
                 }
                 // let input = next_layer_input;
-            }
+            // }
+        }
             let total_layers = architecture.layers.len();
             println!("Last layer index {}",total_layers-1);
             state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
@@ -1266,6 +1268,7 @@ where
             match layer {
             Layer::NLL(NonLinearLayer::ReLU(dims)) => {
                 println!("ReLU");
+                assert_eq!(dims.input_dimensions(), next_layer_input.dim());
 
                 let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
                 // println!("b connected");
@@ -1327,7 +1330,14 @@ where
             }
         }
     }
+    println!("final output");
+    for (i,out) in next_layer_input.iter().enumerate(){
+        if i >300 && i<310{
+            println!("{}", out.inner);
+        }
+    }
     next_layer_input
+    
 }
 
     // pub fn online_server_c_protocol<'a,R: Read + Send, W: Write + Send,RNG: RngCore + CryptoRng>(
@@ -1439,6 +1449,12 @@ where
                 }
                 }
             // }
+    }
+    println!("final output");
+    for (i,out) in next_layer_input.iter().enumerate(){
+        if i >300 && i<310{
+            println!("{}", out.inner);
+        }
     }
     next_layer_input
     }
