@@ -641,17 +641,36 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            
-                            LinearProtocol::<P>::offline_root_server_protocol(
-                                reader_b, 
-                                reader_c, 
-                                writer_b, 
-                                writer_c, 
-                                input_dims,
-                                output_dims,
-                                &mut cg_handler,
-                                rng,
-                            ).unwrap()
+                            if in_shares.keys().any(|k| k == &(i - 1)) {
+                                let prev_input_share = in_shares.get(&(i - 1)).unwrap();
+                                let mut input_share = Output::zeros(input_dims);
+                                linear_layer_info
+                                    .evaluate_naive(prev_input_share, &mut input_share);
+                                let out_share = LinearProtocol::offline_root_server_pooling_protocol(
+                                    reader_b, 
+                                    reader_c, 
+                                    writer_b, 
+                                    writer_c, 
+                                    &mut input_share,
+                                    input_dims,  
+                                    output_dims,
+                                    &mut cg_handler,
+                                    rng,
+                                ).unwrap();
+                                (input_share,out_share)
+                            }else{
+                                LinearProtocol::<P>::offline_root_server_protocol(
+                                    reader_b, 
+                                    reader_c, 
+                                    writer_b, 
+                                    writer_c, 
+                                    input_dims,
+                                    output_dims,
+                                    &mut cg_handler,
+                                    rng,
+                                ).unwrap()
+                            }
+
                         }
                         _ => {
                             // AvgPool and Identity don't require an offline communication
@@ -664,9 +683,11 @@ where
                                     .evaluate_naive(prev_output_share, &mut output_share);
                                 (Input::zeros(dims.input_dimensions()), output_share)
                             } else {
-                                // Otherwise, just return randomizers of 0
+                                
+                                let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
                                 (
-                                    Input::zeros(dims.input_dimensions()),
+                                    // Input::zeros(dims.input_dimensions()),
+                                    input_share,
                                     Output::zeros(dims.output_dimensions()),
                                 )
                             }
@@ -777,6 +798,23 @@ where
                                 }
                                 _ => unreachable!(),
                             };
+                            if r_vec.keys().any(|k| k == &(i - 1)) {
+                                let prev_input_share = r_vec.get(&(i - 1)).unwrap();
+                                let mut input_share = Input::zeros(layer.input_dimensions());
+                                layer
+                                    .evaluate_naive(prev_input_share, &mut input_share);
+                                let out_share = LinearProtocol::offline_leaf_server_pooling_protocol(
+                                    reader, 
+                                    writer, 
+                                    layer.input_dimensions(),
+                                    layer.output_dimensions(),
+                                    &mut input_share,
+                                    &mut cg_handler,
+                                    &layer.kernel_to_repr(),
+                                    rng,
+                                ).unwrap();
+                                (input_share,out_share)
+                            }else{
                             LinearProtocol::<P>::offline_leaf_server_protocol(
                                 reader,
                                 writer,
@@ -785,10 +823,14 @@ where
                                 &mut cg_handler,
                                 &layer.kernel_to_repr(),
                                 rng).unwrap()
+                            }
                         }
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
-                            (Input::zeros(dims.input_dimensions()),Output::zeros(dims.output_dimensions()))
+                            let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
+                            (//Input::zeros(dims.input_dimensions()),
+                            input_share,
+                            Output::zeros(dims.output_dimensions()))
                         }
                         LinearLayer::Identity { dims } =>  (Input::zeros(dims.input_dimensions()),Output::zeros(dims.output_dimensions())),
                     };
@@ -877,6 +919,23 @@ where
                                 }
                                 _ => unreachable!(),
                             };
+                            if r_vec.keys().any(|k| k == &(i - 1)) {
+                                let prev_input_share = r_vec.get(&(i - 1)).unwrap();
+                                let mut input_share = Input::zeros(layer.input_dimensions());
+                                layer
+                                    .evaluate_naive(prev_input_share, &mut input_share);
+                                let out_share = LinearProtocol::offline_leaf_server_pooling_protocol(
+                                    reader, 
+                                    writer, 
+                                    layer.input_dimensions(),
+                                    layer.output_dimensions(),
+                                    &mut input_share,
+                                    &mut cg_handler,
+                                    &layer.kernel_to_repr(),
+                                    rng,
+                                ).unwrap();
+                                (input_share,out_share)
+                            }else{
                             LinearProtocol::<P>::offline_leaf_server_protocol(
                                 reader,
                                 writer,
@@ -885,10 +944,12 @@ where
                                 &mut cg_handler,
                                 &layer.kernel_to_repr(),
                                 rng).unwrap()
+                            }
                         }
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
-                            (Input::zeros(dims.input_dimensions()),Output::zeros(dims.output_dimensions()))
+                            let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
+                            (input_share,Output::zeros(dims.output_dimensions()))
                         }
                         LinearLayer::Identity { dims } => (Input::zeros(dims.input_dimensions()),Output::zeros(dims.output_dimensions())),
                     };
@@ -1215,13 +1276,13 @@ where
                         &layer_info,
                         &mut next_layer_input,
                     ).unwrap();
-                    if i != (architecture.layers.len() - 1)
-                        && architecture.layers[i + 1].is_linear()
-                    {
-                        let share = &state.linear_randomizer[&(i + 1)];
-                        let share_fp = NNProtocol::transform(share,dims.output_dimensions());
-                        next_layer_input.randomize_local_share(&share_fp);
-                    }
+                    // if i != (architecture.layers.len() - 1)
+                    //     && architecture.layers[i + 1].is_linear()
+                    // {
+                    //     let share = &state.linear_randomizer[&(i + 1)];
+                    //     let share_fp = NNProtocol::transform(share,dims.output_dimensions());
+                    //     next_layer_input.randomize_local_share(&share_fp);
+                    // }
                     // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
                     // if i != (architecture.layers.len() - 1)
                     //     && architecture.layers[i + 1].is_linear()
@@ -1273,7 +1334,7 @@ where
         let mut num_consumed_relus = 0;
 
         let mut next_layer_input = Output::zeros(first_layer_out_dims);
-        let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
+        // let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
         // let serverb_listener = TcpListener::bind(server_b_addr).unwrap();
 
         for (i, layer) in neural_network.layers.iter().enumerate() {
@@ -1311,30 +1372,30 @@ where
                 println!("Linear {}", i);
                 let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
                 let layer_randomizer = state.output_randomizer.get(&i).unwrap(); //s
-                if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
-                    println!("Linear but not conv FC{}", i);
-                    next_layer_derandomizer
-                        .iter_mut()
-                        .zip(&next_layer_input)
-                        .for_each(|(l_r, inp)| {
-                            *l_r += &inp.inner.inner;
-                        });
-                }
+                // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
+                //     println!("Linear but not conv FC{}", i);
+                //     next_layer_derandomizer
+                //         .iter_mut()
+                //         .zip(&next_layer_input)
+                //         .for_each(|(l_r, inp)| {
+                //             *l_r += &inp.inner.inner;
+                //         });
+                // }
                 let input_dim = layer.input_dimensions();
                 // println!("input dimension {} {} {} {}",b,c,h,w);
                 next_layer_input = Output::zeros(layer.output_dimensions());
                 // for stream in serverb_listener.incoming() {
                     // let mut read_stream =
                     // IMuxSync::new(vec![stream.expect("server connection failed!")]);
-                    LinearProtocol::online_server_protocol(
+                    LinearProtocol::online_leaf_server_protocol(
                         &mut reader_b,       // we only receive here, no messages to client
                         &layer, // layer parameters
                         layer_randomizer,       // this is our `s` from above.
-                        &next_layer_derandomizer,
+                        input_dim,
                         &mut next_layer_input, // this is where the result will go.
                     ).unwrap();
                     // println!("next layer input length b {}", next_layer_input.len());
-                    next_layer_derandomizer = Output::zeros(layer.output_dimensions());
+                    // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
 
                     for share in next_layer_input.iter_mut() {
                         share.inner.signed_reduce_in_place();
@@ -1389,7 +1450,7 @@ where
             let mut num_consumed_relus = 0;
 
             let mut next_layer_input = Output::zeros(first_layer_out_dims);
-            let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
+            // let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
             // let serverc_listener = TcpListener::bind(server_c_addr).unwrap();
 
             for (i, layer) in neural_network.layers.iter().enumerate() {
@@ -1434,30 +1495,30 @@ where
                     let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
                     // println!("Linear");
                     let layer_randomizer = state.output_randomizer.get(&i).unwrap();
-                    if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
-                        println!("Linear but not conv FC{}", i);
-                        next_layer_derandomizer
-                            .iter_mut()
-                            .zip(&next_layer_input)
-                            .for_each(|(l_r, inp)| {
-                                *l_r += &inp.inner.inner;
-                            });
-                    }
+                    // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
+                    //     println!("Linear but not conv FC{}", i);
+                    //     next_layer_derandomizer
+                    //         .iter_mut()
+                    //         .zip(&next_layer_input)
+                    //         .for_each(|(l_r, inp)| {
+                    //             *l_r += &inp.inner.inner;
+                    //         });
+                    // }
                     let input_dim = layer.input_dimensions();
                     // println!("input dimension {} {} {} {}",b,c,h,w);
                     next_layer_input = Output::zeros(layer.output_dimensions());
                     // for stream in serverc_listener.incoming() {
                     //     let mut read_stream =
                     //     IMuxSync::new(vec![stream.expect("server connection failed!")]);
-                        LinearProtocol::online_server_protocol(
+                        LinearProtocol::online_leaf_server_protocol(
                             &mut reader_c,       // we only receive here, no messages to client
                             &layer, // layer parameters
                             layer_randomizer,       // this is our `s` from above.
-                            &next_layer_derandomizer,
+                            input_dim,
                             &mut next_layer_input, // this is where the result will go.
                         ).unwrap();
                         // println!("next layer input length c {}", next_layer_input.len());
-                        next_layer_derandomizer = Output::zeros(layer.output_dimensions());
+                        // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
 
                         for share in next_layer_input.iter_mut() {
                             share.inner.signed_reduce_in_place();
@@ -1941,6 +2002,7 @@ where
                                 (Input::zeros(dims.input_dimensions()), output_share)
                             } else {
                                 // Otherwise, just return randomizers of 0
+                                // let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
                                 (
                                     Input::zeros(dims.input_dimensions()),
                                     Output::zeros(dims.output_dimensions()),
@@ -2083,7 +2145,7 @@ where
                         [num_consumed_relus..(num_consumed_relus + layer_size)]
                         .to_vec();
                     num_consumed_relus += layer_size;
-                    next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)
+                    next_layer_derandomizer = ndarray::Array1::from_iter(relu_output_randomizers)   //otp
                         .into_shape(dims.output_dimensions())
                         .expect("shape should be correct")
                         .into();

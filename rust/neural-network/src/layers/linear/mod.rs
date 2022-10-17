@@ -120,7 +120,7 @@ impl<F, C> LinearLayer<F, C> {
         }
     }
 
-    fn evaluate_naive(&self, input: &Input<F>, output: &mut Output<F>)
+    pub fn evaluate_naive(&self, input: &Input<F>, output: &mut Output<F>)
     where
         F: Zero + Mul<C, Output = F> + AddAssign + Copy,
         C: Copy + Into<F> + One + std::fmt::Debug,
