@@ -657,6 +657,12 @@ where
                                     &mut cg_handler,
                                     rng,
                                 ).unwrap();
+                                println!("Conv Fr-s after pooling {}",i);
+                                for (i,share) in out_share.iter().enumerate(){
+                                    if i<10{
+                                        println!("{}",share.inner);
+                                    }
+                                }
                                 (input_share,out_share)
                             }else{
                                 LinearProtocol::<P>::offline_root_server_protocol(
