@@ -425,14 +425,14 @@ where
             println!("{} {} {} {}",b,c,h,w);
             println!("{} ",b*c*h*w);
 
-            // for (key, value) in &state.linear_post_application_share{
-            //     println!("key {}", key);
-            //     for (i, op) in value.iter().enumerate(){
-            //         if i>100 && i<110{
-            //             println!("{}",op.inner);
-            //         }
-            //     }
-            // }
+            for (key, value) in &state.linear_post_application_share{
+                println!("key {}", key);
+                for (i, op) in value.iter().enumerate(){
+                    if i<10{
+                        println!("{}",op.inner);
+                    }
+                }
+            }
         }
     }
     // let layer = &neural_network_architecture.layers[1];
@@ -1138,12 +1138,12 @@ where
         println!("linear_post_application_share {}",server_a_state.linear_post_application_share.len());
         println!("num relu {}",server_a_state.num_relu);
 
-        // for (idx, _) in &server_a_state.linear_randomizer{
-        //     println!("linear_randomizer {}", idx);
-        // }
-        // for (idx, _) in &server_a_state.linear_post_application_share{
-        //     println!("linear_post_application_share {}", idx);
-        // }
+        for (idx, _) in &server_a_state.linear_randomizer{
+            println!("linear_randomizer {}", idx);
+        }
+        for (idx, _) in &server_a_state.linear_post_application_share{
+            println!("linear_post_application_share {}", idx);
+        }
     }
 
     pub fn offline_server_c_protocol_r3<W: Write +Send>(
