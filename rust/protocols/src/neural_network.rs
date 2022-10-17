@@ -1215,6 +1215,13 @@ where
                         &layer_info,
                         &mut next_layer_input,
                     ).unwrap();
+                    if i != (architecture.layers.len() - 1)
+                        && architecture.layers[i + 1].is_linear()
+                    {
+                        let share = &state.linear_randomizer[&(i + 1)];
+                        let share_fp = NNProtocol::transform(share,dims.output_dimensions());
+                        next_layer_input.randomize_local_share(&share_fp);
+                    }
                     // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
                     // if i != (architecture.layers.len() - 1)
                     //     && architecture.layers[i + 1].is_linear()
