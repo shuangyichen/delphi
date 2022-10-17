@@ -643,6 +643,7 @@ where
                                 _ => unreachable!(),
                             };
                             if in_shares.keys().any(|k| k == &(i - 1)) {
+                                // println!("AvgPooling {}",i);
                                 let mut input_share = tmp_shares.get(&(i-1)).unwrap().clone();
                         
                                 let out_share = LinearProtocol::offline_root_server_pooling_protocol(
@@ -682,7 +683,7 @@ where
                                     .evaluate_naive(prev_output_share, &mut output_share);
                                 (Input::zeros(dims.input_dimensions()), output_share)
                             } else {
-                                
+                                println!("AvgPooling {}",i);
                                 let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
                                 let mut next_input_share = Input::zeros(dims.output_dimensions());
                                 linear_layer_info.evaluate_naive(&input_share, &mut next_input_share);
@@ -829,6 +830,7 @@ where
                         }
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
+                            println!("AvgPooling {}",i);
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
                             let mut next_input_share = Input::zeros(dims.output_dimensions());
                             &layer.evaluate_naive(&input_share, &mut next_input_share);
@@ -957,6 +959,7 @@ where
                         }
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
+                            println!("AvgPooling {}",i);
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
                             let mut next_input_share = Input::zeros(dims.output_dimensions());
                             &layer.evaluate_naive(&input_share, &mut next_input_share);
