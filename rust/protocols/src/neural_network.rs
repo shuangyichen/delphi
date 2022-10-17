@@ -642,7 +642,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if in_shares.keys().any(|k| k == &(i - 1)) {
+                            if in_shares.keys().any(|k| k == &(i - 10)) {
                                 // println!("AvgPooling {}",i);
                                 let mut input_share = tmp_shares.get(&(i-1)).unwrap().clone();
                         
@@ -665,7 +665,7 @@ where
                                 }
                                 (input_share,out_share)
                             }else{
-                                LinearProtocol::<P>::offline_root_server_protocol(
+                                let (input_share,out_share) = LinearProtocol::<P>::offline_root_server_protocol(
                                     reader_b, 
                                     reader_c, 
                                     writer_b, 
@@ -674,7 +674,14 @@ where
                                     output_dims,
                                     &mut cg_handler,
                                     rng,
-                                ).unwrap()
+                                ).unwrap();
+                                println!("Conv Fr-s after pooling {}",i);
+                                for (i,share) in out_share.iter().enumerate(){
+                                    if i<10{
+                                        println!("{}",share.inner);
+                                    }
+                                }
+                                (input_share,out_share)
                             }
 
                         }
@@ -820,7 +827,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if r_vec.keys().any(|k| k == &(i - 1)) {
+                            if r_vec.keys().any(|k| k == &(i - 10)) {
                                 let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
                                 
                                 let out_share = LinearProtocol::offline_leaf_server_pooling_protocol(
@@ -835,14 +842,21 @@ where
                                 ).unwrap();
                                 (input_share,out_share)
                             }else{
-                            LinearProtocol::<P>::offline_leaf_server_protocol(
+                                let (input_share,out_share) = LinearProtocol::<P>::offline_leaf_server_protocol(
                                 reader,
                                 writer,
                                 layer.input_dimensions(),
                                 layer.output_dimensions(),
                                 &mut cg_handler,
                                 &layer.kernel_to_repr(),
-                                rng).unwrap()
+                                rng).unwrap();
+                                // println!("Conv Fr-s after pooling {}",i);
+                                // for (i,share) in out_share.iter().enumerate(){
+                                //     if i<10{
+                                //         println!("{}",share.inner);
+                                //     }
+                                // }
+                                (input_share,out_share)
                             }
                         }
                         // AvgPool and Identity don't require an offline phase
@@ -955,7 +969,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if r_vec.keys().any(|k| k == &(i - 1)) {
+                            if r_vec.keys().any(|k| k == &(i - 10)) {
                                 let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
                                 // let mut prev_out_share = Output::zeros(layer.input_dimensions());
                                 // s_vec.insert(i-1, prev_out_share);
@@ -975,14 +989,22 @@ where
                                 ).unwrap();
                                 (input_share,out_share)
                             }else{
-                            LinearProtocol::<P>::offline_leaf_server_protocol(
+                                
+                            let (input_share,out_share) = LinearProtocol::<P>::offline_leaf_server_protocol(
                                 reader,
                                 writer,
                                 layer.input_dimensions(),
                                 layer.output_dimensions(),
                                 &mut cg_handler,
                                 &layer.kernel_to_repr(),
-                                rng).unwrap()
+                                rng).unwrap();
+                                // println!("Conv Fr-s after pooling {}",i);
+                                // for (i,share) in out_share.iter().enumerate(){
+                                //     if i<10{
+                                //         println!("{}",share.inner);
+                                //     }
+                                // }
+                                (input_share,out_share)
                             }
                         }
                         // AvgPool and Identity don't require an offline phase
