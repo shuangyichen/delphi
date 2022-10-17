@@ -827,7 +827,7 @@ where
                         }
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
-                            let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
+                            let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
                             (//Input::zeros(dims.input_dimensions()),
                             input_share,
                             Output::zeros(dims.output_dimensions()))
@@ -948,7 +948,7 @@ where
                         }
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
-                            let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
+                            let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
                             (input_share,Output::zeros(dims.output_dimensions()))
                         }
                         LinearLayer::Identity { dims } => (Input::zeros(dims.input_dimensions()),Output::zeros(dims.output_dimensions())),
