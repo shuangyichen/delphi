@@ -1273,7 +1273,7 @@ where
         let mut num_consumed_relus = 0;
 
         let mut next_layer_input = Output::zeros(first_layer_out_dims);
-        // let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
+        let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
         // let serverb_listener = TcpListener::bind(server_b_addr).unwrap();
 
         for (i, layer) in neural_network.layers.iter().enumerate() {
@@ -1311,29 +1311,29 @@ where
                 println!("Linear {}", i);
                 let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
                 let layer_randomizer = state.output_randomizer.get(&i).unwrap(); //s
-                // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
-                //     next_layer_derandomizer
-                //         .iter_mut()
-                //         .zip(&next_layer_input)
-                //         .for_each(|(l_r, inp)| {
-                //             *l_r += &inp.inner.inner;
-                //         });
-                // }
+                if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
+                    next_layer_derandomizer
+                        .iter_mut()
+                        .zip(&next_layer_input)
+                        .for_each(|(l_r, inp)| {
+                            *l_r += &inp.inner.inner;
+                        });
+                }
                 let input_dim = layer.input_dimensions();
                 // println!("input dimension {} {} {} {}",b,c,h,w);
                 next_layer_input = Output::zeros(layer.output_dimensions());
                 // for stream in serverb_listener.incoming() {
                     // let mut read_stream =
                     // IMuxSync::new(vec![stream.expect("server connection failed!")]);
-                    LinearProtocol::online_leaf_server_protocol(
+                    LinearProtocol::online_server_protocol(
                         &mut reader_b,       // we only receive here, no messages to client
                         &layer, // layer parameters
                         layer_randomizer,       // this is our `s` from above.
-                        input_dim,
+                        &next_layer_derandomizer,
                         &mut next_layer_input, // this is where the result will go.
                     ).unwrap();
                     // println!("next layer input length b {}", next_layer_input.len());
-                    // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
+                    next_layer_derandomizer = Output::zeros(layer.output_dimensions());
 
                     for share in next_layer_input.iter_mut() {
                         share.inner.signed_reduce_in_place();

@@ -716,7 +716,7 @@ where
             // println!("{}",out.inner);
         });
         for (i,out) in output.iter().enumerate(){
-            if i >300 && i<310{
+            if i <10{
                 println!("{}", out.inner);
             }
         }
