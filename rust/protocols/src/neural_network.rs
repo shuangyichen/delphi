@@ -592,6 +592,7 @@ where
         let mut num_relu = 0;
         let mut in_shares = BTreeMap::new();
         let mut out_shares = BTreeMap::new();
+        let mut tmp_shares:BTreeMap<usize,Input<AdditiveShare<P>>> = BTreeMap::new();
         let mut relu_layers = Vec::new();
         let (mut rsmphe_, mut lsmphe_, rlk_r1)= crate::root_server_keygen_r1(reader_b,reader_c,writer_b, writer_c);
 
@@ -642,10 +643,8 @@ where
                                 _ => unreachable!(),
                             };
                             if in_shares.keys().any(|k| k == &(i - 1)) {
-                                let prev_input_share = in_shares.get(&(i - 1)).unwrap();
-                                let mut input_share = Output::zeros(input_dims);
-                                linear_layer_info
-                                    .evaluate_naive(prev_input_share, &mut input_share);
+                                let mut input_share = tmp_shares.get(&(i-1)).unwrap().clone();
+                        
                                 let out_share = LinearProtocol::offline_root_server_pooling_protocol(
                                     reader_b, 
                                     reader_c, 
@@ -685,11 +684,15 @@ where
                             } else {
                                 
                                 let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
-                                (
-                                    // Input::zeros(dims.input_dimensions()),
-                                    input_share,
-                                    Output::zeros(dims.output_dimensions()),
-                                )
+                                let mut next_input_share = Input::zeros(dims.output_dimensions());
+                                linear_layer_info.evaluate_naive(&input_share, &mut next_input_share);
+                                tmp_shares.insert(i,next_input_share);
+                                (input_share, Output::zeros(dims.output_dimensions()))
+                                // (
+                                //     // Input::zeros(dims.input_dimensions()),
+                                //     input_share,
+                                //     Output::zeros(dims.output_dimensions()),
+                                // )
                             }
                         }
                     };
@@ -766,6 +769,7 @@ where
         let mut num_relu = 0;
         let mut r_vec = BTreeMap::new();
         let mut s_vec = BTreeMap::new();
+        let mut tmp_vec:BTreeMap<usize,Input<AdditiveShare<P>>> = BTreeMap::new();
         let mut relu_layers = Vec::new();
         // let sfhe: ServerFHE = crate::server_keygen(reader)?;
 
@@ -799,10 +803,8 @@ where
                                 _ => unreachable!(),
                             };
                             if r_vec.keys().any(|k| k == &(i - 1)) {
-                                let prev_input_share = r_vec.get(&(i - 1)).unwrap();
-                                let mut input_share = Input::zeros(layer.input_dimensions());
-                                layer
-                                    .evaluate_naive(prev_input_share, &mut input_share);
+                                let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
+                                
                                 let out_share = LinearProtocol::offline_leaf_server_pooling_protocol(
                                     reader, 
                                     writer, 
@@ -828,6 +830,9 @@ where
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
+                            let mut next_input_share = Input::zeros(dims.output_dimensions());
+                            &layer.evaluate_naive(&input_share, &mut next_input_share);
+                            tmp_vec.insert(i,next_input_share);
                             (//Input::zeros(dims.input_dimensions()),
                             input_share,
                             Output::zeros(dims.output_dimensions()))
@@ -887,6 +892,7 @@ where
         let mut num_relu = 0;
         let mut r_vec = BTreeMap::new();
         let mut s_vec = BTreeMap::new();
+        let mut tmp_vec:BTreeMap<usize,Input<AdditiveShare<P>>> = BTreeMap::new();
         let mut relu_layers = Vec::new();
         // let sfhe: ServerFHE = crate::server_keygen(reader)?;
 
@@ -920,10 +926,13 @@ where
                                 _ => unreachable!(),
                             };
                             if r_vec.keys().any(|k| k == &(i - 1)) {
-                                let prev_input_share = r_vec.get(&(i - 1)).unwrap();
-                                let mut input_share = Input::zeros(layer.input_dimensions());
-                                layer
-                                    .evaluate_naive(prev_input_share, &mut input_share);
+                                let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
+                                // let mut prev_out_share = Output::zeros(layer.input_dimensions());
+                                // s_vec.insert(i-1, prev_out_share);
+                                // let prev_layer = neural_network.layers[i-1];
+                                // let prev_layer_ = Layer::LL(prev_layer);
+                                // prev_layer_
+                                //     .evaluate_naive(prev_input_share, &mut input_share);
                                 let out_share = LinearProtocol::offline_leaf_server_pooling_protocol(
                                     reader, 
                                     writer, 
@@ -949,6 +958,9 @@ where
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
+                            let mut next_input_share = Input::zeros(dims.output_dimensions());
+                            &layer.evaluate_naive(&input_share, &mut next_input_share);
+                            tmp_vec.insert(i,next_input_share);
                             (input_share,Output::zeros(dims.output_dimensions()))
                         }
                         LinearLayer::Identity { dims } => (Input::zeros(dims.input_dimensions()),Output::zeros(dims.output_dimensions())),
