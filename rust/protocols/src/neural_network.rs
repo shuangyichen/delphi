@@ -685,7 +685,7 @@ where
                             } else {
                                 println!("AvgPooling {}",i);
                                 let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
-                                for (i,share) in next_input_share.iter().enumerate(){
+                                for (i,share) in input_share.iter().enumerate(){
                                     if i<10{
                                         println!("{}",share.inner);
                                     }
@@ -843,7 +843,7 @@ where
                         LinearLayer::AvgPool { dims, .. } => {
                             println!("AvgPooling {}",i);
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
-                            for (i,share) in next_input_share.iter().enumerate(){
+                            for (i,share) in input_share.iter().enumerate(){
                                 if i<10{
                                     println!("{}",share.inner);
                                 }
@@ -983,7 +983,7 @@ where
                         LinearLayer::AvgPool { dims, .. } => {
                             println!("AvgPooling {}",i);
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
-                            for (i,share) in next_input_share.iter().enumerate(){
+                            for (i,share) in input_share.iter().enumerate(){
                                 if i<10{
                                     println!("{}",share.inner);
                                 }
