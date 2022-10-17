@@ -1312,6 +1312,7 @@ where
                 let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
                 let layer_randomizer = state.output_randomizer.get(&i).unwrap(); //s
                 if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
+                    println!("Linear but not conv FC{}", i);
                     next_layer_derandomizer
                         .iter_mut()
                         .zip(&next_layer_input)
@@ -1434,6 +1435,7 @@ where
                     // println!("Linear");
                     let layer_randomizer = state.output_randomizer.get(&i).unwrap();
                     if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
+                        println!("Linear but not conv FC{}", i);
                         next_layer_derandomizer
                             .iter_mut()
                             .zip(&next_layer_input)
