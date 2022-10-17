@@ -1276,7 +1276,7 @@ where
                                 *b = AdditiveShare::new(*a)
                             });
                         // }
-                    let mut next_layer_input = state.linear_post_application_share[&i].clone();  //Fr-s
+                    let mut next_layer_input = Output::zeros(dims.output_dimensions()); //state.linear_post_application_share[&i].clone();  //Fr-s
                     
                     let (b, c, h, w) = dims.input_dimensions();
                     println!("Input dimension: {} {} {} {}", b,c,h,w);
