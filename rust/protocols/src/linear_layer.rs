@@ -189,7 +189,7 @@ where
         let mut server_r: Output<FixedPoint<P>> = Output::zeros(output_dims);
         server_r.iter_mut()
         .for_each(|s_r|{
-          *s_r  = FixedPoint::from(generate_random_number(rng).0)
+          *s_r  = FixedPoint::from(generate_random_number_s(rng).0)
         });
 
 
@@ -292,7 +292,7 @@ where
         let mut server_r: Output<FixedPoint<P>> = Output::zeros(output_dims);
         server_r.iter_mut()
         .for_each(|s_r|{
-          *s_r  = FixedPoint::from(generate_random_number(rng).0)
+          *s_r  = FixedPoint::from(generate_random_number_s(rng).0)
         });
 
 
@@ -303,20 +303,13 @@ where
         .for_each(|(s_ra,s_r)|{
             *s_ra = (*s_r).inner
         });
-        // TODO
-        // for r in &mut server_randomness {
-        //     // *r = P::Field::uniform(rng);
-        //     // *r = P::Field::one();//P::Field::uniform(rng);
-        // }
+        
         let mut server_randomness_c = Output::zeros(output_dims);
         server_randomness_c
             .iter_mut()
             .zip(&server_randomness)
             .for_each(|(e1, e2)| *e1 = e2.into_repr().0);
 
-        // for s in &server_randomness{
-        //     println!("SSSS:{}",*s);
-        // }
         let (mut weight_ct_vec,mut r_ct_vec, mut s_ct_vec) = lserver_cg.preprocess(kernel, &r2.to_repr(), &server_randomness_c);
         let  ct_send = vec![weight_ct_vec, r_ct_vec, s_ct_vec];
 
@@ -334,22 +327,86 @@ where
         let sent_message = OfflineServerMsgSend::new(&pd);
         crate::bytes::serialize(writer, &sent_message).unwrap();
 
-        // let layer_randomness = r2
-        //     .iter()
-        //     .map(|r: &AdditiveShare<P>| r.inner.inner)
-        //     .collect::<Vec<_>>();
-        // let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
-        //     .into_shape(input_dims)
-        //     .unwrap();
+        Ok((r1,server_randomness))
+    }
 
-        // let layer_randomness = r2
-        //     .iter()
-        //     .map(|r: &AdditiveShare<P>| r.inner.inner)
-        //     .collect::<Vec<_>>();
-        // let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
-        //     .into_shape(input_dims)
-        //     .unwrap();
-        // Ok((layer_randomness.into(),server_randomness))
+    pub fn offline_leaf_server_b_protocol<'a,R: Read + Send, W: Write + Send, RNG: RngCore + CryptoRng>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        input_dims: (usize, usize, usize, usize),
+        output_dims: (usize, usize, usize, usize),
+        lserver_cg: &mut SealLeafServerCG,
+        kernel: &Kernel<u64>,
+        rng: &mut RNG,
+    )-> Result<(Input<AdditiveShare<P>>,Output<P::Field>), bincode::Error>  {
+
+        // r
+        // let lserver_share: Input<FixedPoint<P>> = Input::zeros(input_dims);
+        let mut r1_ = Input::zeros(input_dims);
+        let mut r2_ = Input::zeros(input_dims);
+        // let (n1, n2) = generate_random_number(rng);
+        r1_.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(r_1,r_2)|{
+            (*r_1, *r_2) = generate_random_number(rng)
+          });
+
+        
+
+        let mut r1: Input<AdditiveShare<P>>  = Input::zeros(input_dims); 
+        let mut r2: Input<AdditiveShare<P>>  = Input::zeros(input_dims);
+
+        r1.iter_mut()
+          .zip(r1_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+        r2.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+
+       
+
+        let mut server_r: Output<FixedPoint<P>> = Output::zeros(output_dims);
+        server_r.iter_mut()
+        .for_each(|s_r|{
+          *s_r  = FixedPoint::from(generate_random_number_0(rng).0)
+        });
+
+
+        let mut server_randomness: Output<P::Field> = Output::zeros(output_dims);
+        // let mut server_randomness: Output<AdditiveShare<P>> = Output::zeros(output_dims);
+        server_randomness.iter_mut()
+        .zip(server_r.iter_mut())
+        .for_each(|(s_ra,s_r)|{
+            *s_ra = (*s_r).inner
+        });
+        
+        let mut server_randomness_c = Output::zeros(output_dims);
+        server_randomness_c
+            .iter_mut()
+            .zip(&server_randomness)
+            .for_each(|(e1, e2)| *e1 = e2.into_repr().0);
+
+        let (mut weight_ct_vec,mut r_ct_vec, mut s_ct_vec) = lserver_cg.preprocess(kernel, &r2.to_repr(), &server_randomness_c);
+        let  ct_send = vec![weight_ct_vec, r_ct_vec, s_ct_vec];
+
+        // println!("sending ct");
+
+
+        let sent_message =OfflineLeafServerMsgSend::new(&ct_send);
+        // let sent_message =OfflineServerMsgSend::new(&weight_ct_vec);
+        crate::bytes::serialize(writer, &sent_message).unwrap();
+        // Ok(())
+
+        let result_ct: OfflineServerMsgRcv = crate::bytes::deserialize(reader).unwrap();
+    
+        let pd = lserver_cg.dis_decrypt(result_ct.msg());
+        let sent_message = OfflineServerMsgSend::new(&pd);
+        crate::bytes::serialize(writer, &sent_message).unwrap();
+
         Ok((r1,server_randomness))
     }
 
@@ -934,7 +991,7 @@ where
             // println!("{}",out.inner);
         });
         println!("F(X-r)-s");
-        
+
         for (i,out) in output.iter().enumerate(){
             if i <10{
                 println!("{}", out.inner);
