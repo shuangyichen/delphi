@@ -411,6 +411,9 @@ where
                         Output::zeros(output_dims)
                     }
             };
+            for share in &mut out_share {
+                share.inner.signed_reduce_in_place();
+            }
             // println!("old current_layer_shares {:?}",state.relu_current_layer_output_shares);
             let mut current_layer_shares = Vec::new();
             current_layer_shares.extend_from_slice(out_share.as_slice().unwrap());
@@ -657,12 +660,12 @@ where
                                     &mut cg_handler,
                                     rng,
                                 ).unwrap();
-                                println!("Conv Fr-s after pooling {}",i);
-                                for (i,share) in out_share.iter().enumerate(){
-                                    if i<10{
-                                        println!("{}",share.inner);
-                                    }
-                                }
+                                // println!("Conv Fr-s after pooling {}",i);
+                                // for (i,share) in out_share.iter().enumerate(){
+                                //     if i<10{
+                                //         println!("{}",share.inner);
+                                //     }
+                                // }
                                 (input_share,out_share)
                             }else{
                                 let (input_share,out_share) = LinearProtocol::<P>::offline_root_server_protocol(
@@ -675,12 +678,12 @@ where
                                     &mut cg_handler,
                                     rng,
                                 ).unwrap();
-                                println!("Conv Fr-s after pooling {}",i);
-                                for (i,share) in out_share.iter().enumerate(){
-                                    if i<10{
-                                        println!("{}",share.inner);
-                                    }
-                                }
+                                // println!("Conv Fr-s after pooling {}",i);
+                                // for (i,share) in out_share.iter().enumerate(){
+                                //     if i<10{
+                                //         println!("{}",share.inner);
+                                //     }
+                                // }
                                 (input_share,out_share)
                             }
 
@@ -2416,6 +2419,10 @@ where
         //                 println!("{}",nl_inp);
         //             }
         next_input.randomize_local_share(&next_layer_derand);
+
+        for share in next_input.iter_mut() {
+            share.inner.signed_reduce_in_place();
+        }
         println!("********************receiving intermeidate result from user*********");
         // for (i,inp) in next_input.iter().enumerate(){
         //     if i <10{
