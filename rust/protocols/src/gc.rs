@@ -883,10 +883,10 @@ where
             //         // }
             //     // }
             // }
-        // results
-        //     .iter_mut()
-        //     .zip(next_layer_randomizers)
-        //     .for_each(|(s, r)| *s = FixedPoint::<P>::randomize_local_share(s, r));
+        results
+            .iter_mut()
+            .zip(next_layer_randomizers)
+            .for_each(|(s, r)| *s = FixedPoint::<P>::randomize_local_share(s, r));
 
             Ok(results)
 

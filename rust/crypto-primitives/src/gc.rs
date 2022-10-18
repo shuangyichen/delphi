@@ -196,12 +196,12 @@ where
 
         let relu_res = BinaryBundle::new(relu_res);
 
-        // let res_b = b.bin_addition_no_carry(&relu_res, &rb_next)?;
-        // let tmp = mod_p_helper(b, &neg_p, &res_b)?;
-        // let res = b.bin_addition_no_carry(&tmp, &rc_next)?;
-        // let next_share = mod_p_helper(b, &neg_p, &res)?;
+        let res_b = b.bin_addition_no_carry(&relu_res, &rb_next)?;
+        let tmp = mod_p_helper(b, &neg_p, &res_b)?;
+        let res = b.bin_addition_no_carry(&tmp, &rc_next)?;
+        let next_share = mod_p_helper(b, &neg_p, &res)?;
 
-        b.output_bundle(&relu_res)?;
+        b.output_bundle(&next_share)?;
     }
 
     Ok(())
