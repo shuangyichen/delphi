@@ -802,15 +802,15 @@ where
     pub fn eval_server_a_protocol<R: Read + Send>(
         reader: &mut IMuxSync<R>,
         rb_labels:&mut Vec<Vec<Wire>>,
-        ra_labels:&[Wire],
+        ra_labels:&[Wire], //Fr-s
         rb_next_labels:&[Wire],
-        rc_next_labels:&[Wire],
+        rc_next_labels:&[Wire], //r_c'
         evaluators: &[GarbledCircuit],
         next_layer_randomizers: &[P::Field],
         num_relus: usize,
     )-> Result<Vec<AdditiveShare<P>>, bincode::Error>{
         let in_msg: ServerLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
-        let rc_labels = in_msg.msg();
+        let rc_labels = in_msg.msg(); //F_c(X-r)+S_c
         // println!("rc labels {}",rc_labels.len());
 
         // println!("Server A receive rc labels from server C");
@@ -883,10 +883,10 @@ where
             //         // }
             //     // }
             // }
-        results
-            .iter_mut()
-            .zip(next_layer_randomizers)
-            .for_each(|(s, r)| *s = FixedPoint::<P>::randomize_local_share(s, r));
+        // results
+        //     .iter_mut()
+        //     .zip(next_layer_randomizers)
+        //     .for_each(|(s, r)| *s = FixedPoint::<P>::randomize_local_share(s, r));
 
             Ok(results)
 
