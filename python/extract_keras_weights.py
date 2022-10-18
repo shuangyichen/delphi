@@ -300,9 +300,9 @@ def serialize_weights_split_additive_share(model, save_path,split):
                 A = np.array(py_tensor)
                 a_shape = A.shape
                 b_shape = b.shape
-                A1 = A/2#np.random.random(a_shape)
+                A1 = np.zeros(a_shape)#A/2#np.random.random(a_shape)
                 A2 = A-A1
-                b1 = b/2#np.random.random(b_shape)
+                b1 = np.zeros(b_shape)#b/2#np.random.random(b_shape)
                 b2 = b-b1
             elif "dense" in layer.name:
                 A, b = layer.get_weights()
@@ -325,9 +325,9 @@ def serialize_weights_split_additive_share(model, save_path,split):
                 A = np.hstack(channel_cols)
                 a_shape = A.shape
                 b_shape = b.shape
-                A1 = A/2#np.random.random(a_shape)
+                A1 = np.zeros(a_shape)#A/2#np.random.random(a_shape)
                 A2 = A-A1
-                b1 = b/2#np.random.random(b_shape)
+                b1 = np.zeros(b_shape)#b/2#np.random.random(b_shape)
                 b2 = b-b1
             else:
                 continue
