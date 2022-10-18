@@ -377,9 +377,9 @@ if __name__ == "__main__":
         if args.test_acc:
             acc = test_accuracy(model, dataset)
             print(f"Quantized Accuracy: {acc}%")
-    
+    model.summary()
     # Serialize weights for Rust
     # serialize_weights(model, save_path)
     # serialize_weights_additive_share(model, save_path)
     # serialize_weights_additive_share_test(model, save_path)
-    serialize_weights_split_additive_share(model, save_path,12)
+    serialize_weights_split_additive_share(model, save_path,14)
