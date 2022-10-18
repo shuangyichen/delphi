@@ -1303,11 +1303,12 @@ where
                             .into_shape(dims.output_dimensions())
                             .expect("shape should be correct")
                             .into();
-                            // for (i,inp) in next_layer_input.iter().enumerate(){
-                            //     if i <10{
-                            //         println!("{}", inp.inner);
-                            //     }
-                            // }
+                            println!("ReLU output value");
+                            for (i,inp) in next_layer_input.iter().enumerate(){
+                                if i <10{
+                                    println!("{}", inp.inner);
+                                }
+                            }
                            
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {}
@@ -1334,6 +1335,12 @@ where
                     // let mut writer_c =
                     //     IMuxSync::new(vec![TcpStream::connect(server_c_addr).unwrap()]);
                     // if i != 0{
+                    println!("Conv Input value");
+                    for (i,inp) in next_layer_input.iter().enumerate(){
+                        if i <10{
+                            println!("{}", inp.inner);
+                        }
+                    }
                     let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
                             next_layer_input.iter_mut().zip(input.iter_mut())
                             .for_each(|(a,b)|{
