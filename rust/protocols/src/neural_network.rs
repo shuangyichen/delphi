@@ -425,17 +425,17 @@ where
             state.linear_post_application_share.insert(0,out_share);
             // state.relu_next_layer_randomizers.splice(0..0,state.linear_randomizer[&0].as_slice().unwrap().iter().clone());
             state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
-            println!("{} {} {} {}",b,c,h,w);
-            println!("{} ",b*c*h*w);
+            // println!("{} {} {} {}",b,c,h,w);
+            // println!("{} ",b*c*h*w);
 
-            for (key, value) in &state.linear_post_application_share{
-                println!("key {}", key);
-                for (i, op) in value.iter().enumerate(){
-                    if i<10{
-                        println!("{}",op.inner);
-                    }
-                }
-            }
+            // for (key, value) in &state.linear_post_application_share{
+            //     println!("key {}", key);
+            //     for (i, op) in value.iter().enumerate(){
+            //         if i<10{
+            //             println!("{}",op.inner);
+            //         }
+            //     }
+            // }
         }
     }
     // let layer = &neural_network_architecture.layers[1];
@@ -455,19 +455,19 @@ where
 
 
     // state.num_relu+=
-    println!("ABC relu num {}", state.num_relu);
+    // println!("ABC relu num {}", state.num_relu);
     // let inshare_num = state.relu_next_layer_randomizers.iter().count();
     // println!("relu_next_layer_randomizers {}",inshare_num);
     // let outshare_num = state.relu_current_layer_output_shares.iter().count();
     // println!("relu_current_layer_output_shares num {}",outshare_num);
     let inshare_num = state.relu_next_layer_randomizers.iter().count();
-    println!("relu_next_layer_randomizers {}",inshare_num);
+    // println!("relu_next_layer_randomizers {}",inshare_num);
     let outshare_num = state.relu_current_layer_output_shares.iter().count();
-    println!("relu_current_layer_randomizers {}",outshare_num);
+    // println!("relu_current_layer_randomizers {}",outshare_num);
     let inshare_num = state.linear_randomizer.iter().count();
     let outshare_num = state.linear_post_application_share.iter().count();
-    println!("inshare_num {}",inshare_num);
-    println!("outshare_num {}",outshare_num);
+    // println!("inshare_num {}",inshare_num);
+    // println!("outshare_num {}",outshare_num);
     crate::hello(writer_b);
 
     }
@@ -609,7 +609,7 @@ where
                     relu_layers.push(i);
                     let (b, c, h, w) = dims.input_dimensions();
                     println!("{} {} {} {}",b,c,h,w);
-                    println!("{} ",b*c*h*w);
+                    // println!("{} ",b*c*h*w);
                     // println!("{} {} {} {}",b,c,h,w);
                     num_relu += b * c * h * w;
                 }
@@ -645,7 +645,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if in_shares.keys().any(|k| k == &(i - 20)) {
+                            if in_shares.keys().any(|k| k == &(i - 1)) {
                                 // println!("AvgPooling {}",i);
                                 let mut input_share = tmp_shares.get(&(i-1)).unwrap().clone();
                         
@@ -830,7 +830,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if r_vec.keys().any(|k| k == &(i - 20)) {
+                            if r_vec.keys().any(|k| k == &(i - 1)) {
                                 let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
                                 
                                 let out_share = LinearProtocol::offline_leaf_server_pooling_protocol(
@@ -972,7 +972,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if r_vec.keys().any(|k| k == &(i - 20)) {
+                            if r_vec.keys().any(|k| k == &(i - 1)) {
                                 let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
                                 // let mut prev_out_share = Output::zeros(layer.input_dimensions());
                                 // s_vec.insert(i-1, prev_out_share);
@@ -1012,21 +1012,21 @@ where
                         }
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
-                            println!("AvgPooling {}",i);
+                            // println!("AvgPooling {}",i);
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
-                            for (i,share) in input_share.iter().enumerate(){
-                                if i<10{
-                                    println!("{}",share.inner);
-                                }
-                            }
+                            // for (i,share) in input_share.iter().enumerate(){
+                            //     if i<10{
+                            //         println!("{}",share.inner);
+                            //     }
+                            // }
                             let mut next_input_share = Input::zeros(dims.output_dimensions());
                             &layer.evaluate_naive(&input_share, &mut next_input_share);
-                            println!("Conv after avgpooling{}",i+1);
-                                for (i,share) in next_input_share.iter().enumerate(){
-                                    if i<10{
-                                        println!("{}",share.inner);
-                                    }
-                                }
+                            // println!("Conv after avgpooling{}",i+1);
+                                // for (i,share) in next_input_share.iter().enumerate(){
+                                //     if i<10{
+                                //         println!("{}",share.inner);
+                                //     }
+                                // }
                             tmp_vec.insert(i,next_input_share);
                             (input_share,Output::zeros(dims.output_dimensions()))
                         }
@@ -1192,22 +1192,22 @@ where
 
 
         server_a_state.relu_server_c_labels = Some(rc_wires);
-        println!("relu_server_c_labels len {}",server_a_state.relu_server_c_labels.as_ref().unwrap().len());
-        println!("relu_server_a_labels len {}",server_a_state.relu_server_a_labels.as_ref().unwrap().len());
-        println!("relu_server_b_labels len {}",server_a_state.relu_server_b_labels.as_ref().unwrap().len());
-        println!("relu circuits len {}",server_a_state.relu_circuits.as_ref().unwrap().len());
-        println!("relu_next_layer_randomizers len {}",server_a_state.relu_next_layer_randomizers.len());
-        println!("relu_next_layer_randomizers len {}",server_a_state.relu_current_layer_output_shares.len());
-        println!("linear_randomizer len {}",server_a_state.linear_randomizer.len());
-        println!("linear_post_application_share {}",server_a_state.linear_post_application_share.len());
-        println!("num relu {}",server_a_state.num_relu);
+        // println!("relu_server_c_labels len {}",server_a_state.relu_server_c_labels.as_ref().unwrap().len());
+        // println!("relu_server_a_labels len {}",server_a_state.relu_server_a_labels.as_ref().unwrap().len());
+        // println!("relu_server_b_labels len {}",server_a_state.relu_server_b_labels.as_ref().unwrap().len());
+        // println!("relu circuits len {}",server_a_state.relu_circuits.as_ref().unwrap().len());
+        // println!("relu_next_layer_randomizers len {}",server_a_state.relu_next_layer_randomizers.len());
+        // println!("relu_next_layer_randomizers len {}",server_a_state.relu_current_layer_output_shares.len());
+        // println!("linear_randomizer len {}",server_a_state.linear_randomizer.len());
+        // println!("linear_post_application_share {}",server_a_state.linear_post_application_share.len());
+        // println!("num relu {}",server_a_state.num_relu);
 
-        for (idx, _) in &server_a_state.linear_randomizer{
-            println!("linear_randomizer {}", idx);
-        }
-        for (idx, _) in &server_a_state.linear_post_application_share{
-            println!("linear_post_application_share {}", idx);
-        }
+        // for (idx, _) in &server_a_state.linear_randomizer{
+        //     println!("linear_randomizer {}", idx);
+        // }
+        // for (idx, _) in &server_a_state.linear_post_application_share{
+        //     println!("linear_post_application_share {}", idx);
+        // }
     }
 
     pub fn offline_server_c_protocol_r3<W: Write +Send>(
