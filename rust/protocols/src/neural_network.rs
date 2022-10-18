@@ -1299,7 +1299,8 @@ where
                                                 &next_layer_randomizers,
                                                 layer_size,
                                             ).unwrap();
-                            let mut next_layer_input:Input<FixedPoint<P>> =  ndarray::Array1::from_iter(output)
+                            // let mut next_layer_input:Input<FixedPoint<P>> =  ndarray::Array1::from_iter(output)
+                            next_layer_input=  ndarray::Array1::from_iter(output)
                             .into_shape(dims.output_dimensions())
                             .expect("shape should be correct")
                             .into();
