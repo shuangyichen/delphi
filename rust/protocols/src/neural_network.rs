@@ -1306,7 +1306,7 @@ where
                             println!("ReLU output value");
                             for (i,inp) in next_layer_input.iter().enumerate(){
                                 if i <10{
-                                    println!("{}", inp.inner);
+                                    println!("{}", inp);
                                 }
                             }
                            
@@ -1338,7 +1338,7 @@ where
                     println!("Conv Input value");
                     for (i,inp) in next_layer_input.iter().enumerate(){
                         if i <10{
-                            println!("{}", inp.inner);
+                            println!("{}", inp);
                         }
                     }
                     let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
