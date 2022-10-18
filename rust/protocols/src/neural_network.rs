@@ -1352,6 +1352,10 @@ where
                         &layer_info,
                         &mut next_layer_input,
                     ).unwrap();
+
+                    for share in next_layer_input.iter_mut() {
+                        share.inner.signed_reduce_in_place();
+                    }
                     // if i != (architecture.layers.len() - 1)
                     //     && architecture.layers[i + 1].is_linear()
                     // {
