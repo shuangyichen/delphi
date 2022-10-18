@@ -942,16 +942,18 @@ where
         };
         // println!("************************receiving result***************************");
         input.randomize_local_share(input_derandomizer);
-        // for (i,inp) in input.iter().enumerate(){
-        //     if i >100 && i<110{
-        //         println!("{}", inp.inner);
-        //     }
-        // }
+        println!("X-r");
+        for (i,inp) in input.iter().enumerate(){
+            if i <10{
+                println!("{}", inp.inner);
+            }
+        }
         *output = layer.evaluate(&input);
         output.zip_mut_with(output_rerandomizer, |out, s| {
             *out = FixedPoint::randomize_local_share(out, s);
             // println!("{}",out.inner);
         });
+        println!("F(X-r)-s");
         for (i,out) in output.iter().enumerate(){
             if i <10{
                 println!("{}", out.inner);
