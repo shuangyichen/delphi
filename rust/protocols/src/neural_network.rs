@@ -699,21 +699,21 @@ where
                                     .evaluate_naive(prev_output_share, &mut output_share);
                                 (Input::zeros(dims.input_dimensions()), output_share)
                             } else {
-                                println!("AvgPooling {}",i);
+                                // println!("AvgPooling {}",i);
                                 let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
-                                for (i,share) in input_share.iter().enumerate(){
-                                    if i<10{
-                                        println!("{}",share.inner);
-                                    }
-                                }
+                                // for (i,share) in input_share.iter().enumerate(){
+                                //     if i<10{
+                                //         println!("{}",share.inner);
+                                //     }
+                                // }
                                 let mut next_input_share = Input::zeros(dims.output_dimensions());
                                 linear_layer_info.evaluate_naive(&input_share, &mut next_input_share);
-                                println!("Conv after avgpooling{}",i+1);
-                                for (i,share) in next_input_share.iter().enumerate(){
-                                    if i<10{
-                                        println!("{}",share.inner);
-                                    }
-                                }
+                                // println!("Conv after avgpooling{}",i+1);
+                                // for (i,share) in next_input_share.iter().enumerate(){
+                                //     if i<10{
+                                //         println!("{}",share.inner);
+                                //     }
+                                // }
                                 tmp_shares.insert(i,next_input_share);
                                 (input_share, Output::zeros(dims.output_dimensions()))
                                 // (
@@ -864,21 +864,21 @@ where
                         }
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
-                            println!("AvgPooling {}",i);
+                            // println!("AvgPooling {}",i);
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
-                            for (i,share) in input_share.iter().enumerate(){
-                                if i<10{
-                                    println!("{}",share.inner);
-                                }
-                            }
+                            // for (i,share) in input_share.iter().enumerate(){
+                            //     if i<10{
+                            //         println!("{}",share.inner);
+                            //     }
+                            // }
                             let mut next_input_share = Input::zeros(dims.output_dimensions());
                             &layer.evaluate_naive(&input_share, &mut next_input_share);
-                            println!("Conv after avgpooling{}",i+1);
-                                for (i,share) in next_input_share.iter().enumerate(){
-                                    if i<10{
-                                        println!("{}",share.inner);
-                                    }
-                                }
+                            // println!("Conv after avgpooling{}",i+1);
+                            //     for (i,share) in next_input_share.iter().enumerate(){
+                            //         if i<10{
+                            //             println!("{}",share.inner);
+                            //         }
+                            //     }
                             tmp_vec.insert(i,next_input_share);
                             (//Input::zeros(dims.input_dimensions()),
                             input_share,
@@ -1304,12 +1304,12 @@ where
                             .into_shape(dims.output_dimensions())
                             .expect("shape should be correct")
                             .into();
-                            println!("ReLU output value");
-                            for (i,inp) in next_layer_input.iter().enumerate(){
-                                if i <10{
-                                    println!("{}", inp);
-                                }
-                            }
+                            // println!("ReLU output value");
+                            // for (i,inp) in next_layer_input.iter().enumerate(){
+                            //     if i <10{
+                            //         println!("{}", inp);
+                            //     }
+                            // }
                            
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {}
@@ -1318,7 +1318,7 @@ where
 
                 LayerInfo::LL(dims, layer_info) => {
                     thread::sleep(time::Duration::from_millis(2000));
-                    println!("Linear {}",i);
+                    // println!("Linear {}",i);
                     let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
                     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
 
@@ -1336,12 +1336,12 @@ where
                     // let mut writer_c =
                     //     IMuxSync::new(vec![TcpStream::connect(server_c_addr).unwrap()]);
                     // if i != 0{
-                    println!("Conv Input value");
-                    for (i,inp) in next_layer_input.iter().enumerate(){
-                        if i <10{
-                            println!("{}", inp);
-                        }
-                    }
+                    // println!("Conv Input value");
+                    // for (i,inp) in next_layer_input.iter().enumerate(){
+                    //     if i <10{
+                    //         println!("{}", inp);
+                    //     }
+                    // }
                     let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
                             next_layer_input.iter_mut().zip(input.iter_mut())
                             .for_each(|(a,b)|{
@@ -1390,12 +1390,12 @@ where
         }
             let total_layers = architecture.layers.len();
             let last_share = state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
-            println!("Last layer index {}",total_layers-1);
-            for (i, op) in last_share.iter().enumerate(){
-                if i<10{
-                    println!("{}",op.inner);
-                }
-            }
+            // println!("Last layer index {}",total_layers-1);
+            // for (i, op) in last_share.iter().enumerate(){
+            //     if i<10{
+            //         println!("{}",op.inner);
+            //     }
+            // }
             state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
         }
 
@@ -1496,13 +1496,13 @@ where
             }
         }
     }
-    println!("final output");
-    println!("final output {}",next_layer_input.iter().count());
-    for (i,out) in next_layer_input.iter().enumerate(){
-        if i<10{
-            println!("{}", out.inner);
-        }
-    }
+    // println!("final output");
+    // println!("final output {}",next_layer_input.iter().count());
+    // for (i,out) in next_layer_input.iter().enumerate(){
+    //     if i<10{
+    //         println!("{}", out.inner);
+    //     }
+    // }
     next_layer_input
     
 }
@@ -1618,13 +1618,13 @@ where
                 }
             // }
     }
-    println!("final output");
-    println!("final output {}",next_layer_input.iter().count());
-    for (i,out) in next_layer_input.iter().enumerate(){
-        if i<10{
-            println!("{}", out.inner);
-        }
-    }
+    // println!("final output");
+    // println!("final output {}",next_layer_input.iter().count());
+    // for (i,out) in next_layer_input.iter().enumerate(){
+    //     if i<10{
+    //         println!("{}", out.inner);
+    //     }
+    // }
     next_layer_input
     }
 
@@ -1948,7 +1948,7 @@ where
                  .extend_from_slice(next_layer_randomizers.as_slice().unwrap());
              }
          }
-         println!("user A relu num {}", num_relu);
+        //  println!("user A relu num {}", num_relu);
         Ok((UserState {
             relu_circuits:None,
             relu_server_labels:None,
@@ -2431,7 +2431,7 @@ where
         for share in next_input.iter_mut() {
             share.inner.signed_reduce_in_place();
         }
-        println!("********************receiving intermeidate result from user*********");
+        // println!("********************receiving intermeidate result from user*********");
         // for (i,inp) in next_input.iter().enumerate(){
         //     if i <10{
         //         println!("{}", inp.inner);
@@ -2688,7 +2688,7 @@ where
         // Ok(result)
         let sent_message = MsgSend::new(&next_layer_input);
          crate::bytes::serialize(writer, &sent_message).unwrap();
-         println!("sending intermeidate result from user");
+        //  println!("sending intermeidate result from user");
     }
 
     pub fn leaf_server_output<R: Read + Send, W: Write + Send>(
