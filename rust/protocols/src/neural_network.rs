@@ -1354,8 +1354,15 @@ where
                             .for_each(|(a,b)|{
                                 *b = AdditiveShare::new(*a)
                             });
+
+                            println!("Copied Linear input value");
+                            for (i,inp) in input.iter().enumerate(){
+                                if i <10{
+                                    println!("{}", inp.inner);
+                                }
+                            }
                         // }
-                    let mut next_layer_input = Output::zeros(dims.output_dimensions()); //state.linear_post_application_share[&i].clone();  //Fr-s
+                    let mut next_layer_input_as = Output::zeros(dims.output_dimensions()); //state.linear_post_application_share[&i].clone();  //Fr-s
                     
                     let (b, c, h, w) = dims.input_dimensions();
                     println!("Input dimension: {} {} {} {}", b,c,h,w);
@@ -1368,20 +1375,28 @@ where
                         &mut writer_c,
                         &input,
                         &layer_info,
-                        &mut next_layer_input,
+                        &mut next_layer_input_as,
                     ).unwrap();
 
-                    for share in next_layer_input.iter_mut() {
-                        share.inner.signed_reduce_in_place();
-                    }
+                    // for share in next_layer_input.iter_mut() {
+                    //     share.inner.signed_reduce_in_place();
+                    // }
                     let duration = start.elapsed();
                     println!("Time : {:?}", duration);
+                    if i != (architecture.layers.len() - 1)
+                        && architecture.layers[i + 1].is_linear()
+                    {
+                    next_layer_input = NNProtocol::transform_fp(&next_layer_input_as,dims.output_dimensions());
                         println!("Conv output value");
                             for (i,inp) in next_layer_input.iter().enumerate(){
                                 if i <10{
-                                    println!("{}", inp.inner);
+                                    println!("{}", inp);
                                 }
                             }
+                            for share in next_layer_input.iter_mut() {
+                                share.signed_reduce_in_place();
+                            }
+                        }
                     
                     // if i != (architecture.layers.len() - 1)
                     //     && architecture.layers[i + 1].is_linear()
