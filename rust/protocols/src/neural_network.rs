@@ -648,7 +648,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if in_shares.keys().any(|k| k == &(i - 1)) {
+                            if in_shares.keys().any(|k| k == &(i - 20)) {
                                 // println!("AvgPooling {}",i);
                                 let mut input_share = tmp_shares.get(&(i-1)).unwrap().clone();
                         
@@ -835,7 +835,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if r_vec.keys().any(|k| k == &(i - 1)) {
+                            if r_vec.keys().any(|k| k == &(i - 20)) {
                                 let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
                                 
                                 let out_share = LinearProtocol::offline_leaf_server_pooling_protocol(
@@ -977,7 +977,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if r_vec.keys().any(|k| k == &(i - 1)) {
+                            if r_vec.keys().any(|k| k == &(i - 20)) {
                                 let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
                                 // let mut prev_out_share = Output::zeros(layer.input_dimensions());
                                 // s_vec.insert(i-1, prev_out_share);
@@ -1342,12 +1342,12 @@ where
                     //             *l_r += &inp.inner.inner;
                     //         });
                     // }
-                    println!("Linear input value");
-                            for (i,inp) in next_layer_input.iter().enumerate(){
-                                if i <10{
-                                    println!("{}", inp);
-                                }
-                            }
+                    // println!("Linear input value");
+                    //         for (i,inp) in next_layer_input.iter().enumerate(){
+                    //             if i <10{
+                    //                 println!("{}", inp);
+                    //             }
+                    //         }
 
                     let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
                             next_layer_input.iter_mut().zip(input.iter_mut())
@@ -1355,12 +1355,12 @@ where
                                 *b = AdditiveShare::new(*a)
                             });
 
-                            println!("Copied Linear input value");
-                            for (i,inp) in input.iter().enumerate(){
-                                if i <10{
-                                    println!("{}", inp.inner);
-                                }
-                            }
+                            // println!("Copied Linear input value");
+                            // for (i,inp) in input.iter().enumerate(){
+                            //     if i <10{
+                            //         println!("{}", inp.inner);
+                            //     }
+                            // }
                         // }
                     let mut next_layer_input_as = Output::zeros(dims.output_dimensions()); //state.linear_post_application_share[&i].clone();  //Fr-s
                     
@@ -1387,12 +1387,12 @@ where
                         && architecture.layers[i + 1].is_linear()
                     {
                     next_layer_input = NNProtocol::transform_fp(&next_layer_input_as,dims.output_dimensions());
-                        println!("Conv output value");
-                            for (i,inp) in next_layer_input.iter().enumerate(){
-                                if i <10{
-                                    println!("{}", inp);
-                                }
-                            }
+                        // println!("Conv output value");
+                        //     for (i,inp) in next_layer_input.iter().enumerate(){
+                        //         if i <10{
+                        //             println!("{}", inp);
+                        //         }
+                        //     }
                             for share in next_layer_input.iter_mut() {
                                 share.signed_reduce_in_place();
                             }
