@@ -648,7 +648,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if in_shares.keys().any(|k| k == &(i - 20)) {
+                            if in_shares.keys().any(|k| k == &(i - 1)) {
                                 // println!("AvgPooling {}",i);
                                 let mut input_share = tmp_shares.get(&(i-1)).unwrap().clone();
                         
@@ -835,7 +835,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if r_vec.keys().any(|k| k == &(i - 20)) {
+                            if r_vec.keys().any(|k| k == &(i - 1)) {
                                 let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
                                 
                                 let out_share = LinearProtocol::offline_leaf_server_pooling_protocol(
@@ -977,7 +977,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if r_vec.keys().any(|k| k == &(i - 20)) {
+                            if r_vec.keys().any(|k| k == &(i - 1)) {
                                 let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
                                 // let mut prev_out_share = Output::zeros(layer.input_dimensions());
                                 // s_vec.insert(i-1, prev_out_share);
