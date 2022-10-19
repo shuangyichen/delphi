@@ -663,12 +663,12 @@ where
                                     &mut cg_handler,
                                     rng,
                                 ).unwrap();
-                                println!("Conv Fr-s after pooling {}",i);
-                                for (i,share) in out_share.iter().enumerate(){
-                                    if i<10{
-                                        println!("{}",share.inner);
-                                    }
-                                }
+                                // println!("Conv Fr-s after pooling {}",i);
+                                // for (i,share) in out_share.iter().enumerate(){
+                                //     if i<10{
+                                //         println!("{}",share.inner);
+                                //     }
+                                // }
                                 (input_share,out_share)
                             }else{
                                 let (input_share,out_share) = LinearProtocol::<P>::offline_root_server_protocol(
@@ -874,12 +874,12 @@ where
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
                             println!("AvgPooling {}",i);
-                            let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
-                            for (i,share) in input_share.iter().enumerate(){
-                                if i<100{
-                                    println!("{}",share.inner);
-                                }
-                            }
+                            // let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
+                            // for (i,share) in input_share.iter().enumerate(){
+                            //     if i<100{
+                            //         println!("{}",share.inner);
+                            //     }
+                            // }
                             let mut next_input_share = Input::zeros(dims.output_dimensions());
                             &layer.evaluate_naive(&input_share, &mut next_input_share);
                             // println!("Conv after avgpooling{}",i+1);
