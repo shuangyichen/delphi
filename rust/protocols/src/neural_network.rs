@@ -874,7 +874,7 @@ where
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
                             println!("AvgPooling {}",i);
-                            // let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
+                            let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
                             // for (i,share) in input_share.iter().enumerate(){
                             //     if i<100{
                             //         println!("{}",share.inner);
