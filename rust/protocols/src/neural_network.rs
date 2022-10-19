@@ -618,6 +618,8 @@ where
                 }
 
                 LayerInfo::LL(dims, linear_layer_info) => {
+                    println!("Linear {}",i);
+                    let start = Instant::now();
                     let input_dims = dims.input_dimensions();
                     let output_dims = dims.output_dimensions();
                     // println!("{} {} {} {}",output_dims.0,output_dims.1,output_dims.2,output_dims.3);
@@ -738,6 +740,8 @@ where
                     in_shares.insert(i, in_share);
                     // -(Lr + s)
                     out_shares.insert(i, out_share);
+                    let duration = start.elapsed();
+                    println!("Time : {:?}", duration);
                 }
             }
         }
@@ -1460,6 +1464,7 @@ where
             Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
             Layer::LL(layer) => {
                 println!("Linear {}", i);
+                let start = Instant::now();
                 let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
                 let layer_randomizer = state.output_randomizer.get(&i).unwrap(); //s
                 // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
@@ -1490,6 +1495,8 @@ where
                     for share in next_layer_input.iter_mut() {
                         share.inner.signed_reduce_in_place();
                     }
+                    let duration = start.elapsed();
+                            println!("Time : {:?}", duration);
                     // break; //?
             // }
             }
@@ -1516,18 +1523,7 @@ where
         rng: &mut RNG,
         // num_relus: usize,
     )->Output<AdditiveShare<P>>{
-        // let num_relus = state.num_relu;
-        // let server_c_listener = TcpListener::bind(server_c_addr).unwrap();
-        // let stream = server_c_listener
-        //         .incoming()
-        //         .next()
-        //         .unwrap()
-        //         .expect("server connection failed!");
-        // let mut reader_c = IMuxSync::new(vec![BufReader::new(stream.try_clone().unwrap())]);
-        // let mut writer_c= IMuxSync::new(vec![stream]);
-        // for stream in serverc_listener.incoming() {
-        //     let mut read_stream =IMuxSync::new(vec![stream.expect("server connection failed!")]);
-        //     let mut write_stream = IMuxSync::new(vec![stream]);
+        
             let (first_layer_in_dims, first_layer_out_dims) = {
                 let layer = neural_network.layers.first().unwrap();
                 assert!(
@@ -1582,6 +1578,7 @@ where
                 Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
                 Layer::LL(layer) => {
                     println!("Linear {}", i);
+                    let start = Instant::now();
                     let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
                     // println!("Linear");
                     let layer_randomizer = state.output_randomizer.get(&i).unwrap();
@@ -1613,6 +1610,8 @@ where
                         for share in next_layer_input.iter_mut() {
                             share.inner.signed_reduce_in_place();
                         }
+                        let duration = start.elapsed();
+                        println!("Time : {:?}", duration);
                 }
                 }
             // }

@@ -21,6 +21,7 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 use std::{thread, time};
+use std::time::{Duration, Instant};
 
 pub mod inference;
 pub mod latency;
@@ -269,7 +270,8 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
 
     // thread::sleep(time::Duration::from_millis(1000));
     let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
-    
+    let start = Instant::now();
+
     NNProtocol::offline_server_a_protocol_r2(
         &mut reader_b,
         &mut writer_b,
@@ -286,6 +288,8 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         sa_state.num_relu,
         &mut sa_state,
     );
+    let duration = start.elapsed();
+    println!("ReLU Preprocessing Time : {:?}", duration);
 
     
 
