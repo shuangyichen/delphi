@@ -1379,7 +1379,7 @@ where
                         println!("Conv output value");
                             for (i,inp) in next_layer_input.iter().enumerate(){
                                 if i <10{
-                                    println!("{}", inp);
+                                    println!("{}", inp.inner);
                                 }
                             }
                     
