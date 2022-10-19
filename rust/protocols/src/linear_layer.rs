@@ -942,23 +942,23 @@ where
         };
         // println!("************************receiving result***************************");
         input.randomize_local_share(input_derandomizer);
-        println!("X-r");
-        for (i,inp) in input.iter().enumerate(){
-            if i <10{
-                println!("{}", inp.inner);
-            }
-        }
+        // println!("X-r");
+        // for (i,inp) in input.iter().enumerate(){
+        //     if i <10{
+        //         println!("{}", inp.inner);
+        //     }
+        // }
         *output = layer.evaluate(&input);
         output.zip_mut_with(output_rerandomizer, |out, s| {
             *out = FixedPoint::randomize_local_share(out, s);
             // println!("{}",out.inner);
         });
-        println!("F(X-r)-s");
-        for (i,out) in output.iter().enumerate(){
-            if i <10{
-                println!("{}", out.inner);
-            }
-        }
+        // println!("F(X-r)-s");
+        // for (i,out) in output.iter().enumerate(){
+        //     if i <10{
+        //         println!("{}", out.inner);
+        //     }
+        // }
 
         timer_end!(start);
         Ok(())
@@ -980,25 +980,25 @@ where
             }
             _ => Input::zeros(input_dim),
         };
-        println!("X-r");
-        for (i,inp) in input.iter().enumerate(){
-            if i <10{
-                println!("{}", inp.inner);
-            }
-        }
+        // println!("X-r");
+        // for (i,inp) in input.iter().enumerate(){
+        //     if i <10{
+        //         println!("{}", inp.inner);
+        //     }
+        // }
         *output = layer.evaluate(&input);
         // println!("************************linear evaluation result***************************");
         output.zip_mut_with(output_rerandomizer, |out, s| {
             *out = FixedPoint::randomize_local_share(out, s);
             // println!("{}",out.inner);
         });
-        println!("F(X-r)-s");
+        // println!("F(X-r)-s");
 
-        for (i,out) in output.iter().enumerate(){
-            if i <10{
-                println!("{}", out.inner);
-            }
-        }
+        // for (i,out) in output.iter().enumerate(){
+        //     if i <10{
+        //         println!("{}", out.inner);
+        //     }
+        // }
         timer_end!(start);
         Ok(())
     }

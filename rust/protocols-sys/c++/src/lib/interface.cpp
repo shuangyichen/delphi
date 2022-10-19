@@ -959,7 +959,7 @@ LeafServerShares server_bc_fc_preprocess(const LeafServerMPHE* lsmphe, const Met
     // Recast the needed fhe helpers
     Encryptor *encryptor = reinterpret_cast<Encryptor*>(lsmphe->encryptor);
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(lsmphe->encoder);
-    printf("loading encryptor  \n");
+    // printf("loading encryptor  \n");
     
     // Preprocess image
 
@@ -1929,15 +1929,15 @@ void client_fc_decrypt(const ClientFHE *cfhe, const Metadata *data, ClientShares
 void leaf_server_fc_decrypt(const LeafServerMPHE *lsmphe, const Metadata *data, LeafServerShares* shares){
     auto context = static_cast<SEALContext*>(lsmphe->context);
     Decryptor *decryptor = reinterpret_cast<Decryptor*>(lsmphe->decryptor);
-    printf("loading decryptor \n");
+    // printf("loading decryptor \n");
     vector<Ciphertext> ct(1);
     vector<Ciphertext> partial_decryption(1);
 
     recast_opaque(shares->result_pd, ct, context);
-    printf("loading result ct \n");
+    // printf("loading result ct \n");
     // for (int idx=0;idx<data->out_ct;idx++){
     decryptor->distributed_decrypt(ct[0],partial_decryption[0]);
-    printf("distributed_decrypt \n");
+    // printf("distributed_decrypt \n");
     
     // }
 

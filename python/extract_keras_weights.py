@@ -382,4 +382,4 @@ if __name__ == "__main__":
     # serialize_weights(model, save_path)
     # serialize_weights_additive_share(model, save_path)
     # serialize_weights_additive_share_test(model, save_path)
-    serialize_weights_split_additive_share(model, save_path,14)
+    serialize_weights_split_additive_share(model, save_path,2)

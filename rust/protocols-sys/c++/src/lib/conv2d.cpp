@@ -768,7 +768,7 @@ vector<vector<Ciphertext>> HE_conv(vector<vector<vector<Plaintext>>> &masks,
                     rot_amt = -neg_mod(-in_rot, data.repeat_chans) * data.image_size;
                 else 
                     rot_amt = -neg_mod(-in_rot, data.chans_per_half) * data.image_size;
-                cout << "rotamt 1 "<< rot_amt<<endl;
+                // cout << "rotamt 1 "<< rot_amt<<endl;
                 evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
                                                   rot_amt,
                                                   gal_keys);
@@ -776,7 +776,7 @@ vector<vector<Ciphertext>> HE_conv(vector<vector<vector<Plaintext>>> &masks,
                                           convs[conv_idx][ct_idx]);
                 // Do the same for the column swap if it exists
                 if (data.half_perms > 1) {
-                    cout << "rotamt 2 "<< rot_amt<<endl;
+                    // cout << "rotamt 2 "<< rot_amt<<endl;
                     evaluator.rotate_rows_inplace(convs[conv_idx+data.half_rots][ct_idx],
                                                       rot_amt,
                                                       gal_keys);
@@ -817,13 +817,13 @@ vector<vector<Ciphertext>> HE_conv(vector<vector<vector<Plaintext>>> &masks,
                 for (int in_rot = size_to_reduce/2; in_rot >= data.repeat_chans; in_rot = in_rot/2) {
                     int rot_amt = in_rot * data.image_size;
                     Ciphertext tmp = partials[perm][ct_idx];
-                    cout << "rotamt 3 "<< rot_amt<<endl;
+                    // cout << "rotamt 3 "<< rot_amt<<endl;
                     evaluator.rotate_rows_inplace(tmp, rot_amt, gal_keys);
                     evaluator.add_inplace(partials[perm][ct_idx], tmp);
                     // Do the same for column swap if exists
                     if (data.half_perms > 1) {
                         tmp = partials[perm+1][ct_idx];
-                        cout << "rotamt 4 "<< rot_amt<<endl;
+                        // cout << "rotamt 4 "<< rot_amt<<endl;
                         evaluator.rotate_rows_inplace(tmp, rot_amt, gal_keys);
                         evaluator.add_inplace(partials[perm+1][ct_idx], tmp);
                         if (rot_amt != 0)

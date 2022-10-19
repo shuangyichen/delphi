@@ -36,6 +36,7 @@ use std::collections::BTreeMap;
 use std::net::TcpStream;
 use std::net::TcpListener;
 use std::{thread, time};
+use std::time::{Duration, Instant};
 
 pub struct NNProtocol<P: FixedPointParameters> {
     _share: PhantomData<P>,
@@ -321,7 +322,7 @@ where
                             }
                             _ => unreachable!(),
                         };
-                        println!("offline_user_l_protocol");
+                        // println!("offline_user_l_protocol");
                         LinearProtocol::<P>::offline_user_l_protocol(
                             writer_a, 
                             &mut cg_handler,
@@ -1258,8 +1259,9 @@ where
                 LayerInfo::NLL(dims, nll_info) => {
                     match nll_info {
                         NonLinearLayerInfo::ReLU => {
-                            println!("ReLU");
+                            println!("ReLU {}",i);
                             // thread::sleep(time::Duration::from_millis(3000));
+                            let start = Instant::now();
                             let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
                             // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
                             let output_dims = dims.output_dimensions();
@@ -1304,6 +1306,8 @@ where
                             .into_shape(dims.output_dimensions())
                             .expect("shape should be correct")
                             .into();
+                            let duration = start.elapsed();
+                            println!("Time : {:?}", duration);
                             // println!("ReLU output value");
                             // for (i,inp) in next_layer_input.iter().enumerate(){
                             //     if i <10{
@@ -1317,7 +1321,11 @@ where
                 }
 
                 LayerInfo::LL(dims, layer_info) => {
+                    println!("Linear {}", i);
                     thread::sleep(time::Duration::from_millis(2000));
+                    let start = Instant::now();
+    
+    
                     // println!("Linear {}",i);
                     let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
                     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
@@ -1331,17 +1339,6 @@ where
                     //         });
                     // }
 
-                    // let mut writer_b =
-                    //     IMuxSync::new(vec![TcpStream::connect(server_b_addr).unwrap()]);
-                    // let mut writer_c =
-                    //     IMuxSync::new(vec![TcpStream::connect(server_c_addr).unwrap()]);
-                    // if i != 0{
-                    // println!("Conv Input value");
-                    // for (i,inp) in next_layer_input.iter().enumerate(){
-                    //     if i <10{
-                    //         println!("{}", inp);
-                    //     }
-                    // }
                     let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
                             next_layer_input.iter_mut().zip(input.iter_mut())
                             .for_each(|(a,b)|{
@@ -1367,6 +1364,8 @@ where
                     for share in next_layer_input.iter_mut() {
                         share.inner.signed_reduce_in_place();
                     }
+                    let duration = start.elapsed();
+                    println!("Time : {:?}", duration);
                     // if i != (architecture.layers.len() - 1)
                     //     && architecture.layers[i + 1].is_linear()
                     // {
