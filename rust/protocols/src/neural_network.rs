@@ -648,7 +648,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if in_shares.keys().any(|k| k == &(i - 20)) {
+                            if in_shares.keys().any(|k| k == &(i - 1)) {
                                 // println!("AvgPooling {}",i);
                                 let mut input_share = tmp_shares.get(&(i-1)).unwrap().clone();
                         
@@ -702,21 +702,21 @@ where
                                     .evaluate_naive(prev_output_share, &mut output_share);
                                 (Input::zeros(dims.input_dimensions()), output_share)
                             } else {
-                                // println!("AvgPooling {}",i);
+                                println!("AvgPooling {}",i);
                                 let input_share = LinearProtocol::generate_randomness(layer.input_dimensions(),rng);
-                                // for (i,share) in input_share.iter().enumerate(){
-                                //     if i<10{
-                                //         println!("{}",share.inner);
-                                //     }
-                                // }
+                                for (i,share) in input_share.iter().enumerate(){
+                                    if i<100{
+                                        println!("{}",share.inner);
+                                    }
+                                }
                                 let mut next_input_share = Input::zeros(dims.output_dimensions());
                                 linear_layer_info.evaluate_naive(&input_share, &mut next_input_share);
-                                // println!("Conv after avgpooling{}",i+1);
-                                // for (i,share) in next_input_share.iter().enumerate(){
-                                //     if i<10{
-                                //         println!("{}",share.inner);
-                                //     }
-                                // }
+                                println!("Conv after avgpooling{}",i+1);
+                                for (i,share) in next_input_share.iter().enumerate(){
+                                    if i<100{
+                                        println!("{}",share.inner);
+                                    }
+                                }
                                 tmp_shares.insert(i,next_input_share);
                                 (input_share, Output::zeros(dims.output_dimensions()))
                                 // (
@@ -835,7 +835,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if r_vec.keys().any(|k| k == &(i - 20)) {
+                            if r_vec.keys().any(|k| k == &(i - 1)) {
                                 let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
                                 
                                 let out_share = LinearProtocol::offline_leaf_server_pooling_protocol(
@@ -869,21 +869,21 @@ where
                         }
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
-                            // println!("AvgPooling {}",i);
+                            println!("AvgPooling {}",i);
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
-                            // for (i,share) in input_share.iter().enumerate(){
-                            //     if i<10{
-                            //         println!("{}",share.inner);
-                            //     }
-                            // }
+                            for (i,share) in input_share.iter().enumerate(){
+                                if i<100{
+                                    println!("{}",share.inner);
+                                }
+                            }
                             let mut next_input_share = Input::zeros(dims.output_dimensions());
                             &layer.evaluate_naive(&input_share, &mut next_input_share);
-                            // println!("Conv after avgpooling{}",i+1);
-                            //     for (i,share) in next_input_share.iter().enumerate(){
-                            //         if i<10{
-                            //             println!("{}",share.inner);
-                            //         }
-                            //     }
+                            println!("Conv after avgpooling{}",i+1);
+                                for (i,share) in next_input_share.iter().enumerate(){
+                                    if i<100{
+                                        println!("{}",share.inner);
+                                    }
+                                }
                             tmp_vec.insert(i,next_input_share);
                             (//Input::zeros(dims.input_dimensions()),
                             input_share,
@@ -977,7 +977,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            if r_vec.keys().any(|k| k == &(i - 20)) {
+                            if r_vec.keys().any(|k| k == &(i - 1)) {
                                 let mut input_share = tmp_vec.get(&(i-1)).unwrap().clone();
                                 // let mut prev_out_share = Output::zeros(layer.input_dimensions());
                                 // s_vec.insert(i-1, prev_out_share);
@@ -1017,21 +1017,21 @@ where
                         }
                         // AvgPool and Identity don't require an offline phase
                         LinearLayer::AvgPool { dims, .. } => {
-                            // println!("AvgPooling {}",i);
+                            println!("AvgPooling {}",i);
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
-                            // for (i,share) in input_share.iter().enumerate(){
-                            //     if i<10{
-                            //         println!("{}",share.inner);
-                            //     }
-                            // }
+                            for (i,share) in input_share.iter().enumerate(){
+                                if i<100{
+                                    println!("{}",share.inner);
+                                }
+                            }
                             let mut next_input_share = Input::zeros(dims.output_dimensions());
                             &layer.evaluate_naive(&input_share, &mut next_input_share);
-                            // println!("Conv after avgpooling{}",i+1);
-                                // for (i,share) in next_input_share.iter().enumerate(){
-                                //     if i<10{
-                                //         println!("{}",share.inner);
-                                //     }
-                                // }
+                            println!("Conv after avgpooling{}",i+1);
+                                for (i,share) in next_input_share.iter().enumerate(){
+                                    if i<100{
+                                        println!("{}",share.inner);
+                                    }
+                                }
                             tmp_vec.insert(i,next_input_share);
                             (input_share,Output::zeros(dims.output_dimensions()))
                         }
