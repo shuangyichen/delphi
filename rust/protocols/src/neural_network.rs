@@ -651,7 +651,7 @@ where
                             if in_shares.keys().any(|k| k == &(i - 1)) {
                                 // println!("AvgPooling {}",i);
                                 let mut input_share = tmp_shares.get(&(i-1)).unwrap().clone();
-                        
+                                assert_eq!(input_share.dim(), input_dims);
                                 let out_share = LinearProtocol::offline_root_server_pooling_protocol(
                                     reader_b, 
                                     reader_c, 
@@ -711,6 +711,7 @@ where
                                 }
                                 let mut next_input_share = Input::zeros(dims.output_dimensions());
                                 linear_layer_info.evaluate_naive(&input_share, &mut next_input_share);
+                                assert_eq!(next_input_share.dim(), dims.output_dimensions());
                                 println!("Conv after avgpooling{}",i+1);
                                 for (i,share) in next_input_share.iter().enumerate(){
                                     if i<100{
