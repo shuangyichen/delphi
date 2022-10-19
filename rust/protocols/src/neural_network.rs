@@ -1342,6 +1342,12 @@ where
                     //             *l_r += &inp.inner.inner;
                     //         });
                     // }
+                    println!("Linear input value");
+                            for (i,inp) in next_layer_input.iter().enumerate(){
+                                if i <10{
+                                    println!("{}", inp);
+                                }
+                            }
 
                     let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
                             next_layer_input.iter_mut().zip(input.iter_mut())
@@ -1370,6 +1376,13 @@ where
                     }
                     let duration = start.elapsed();
                     println!("Time : {:?}", duration);
+                        println!("Conv output value");
+                            for (i,inp) in next_layer_input.iter().enumerate(){
+                                if i <10{
+                                    println!("{}", inp);
+                                }
+                            }
+                    
                     // if i != (architecture.layers.len() - 1)
                     //     && architecture.layers[i + 1].is_linear()
                     // {
