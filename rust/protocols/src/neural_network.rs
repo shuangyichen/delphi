@@ -1026,11 +1026,11 @@ where
                         LinearLayer::AvgPool { dims, .. } => {
                             println!("AvgPooling {}",i);
                             let input_share = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
-                            for (i,share) in input_share.iter().enumerate(){
-                                if i<100{
-                                    println!("{}",share.inner);
-                                }
-                            }
+                            // for (i,share) in input_share.iter().enumerate(){
+                            //     if i<100{
+                            //         println!("{}",share.inner);
+                            //     }
+                            // }
                             let mut next_input_share = Input::zeros(dims.output_dimensions());
                             &layer.evaluate_naive(&input_share, &mut next_input_share);
                             // println!("Conv after avgpooling{}",i+1);

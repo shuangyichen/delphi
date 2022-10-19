@@ -77,7 +77,7 @@ pub type MsgRcv<P> = InMessage<Input<AdditiveShare<P>>, LinearProtocolType>;
 fn generate_random_number<R: Rng>(rng: &mut R) -> (f64, f64) {
     let is_neg: bool = rng.gen();
     let mul = if is_neg { -10.0 } else { 10.0 };
-    let mut float: f64 = 1.0;//rng.gen_range(-100.0,100.0);
+    let mut float: f64 = rng.gen_range(-100.0,100.0);
     // float += 1.0;
     let mut float_ = -1.0*float;
     let f = TenBitExpFP::truncate_float(float);//* mul);
@@ -91,7 +91,7 @@ fn generate_random_number<R: Rng>(rng: &mut R) -> (f64, f64) {
 fn generate_random_number_0<R: Rng>(rng: &mut R) -> (f64, f64) {
     let is_neg: bool = rng.gen();
     let mul = if is_neg { -10.0 } else { 10.0 };
-    let mut float: f64 = 1.0;//rng.gen_range(-100.0,100.0);
+    let mut float: f64 = rng.gen_range(-100.0,100.0);
     // float += 1.0;
     let mut float_ = -1.0*float;
     let f = TenBitExpFP::truncate_float(float);//* mul);
@@ -105,7 +105,7 @@ fn generate_random_number_0<R: Rng>(rng: &mut R) -> (f64, f64) {
 fn generate_random_number_r<R: Rng>(rng: &mut R) -> (f64, f64) {
     let is_neg: bool = rng.gen();
     let mul = if is_neg { -10.0 } else { 10.0 };
-    let mut float: f64 = 3.0;//rng.gen_range(-100.0,100.0);
+    let mut float: f64 = rng.gen_range(-100.0,100.0);
     // float += 1.0;
     let mut float_ = -1.0*float;
     let f = TenBitExpFP::truncate_float(float);//* mul);
@@ -119,7 +119,7 @@ fn generate_random_number_r<R: Rng>(rng: &mut R) -> (f64, f64) {
 fn generate_random_number_s<R: Rng>(rng: &mut R) -> (f64, f64) {
     let is_neg: bool = rng.gen();
     let mul = if is_neg { -10.0 } else { 10.0 };
-    let mut float: f64 = 2.0;//rng.gen_range(-100.0,100.0);
+    let mut float: f64 = rng.gen_range(-100.0,100.0);
     // float += 1.0;
     let mut float_ = -1.0*float;
     let f = TenBitExpFP::truncate_float(float);//* mul);
