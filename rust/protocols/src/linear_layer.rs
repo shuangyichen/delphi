@@ -59,7 +59,6 @@ pub type OfflineRootServerMsgRcv = InMessage<Vec<Vec<c_char>>, LinearProtocolTyp
 pub type OfflineClientMsgSend<'a> = OutMessage<'a, Vec<c_char>, LinearProtocolType>;
 pub type OfflineClientMsgRcv = InMessage<Vec<c_char>, LinearProtocolType>;
 pub type OfflineClientKeySend<'a> = OutMessage<'a, Vec<c_char>, LinearProtocolType>;
-
 pub type MsgSend<'a, P> = OutMessage<'a, Input<AdditiveShare<P>>, LinearProtocolType>;
 pub type MsgRcv<P> = InMessage<Input<AdditiveShare<P>>, LinearProtocolType>;
 
@@ -499,6 +498,7 @@ where
         input_dims: (usize, usize, usize, usize),
         rng: &mut RNG,
     )-> Result<Input<P::Field>, bincode::Error>{
+        let start_user = Instant::now();
         let mut r1_ = Input::zeros(input_dims);
         let mut r2_ = Input::zeros(input_dims);
         // let (n1, n2) = generate_random_number(rng);
@@ -525,9 +525,10 @@ where
         let mut r_u = user_cg.preprocess(&r2.to_repr());
 
         let sent_message = OfflineServerMsgSend::new(&r_u);
+        let duration1 = start_user.elapsed();
         crate::bytes::serialize(writer, &sent_message).unwrap();
         // println!("r u sent ");
-
+        let start_user_2 = Instant::now();
         let layer_randomness = r1
             .iter()
             .map(|r: &AdditiveShare<P>| r.inner.inner)
@@ -535,6 +536,10 @@ where
         let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
             .into_shape(input_dims)
             .unwrap();
+        let duration2 = start_user_2.elapsed();
+        let duration = duration1+duration2;
+    
+        println!("User l layer processed time part 1: {:?}", duration);
         //return r2
         Ok(layer_randomness.into())
     }

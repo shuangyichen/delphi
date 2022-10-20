@@ -324,6 +324,8 @@ where
                             _ => unreachable!(),
                         };
                         // println!("offline_user_l_protocol");
+                        let duration1 = start_user.elapsed();
+                        // println!("User l layer processed time: {:?}", duration1);
                         LinearProtocol::<P>::offline_user_l_protocol(
                             writer_a, 
                             &mut cg_handler,
@@ -333,12 +335,15 @@ where
                     }
                     &LinearLayerInfo::AvgPool { .. } | &LinearLayerInfo::Identity => {Input::zeros(dims.input_dimensions())}
             };
+            let start_user_2 = Instant::now();
             state.relu_next_layer_randomizers.extend_from_slice(input_share.as_slice().unwrap());
             state.linear_randomizer.insert(total_layer-2,input_share);
+            let duration2 = start_user_2.elapsed();
         }
     }
-    let duration1 = start_user.elapsed();
-    println!("User l layer processed time: {:?}", duration1);
+    // let duration1 = start_user.elapsed();
+    let duration = duration1+duration2;
+    println!("User l layer processed time: {:?}", duration);
     // let inshare_num = state.relu_next_layer_randomizers.iter().count();
     // println!("relu_next_layer_randomizers {}",inshare_num);
     // let outshare_num = state.relu_current_layer_randomizers.iter().count();
