@@ -1246,8 +1246,8 @@ where
         state: &ServerAState<P>,
         // num_relus: usize,
     )->Output<AdditiveShare<P>>{
-        let start_a_online = Instant::now();
-        let num_relus = state.num_relu;
+        let start_a_online_1 = Instant::now();
+        // let num_relus = state.num_relu;
         let first_layer_in_dims = {
             let layer = architecture.layers.first().unwrap();
             assert!(
@@ -1261,15 +1261,17 @@ where
         // let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
         let mut num_consumed_relus = 0;
         let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
+        let mut duration = start_a_online_1.elapsed();
 
         // let last_share :Output<AdditiveShare<P>> = 
         // let next_layer_input = input;
         
         for (i, layer) in architecture.layers.iter().enumerate() {
-            // thread::sleep(time::Duration::from_millis(2000));
+            thread::sleep(time::Duration::from_millis(2500));
             // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
             // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
             // if i<2{
+            let start_a_online_2 = Instant::now();
             match layer {
                 LayerInfo::NLL(dims, nll_info) => {
                     match nll_info {
@@ -1337,7 +1339,7 @@ where
 
                 LayerInfo::LL(dims, layer_info) => {
                     println!("Linear {}", i);
-                    thread::sleep(time::Duration::from_millis(500));
+                    // thread::sleep(time::Duration::from_millis(500));
                     let start = Instant::now();
     
     
@@ -1429,6 +1431,8 @@ where
                 }
                 // let input = next_layer_input;
             // }
+            let tmp_duration = start_a_online_2.elapsed();
+            duration = duration + tmp_duration;
         }
             let total_layers = architecture.layers.len();
             // let last_share = state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
@@ -1438,7 +1442,7 @@ where
             //         println!("{}",op.inner);
             //     }
             // }
-            let duration = start_a_online.elapsed();
+            // let duration = start_a_online.elapsed();
             println!("Split 2 Online Time from Server A: {:?}", duration);
             state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
         }

@@ -315,7 +315,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
 
     //U-------A online
     // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
-    let start_a_online = Instant::now();
+    // let start_a_online_1 = Instant::now();
     let start_user_3 = Instant::now();
     let next_input = NNProtocol::online_root_server_protocol(&mut reader_u, &mut writer_u, &nn1, &sa_split1).unwrap();
     let duration_user_3 = start_user_3.elapsed();
@@ -328,8 +328,8 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &architecture2,
         &sa_state,
     );
-    let duration = start_a_online.elapsed();
-    println!("Online Time from Server A: {:?}", duration);
+    // let duration = start_a_online.elapsed();
+    println!("Online Time of split 1 : {:?}", duration_user_3);
 
 
     //Output
