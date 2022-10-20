@@ -1246,6 +1246,7 @@ where
         state: &ServerAState<P>,
         // num_relus: usize,
     )->Output<AdditiveShare<P>>{
+        let start_a_online = Instant::now();
         let num_relus = state.num_relu;
         let first_layer_in_dims = {
             let layer = architecture.layers.first().unwrap();
@@ -1265,7 +1266,7 @@ where
         // let next_layer_input = input;
         
         for (i, layer) in architecture.layers.iter().enumerate() {
-            thread::sleep(time::Duration::from_millis(2000));
+            // thread::sleep(time::Duration::from_millis(2000));
             // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
             // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
             // if i<2{
@@ -1336,7 +1337,7 @@ where
 
                 LayerInfo::LL(dims, layer_info) => {
                     println!("Linear {}", i);
-                    thread::sleep(time::Duration::from_millis(2000));
+                    thread::sleep(time::Duration::from_millis(500));
                     let start = Instant::now();
     
     
@@ -1430,13 +1431,15 @@ where
             // }
         }
             let total_layers = architecture.layers.len();
-            let last_share = state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
+            // let last_share = state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
             // println!("Last layer index {}",total_layers-1);
             // for (i, op) in last_share.iter().enumerate(){
             //     if i<10{
             //         println!("{}",op.inner);
             //     }
             // }
+            let duration = start_a_online.elapsed();
+            println!("Split 2 Online Time from Server A: {:?}", duration);
             state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
         }
 
@@ -1453,7 +1456,7 @@ where
         rng: &mut RNG,
         // num_relus: usize,
     )->Output<AdditiveShare<P>>{
-
+        let start_b_online = Instant::now();
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
             assert!(
@@ -1540,6 +1543,8 @@ where
             }
         }
     }
+    let duration = start_b_online.elapsed();
+    println!("Split 2 Online Time from Server B: {:?}", duration);
     // println!("final output");
     // println!("final output {}",next_layer_input.iter().count());
     // for (i,out) in next_layer_input.iter().enumerate(){
@@ -1561,7 +1566,7 @@ where
         rng: &mut RNG,
         // num_relus: usize,
     )->Output<AdditiveShare<P>>{
-        
+        let start_c_online = Instant::now();
             let (first_layer_in_dims, first_layer_out_dims) = {
                 let layer = neural_network.layers.first().unwrap();
                 assert!(
@@ -1661,6 +1666,8 @@ where
     //         println!("{}", out.inner);
     //     }
     // }
+    let duration = start_c_online.elapsed();
+    println!("Split 2 Online Time from Server C: {:?}", duration);
     next_layer_input
     }
 
