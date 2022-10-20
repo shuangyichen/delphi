@@ -288,6 +288,8 @@ where
         let lsmphe= crate::client_mphe_keygen(reader_a).unwrap();
         let total_num = state.linear_randomizer.iter().count();
         let total_layer = neural_network_architecture.layers.iter().count();
+        let mut duration1 = start_user.elapsed();
+        let mut start_user_2 = Instant::now();
         // println!("total num {}", total_num);
 
         //define cg, processing the last layer
@@ -324,7 +326,7 @@ where
                             _ => unreachable!(),
                         };
                         // println!("offline_user_l_protocol");
-                        let duration1 = start_user.elapsed();
+                        duration1 = start_user.elapsed();
                         // println!("User l layer processed time: {:?}", duration1);
                         LinearProtocol::<P>::offline_user_l_protocol(
                             writer_a, 
@@ -335,15 +337,16 @@ where
                     }
                     &LinearLayerInfo::AvgPool { .. } | &LinearLayerInfo::Identity => {Input::zeros(dims.input_dimensions())}
             };
-            let start_user_2 = Instant::now();
+            start_user_2 = Instant::now();
             state.relu_next_layer_randomizers.extend_from_slice(input_share.as_slice().unwrap());
             state.linear_randomizer.insert(total_layer-2,input_share);
-            let duration2 = start_user_2.elapsed();
+            // let duration2 = start_user_2.elapsed();
         }
     }
+    let duration2 = start_user_2.elapsed();
     // let duration1 = start_user.elapsed();
     let duration = duration1+duration2;
-    println!("User l layer processed time: {:?}", duration);
+    println!("User l layer processed time part 2: {:?}", duration);
     // let inshare_num = state.relu_next_layer_randomizers.iter().count();
     // println!("relu_next_layer_randomizers {}",inshare_num);
     // let outshare_num = state.relu_current_layer_randomizers.iter().count();
