@@ -284,6 +284,7 @@ where
         rng: &mut RNG,
         state: &mut UserState<P>,
     ){
+        let start_user = Instant::now();
         let lsmphe= crate::client_mphe_keygen(reader_a).unwrap();
         let total_num = state.linear_randomizer.iter().count();
         let total_layer = neural_network_architecture.layers.iter().count();
@@ -336,6 +337,8 @@ where
             state.linear_randomizer.insert(total_layer-2,input_share);
         }
     }
+    let duration1 = start_user.elapsed();
+    println!("User l layer processed time: {:?}", duration1);
     // let inshare_num = state.relu_next_layer_randomizers.iter().count();
     // println!("relu_next_layer_randomizers {}",inshare_num);
     // let outshare_num = state.relu_current_layer_randomizers.iter().count();
