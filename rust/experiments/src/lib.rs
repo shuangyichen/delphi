@@ -354,6 +354,10 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     );
     let duration_user_4 = start_user_4.elapsed();
     let duration_user = duration_user_4+duration_user_3+duration_user_2+duration_user_1;
+    println!("User Online time 1: {:?}", duration_user_1);
+    println!("User Online time 2: {:?}", duration_user_2);
+    println!("User Online time 3: {:?}", duration_user_3);
+    println!("User Online time 4: {:?}", duration_user_4);
     println!("User Online time: {:?}", duration_user);
 }
 
