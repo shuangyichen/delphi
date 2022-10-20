@@ -197,7 +197,7 @@ pub fn nn_user<R: RngCore + CryptoRng>(
 
     //Output
     let (mut reader_a, mut writer_a) = server_connect(user_addr);
-    let output = Instant::now();
+    let start_output = Instant::now();
     let mut output:Output<TenBitExpFP> = Output::zeros((1,output_size,0,0));
     output = NNProtocol::user_decrypt(
         &mut reader_a,
@@ -205,7 +205,7 @@ pub fn nn_user<R: RngCore + CryptoRng>(
         output_size,
         // &mut output,
     );
-    let duration2 = output.elapsed();
+    let duration2 = start_output.elapsed();
     let duration = duration2+duration1;
     println!("User online time: {:?}", duration);
     output
