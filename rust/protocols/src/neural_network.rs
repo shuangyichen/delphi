@@ -284,7 +284,7 @@ where
         rng: &mut RNG,
         state: &mut UserState<P>,
     ){
-        let start_user = Instant::now();
+        // let start_user = Instant::now();
         let lsmphe= crate::client_mphe_keygen(reader_a).unwrap();
         let total_num = state.linear_randomizer.iter().count();
         let total_layer = neural_network_architecture.layers.iter().count();
@@ -300,6 +300,7 @@ where
             LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
             }
             LayerInfo::LL(dims, linear_layer_info) => {
+                let start_user = Instant::now();
                 let input_dims = dims.input_dimensions();
                 let output_dims = dims.output_dimensions();
                 let input_share = match &linear_layer_info {
