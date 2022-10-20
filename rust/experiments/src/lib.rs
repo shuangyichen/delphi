@@ -163,9 +163,10 @@ pub fn nn_user<R: RngCore + CryptoRng>(
     output_size: usize,
 )-> Output<TenBitExpFP>{
     let (mut reader_a, mut writer_a) = server_connect(user_addr);
-    let start_user = Instant::now();
+    // let start_user = Instant::now();
     let (mut client_state,cfhe) = NNProtocol::offline_client_linear_protocol(&mut reader_a, &mut writer_a, &architecture1, rng)
                 .unwrap();
+    // let duration1 = start_user.elapsed();
     
     NNProtocol::offline_user_l_protocol(
         &mut reader_a, 
@@ -182,7 +183,7 @@ pub fn nn_user<R: RngCore + CryptoRng>(
         rng,
         &mut client_state,
     );
-
+    // let duration1 = start_user.elapsed();
     NNProtocol::online_user_protocol(
         &mut reader_a, 
         &mut writer_a,
@@ -190,14 +191,14 @@ pub fn nn_user<R: RngCore + CryptoRng>(
         &architecture1,
         &client_state
     );
-    let duration1 = start_user.elapsed();
+    // let duration1 = start_user.elapsed();
 
     println!("User Server finish eval");
 
 
     //Output
     let (mut reader_a, mut writer_a) = server_connect(user_addr);
-    let start_output = Instant::now();
+    // let start_output = Instant::now();
     let mut output:Output<TenBitExpFP> = Output::zeros((1,output_size,0,0));
     output = NNProtocol::user_decrypt(
         &mut reader_a,
@@ -205,9 +206,9 @@ pub fn nn_user<R: RngCore + CryptoRng>(
         output_size,
         // &mut output,
     );
-    let duration2 = start_output.elapsed();
-    let duration = duration2+duration1;
-    println!("User online time: {:?}", duration);
+    // let duration2 = start_output.elapsed();
+    // let duration = duration2+duration1;
+    // println!("User online time: {:?}", duration);
     output
 }
 
@@ -234,8 +235,10 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
     // println!("server c connected");
     let start1 = Instant::now();
+    let start_user = Instant::now();
     //***************Split 1 preprocessing  *********
     let (mut sa_split1,pk,sfhe) =  NNProtocol::offline_server_linear_protocol(&mut reader_u, &mut writer_u, &nn1, rng).unwrap();
+    let duration_user_1 = start_user.elapsed();
     //***************Split 2 preprocessing   **********
 
     let (mut sa_state,cpk,rsmphe,lsmphe) = {
@@ -251,6 +254,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
                  (sa_state,cpk,rsmphe_,lsmphe_)
             };
     //l+1 layer linear preprocessing
+    let start_user_2 = Instant::now();
     NNProtocol::offline_server_a_l_protocol(
         &mut reader_u,
         &mut writer_u,
@@ -264,6 +268,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &lsmphe,
         &mut sa_state,
     );
+    
     println!("l layer preprocessed");
 
     NNProtocol::offline_server_relu_protocol(
@@ -274,6 +279,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &mut sa_split1,
     );
     println!("User A relu done");
+    let duration_user_2 = start_user_2.elapsed();
     let duration1 = start1.elapsed();
 
     // thread::sleep(time::Duration::from_millis(1000));
@@ -310,7 +316,9 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     //U-------A online
     // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
     let start_a_online = Instant::now();
+    let start_user_3 = Instant::now();
     let next_input = NNProtocol::online_root_server_protocol(&mut reader_u, &mut writer_u, &nn1, &sa_split1).unwrap();
+    let duration_user_3 = start_user_3.elapsed();
     // //A----B----C online
     let last_share = NNProtocol::online_server_a_protocol(
         server_a_addr,
@@ -332,7 +340,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // let (mut reader_u, mut writer_u) = client_connect(user_addr);
 
     // let out_channel = architecture2.layers[]
-
+    let start_user_4 = Instant::now();
     NNProtocol::root_server_output(
         &mut writer_u,
         &mut reader_b,
@@ -344,6 +352,9 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         sfhe,
         out_channel,
     );
+    let duration_user_4 = start_user_4.elapsed();
+    let duration_user = duration_user_4+duration_user_3+duration_user_2+duration_user_1;
+    println!("User Online time: {:?}", duration);
 }
 
 pub fn nn_server_a<R: RngCore + CryptoRng>(
