@@ -133,21 +133,21 @@ pub fn construct_minionn_split_a<R: RngCore + CryptoRng>(
     network.layers.push(Layer::LL(conv));
     add_activation_layer(&mut network, &relu_layers);
     // 2
-    // let input_dims = network.layers.last().unwrap().output_dimensions();
-    // let kernel_dims = (64, 64, 3, 3);
-    // let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
-    // network.layers.push(Layer::LL(conv));
-    // add_activation_layer(&mut network, &relu_layers);
-    // // 3
-    // let input_dims = network.layers.last().unwrap().output_dimensions();
-    // let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
-    // network.layers.push(Layer::LL(pool));
-    // // 4
-    // let input_dims = network.layers.last().unwrap().output_dimensions();
-    // let kernel_dims = (64, 64, 3, 3);
-    // let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
-    // network.layers.push(Layer::LL(conv));
-    // add_activation_layer(&mut network, &relu_layers);
+    let input_dims = network.layers.last().unwrap().output_dimensions();
+    let kernel_dims = (64, 64, 3, 3);
+    let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
+    network.layers.push(Layer::LL(conv));
+    add_activation_layer(&mut network, &relu_layers);
+    // 3
+    let input_dims = network.layers.last().unwrap().output_dimensions();
+    let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
+    network.layers.push(Layer::LL(pool));
+    // 4
+    let input_dims = network.layers.last().unwrap().output_dimensions();
+    let kernel_dims = (64, 64, 3, 3);
+    let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
+    network.layers.push(Layer::LL(conv));
+    add_activation_layer(&mut network, &relu_layers);
     // // 5
     // let input_dims = network.layers.last().unwrap().output_dimensions();
     // let kernel_dims = (64, 64, 3, 3);
@@ -228,22 +228,22 @@ pub fn construct_minionn_split<R: RngCore + CryptoRng>(
     network.layers.push(Layer::LL(conv));
     add_activation_layer(&mut network, &relu_layers);
     // // 3
-    // let input_dims = network.layers.last().unwrap().output_dimensions();
-    // let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
-    // network.layers.push(Layer::LL(pool));
-    // // 4
-    // let input_dims = network.layers.last().unwrap().output_dimensions();
-    // let kernel_dims = (64, 64, 3, 3);
-    // let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
-    // network.layers.push(Layer::LL(conv));
-    // add_activation_layer(&mut network, &relu_layers);
-    // // 5
-    // let input_dims = network.layers.last().unwrap().output_dimensions();
-    // let kernel_dims = (64, 64, 3, 3);
-    // let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
-    // network.layers.push(Layer::LL(conv));
-    // add_activation_layer(&mut network, &relu_layers);
-    // // 6
+    let input_dims = network.layers.last().unwrap().output_dimensions();
+    let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
+    network.layers.push(Layer::LL(pool));
+    // 4
+    let input_dims = network.layers.last().unwrap().output_dimensions();
+    let kernel_dims = (64, 64, 3, 3);
+    let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
+    network.layers.push(Layer::LL(conv));
+    add_activation_layer(&mut network, &relu_layers);
+    // 5
+    let input_dims = network.layers.last().unwrap().output_dimensions();
+    let kernel_dims = (64, 64, 3, 3);
+    let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
+    network.layers.push(Layer::LL(conv));
+    add_activation_layer(&mut network, &relu_layers);
+    // 6
     // let input_dims = network.layers.last().unwrap().output_dimensions();
     // let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
     // network.layers.push(Layer::LL(pool));
@@ -306,7 +306,9 @@ pub fn construct_minionn_second_split<R: RngCore + CryptoRng>(
 
     //if split==1
     // Dimensions of input image.
-    let input_dims = (batch_size, 64, 32, 32);
+    // let input_dims = (batch_size, 64, 32, 32);
+    
+    let input_dims = (batch_size, 64, 16, 16);
     // let input_dims = (batch_size, 64, 8, 8);
     // 1 if split==1
     // let kernel_dims = (64, 3, 3, 3);
@@ -315,20 +317,20 @@ pub fn construct_minionn_second_split<R: RngCore + CryptoRng>(
     // add_activation_layer(&mut network, &relu_layers);
     // // 2
     // let input_dims = network.layers.last().unwrap().output_dimensions();
-    let kernel_dims = (64, 64, 3, 3);
-    let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
-    network.layers.push(Layer::LL(conv));
-    add_activation_layer(&mut network, &relu_layers);
-    // // 3
-    let input_dims = network.layers.last().unwrap().output_dimensions();
-    let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
-    network.layers.push(Layer::LL(pool));
-    // // 4
-    let input_dims = network.layers.last().unwrap().output_dimensions();
-    let kernel_dims = (64, 64, 3, 3);
-    let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
-    network.layers.push(Layer::LL(conv));
-    add_activation_layer(&mut network, &relu_layers);
+    // let kernel_dims = (64, 64, 3, 3);
+    // let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
+    // network.layers.push(Layer::LL(conv));
+    // add_activation_layer(&mut network, &relu_layers);
+    // // // 3
+    // let input_dims = network.layers.last().unwrap().output_dimensions();
+    // let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
+    // network.layers.push(Layer::LL(pool));
+    // // // 4
+    // let input_dims = network.layers.last().unwrap().output_dimensions();
+    // let kernel_dims = (64, 64, 3, 3);
+    // let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Same, rng).0;
+    // network.layers.push(Layer::LL(conv));
+    // add_activation_layer(&mut network, &relu_layers);
     // // 5
     let input_dims = network.layers.last().unwrap().output_dimensions();
     let kernel_dims = (64, 64, 3, 3);
