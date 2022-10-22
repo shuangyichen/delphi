@@ -923,7 +923,10 @@ where
         }
         }
         let mut relu_next_layer_randomizers = Vec::new();
+        let total_layers = neural_network.layers.iter().count();
 
+        //2 is linear?
+        if total_layers>1{
         let next_layer_randomizers = r_vec
                 .get(&2)
                 .expect("should exist because every ReLU should be succeeded by a linear layer");
@@ -942,6 +945,7 @@ where
             relu_next_layer_randomizers
                 .extend_from_slice(next_layer_randomizers.as_slice().unwrap());
         }
+    }
 
 
 
@@ -1072,6 +1076,10 @@ where
         }
         }
         let mut relu_next_layer_randomizers = Vec::new();
+        let total_layers = neural_network.layers.iter().count();
+
+        //2 is linear?
+        if total_layers>1{
         let next_layer_randomizers = r_vec
                 .get(&2)
                 .expect("should exist because every ReLU should be succeeded by a linear layer");
@@ -1090,6 +1098,7 @@ where
             relu_next_layer_randomizers
                 .extend_from_slice(next_layer_randomizers.as_slice().unwrap());
         }
+    }
 
 
 
