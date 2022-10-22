@@ -615,6 +615,7 @@ where
 
         let (lsmphe, rsmphe)= crate::root_server_keygen_r2(lsmphe_, rsmphe_, rlk_r1.clone(), reader_b,reader_c);
 
+
         for (i, layer) in neural_network_architecture.layers.iter().enumerate() {
             if i>1{
             match layer {
@@ -766,9 +767,11 @@ where
 
         let mut current_layer_shares = Vec::new(); //Fr-s
         let mut relu_next_layer_randomizers = Vec::new(); //ra'
+        let total_layers = neural_network_architecture.layers.iter().count();
 
         //2 is linear?
-        let next_layer_randomizers_0 = in_shares
+        if total_layers>1{
+            let next_layer_randomizers_0 = in_shares
                 .get(&2)
                 .expect("should exist because every ReLU should be succeeded by a linear layer");
         relu_next_layer_randomizers
@@ -786,6 +789,8 @@ where
             relu_next_layer_randomizers
                 .extend_from_slice(next_layer_randomizers.as_slice().unwrap());
         }
+        }
+
 
         // let gc_server_a_state = ReluProtocol::<P>::offline_server_a_protocol(
         //     reader_b,
