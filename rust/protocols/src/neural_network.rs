@@ -293,7 +293,8 @@ where
         // println!("total num {}", total_num);
 
         //define cg, processing the last layer
-        let layer = &neural_network_architecture.layers[total_layer-2];
+        // if total_layer
+        let layer = &neural_network_architecture.layers[total_layer-1];
         match layer {
             LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
             }
