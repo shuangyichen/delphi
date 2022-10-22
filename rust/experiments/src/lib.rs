@@ -167,7 +167,7 @@ pub fn nn_user<R: RngCore + CryptoRng>(
     let (mut client_state,cfhe) = NNProtocol::offline_client_linear_protocol(&mut reader_a, &mut writer_a, &architecture1, rng)
                 .unwrap();
     // let duration1 = start_user.elapsed();
-    
+    thread::sleep(time::Duration::from_millis(1000));
     NNProtocol::offline_user_l_protocol(
         &mut reader_a, 
         &mut writer_a,
