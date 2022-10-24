@@ -94,7 +94,7 @@ fn main() {
     let out_channel:usize = 1;
 
     //split 1
-    let mut network1 = construct_resnet_32_split_a(None, 1, layers, &mut rng,split_layer);
+    let mut network1 = construct_resnet_32_second_split(None, 1, layers, &mut rng,split_layer);
     // let network = construct_minionn_test(None, 1, layers, &mut rng);
     // let architecture1 = (&network1).into();
     // network1.from_numpy(&weights_1).unwrap();
