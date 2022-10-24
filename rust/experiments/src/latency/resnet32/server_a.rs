@@ -94,13 +94,13 @@ fn main() {
     let out_channel:usize = 1;
 
     //split 1
-    let mut network1 = construct_resnet_32_second_split(None, 1, layers, &mut rng,split_layer);
+    let mut network1 = construct_resnet_32_split_a(None, 1, layers, &mut rng,split_layer);
     // let network = construct_minionn_test(None, 1, layers, &mut rng);
     // let architecture1 = (&network1).into();
     // network1.from_numpy(&weights_1).unwrap();
 
     //split 2 
-    let network2 = construct_minionn_second_split(None, 1, layers, &mut rng,split_layer);
+    let network2 = construct_resnet_32_second_split(None, 1, layers, &mut rng,split_layer);
     let architecture2 = (&network2).into();
 
     nn_root_server(&user_addr,&server_a_addr,&server_b_addr,&server_c_addr,&network1,&architecture2,&mut rng,out_channel);
