@@ -104,7 +104,7 @@ fn conv_1_block<R: RngCore + CryptoRng>(
         rng,
     );
     nn.layers.push(Layer::LL(conv_1));
-    add_activation_layer(nn, relu_layers);
+    // add_activation_layer(nn, relu_layers);
     // let cur_input_dims = nn.layers.last().as_ref().unwrap().output_dimensions();
     // let c_in = cur_input_dims.1;
 
