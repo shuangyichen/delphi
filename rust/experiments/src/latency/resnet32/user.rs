@@ -1,19 +1,27 @@
-use experiments::nn_server_c;
-use clap::{App, Arg, ArgMatches};
-use experiments::minionn::construct_minionn;
-// use experiments::minionn::construct_minionn_test;
-use experiments::minionn::construct_minionn_second_split;
+// use crate::*;
+use ::neural_network::{tensors::Input, NeuralArchitecture};
+use protocols::neural_network::NNProtocol;
+use rand::thread_rng;
+use std::{io::BufReader, net::TcpStream};
+use experiments::nn_client;
 use neural_network::{ndarray::Array4, npy::NpyData};
+use clap::{App, Arg, ArgMatches};
+use experiments::minionn::construct_minionn_split;
+use experiments::resnet32::construct_resnet_32_split;
+use std::io::Read;
+use std::path::Path;
+use rand::ChaChaRng;
 use rand::SeedableRng;
-use rand_chacha::ChaChaRng;
-use std::{io::Read, path::Path};
-
+use experiments::nn_user;
+use experiments::inference::inference::softmax;
+// use experiments::validation::validate::softmax;
 const RANDOMNESS: [u8; 32] = [
     0x11, 0xe0, 0x8f, 0xbc, 0x89, 0xa7, 0x34, 0x01, 0x45, 0x86, 0x82, 0xb6, 0x51, 0xda, 0xf4, 0x76,
     0x5d, 0xc9, 0x8d, 0xea, 0x23, 0xf2, 0x90, 0x8f, 0x9d, 0x03, 0xf2, 0x77, 0xd3, 0x4a, 0x52, 0xd2,
 ];
+
 fn get_args() -> ArgMatches<'static> {
-    App::new("minionn-server-c")
+    App::new("resnet-32-user")
         // .arg(
         //     Arg::with_name("ip_a")
         //         .short("i_a")
@@ -62,26 +70,23 @@ fn get_args() -> ArgMatches<'static> {
         //         .help("Server C port (default 8000)")
         //         .required(false),
         // )
-        .arg(
-            Arg::with_name("weights")
-                .short("w")
-                .long("weights")
-                .takes_value(true)
-                .help("Path to weights")
-                .required(true),
-        )
+        // .arg(
+        //     Arg::with_name("weights")
+        //         .short("w")
+        //         .long("weights")
+        //         .takes_value(true)
+        //         .help("Path to weights")
+        //         .required(false),
+        // )
         .get_matches()
 }
 
-fn main(){
+
+fn main() {
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
-    let layers:usize = 0;
     let args = get_args();
 
-    let weights_c = args.value_of("weights").unwrap();
-    let mut network_c = construct_minionn_second_split(None, 1, layers, &mut rng,layers);
-    // let mut network_c = construct_minionn_test(None, 1, layers, &mut rng);
-    network_c.from_numpy(&weights_c).unwrap();
+    let layers:usize = 0; 
 
     // let ip_a = args.value_of("ip_a").unwrap();
     // let port_a = args.value_of("port_a").unwrap_or("8000");
@@ -91,14 +96,47 @@ fn main(){
     // let port_b = args.value_of("port_a").unwrap_or("8000");
     // let server_b_addr = format!("{}:{}", ip_b, port_b);
 
-    
     // let ip_c = args.value_of("ip_a").unwrap();
     // let port_c = args.value_of("port_a").unwrap_or("8000");
     // let server_c_addr = format!("{}:{}", ip_b, port_b);
+    let user_addr = "10.30.8.5:8000";
     let server_a_addr = "10.30.8.15:8000";
-    let server_b_addr = "10.30.8.11:8000";
-    let server_c_addr = "10.30.8.7:8000";
 
+    let split_layer:usize = 1;
+    let output_size :usize = 100;
+    let network = construct_resnet_32_split(None, 1, layers, &mut rng,split_layer);
+    // let network = construct_minionn_test(None, 1, layers, &mut rng);
+    let architecture = (&network).into();
 
-    nn_server_c(&server_a_addr,&server_b_addr,&server_c_addr,&network_c,&mut rng);
+    let mut buf = vec![];
+    std::fs::File::open(Path::new("class_100.npy"))
+        .unwrap()
+        .read_to_end(&mut buf)
+        .unwrap();
+    let class: i64 = NpyData::from_bytes(&buf).unwrap().to_vec()[0];
+
+    buf = vec![];
+    std::fs::File::open(Path::new("image_100.npy"))
+        .unwrap()
+        .read_to_end(&mut buf)
+        .unwrap();
+    let image_vec: Vec<f64> = NpyData::from_bytes(&buf).unwrap().to_vec();
+    let mut image = Array4::from_shape_vec((1, 3, 32, 32), image_vec).unwrap();
+
+    // let mut input = experiments::inference::inference::image_transform(&mut image);
+    // let image_shape: (usize, usize, usize,usize) = (image.shape()[0],image.shape()[1],image.shape()[2],image.shape()[3]);
+    // let mut input: Input<TenBitAS>  = Input::zeros(image_shape); 
+    // input.iter_mut()
+    //       .zip(image.iter_mut())
+    //       .for_each(|(a,b)|{
+    //           *a = AdditiveShare::new(FixedPoint::from(*b))
+    //       });
+
+    let mut result = nn_user(&user_addr,&server_a_addr,&architecture,(image.clone()).into(),&mut rng,output_size);
+    let sm = softmax(&result);
+    let max = sm.iter().map(|e| f64::from(*e)).fold(0. / 0., f64::max);
+    let index = sm.iter().position(|e| f64::from(*e) == max).unwrap() as i64;
+    println!("Correct class is {}, inference result is {}", class, index);
 }
+
+

@@ -557,7 +557,7 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
 pub fn generate_random_number<R: Rng>(rng: &mut R) -> (f64, TenBitExpFP) {
     let is_neg: bool = rng.gen();
     let mul = if is_neg { -1.0 } else { 1.0 };
-    let float: f64 = rng.gen();
+    let float: f64 = rng.gen_range(-1.0,1.0);
     let f = TenBitExpFP::truncate_float(float * mul);
     let n = TenBitExpFP::from(f);
     (f, n)

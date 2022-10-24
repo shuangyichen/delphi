@@ -1,8 +1,8 @@
-use experiments::nn_server_c;
+use experiments::nn_server_b;
 use clap::{App, Arg, ArgMatches};
-use experiments::minionn::construct_minionn;
-// use experiments::minionn::construct_minionn_test;
-use experiments::minionn::construct_minionn_second_split;
+// use experiments::minionn::construct_minionn;
+// use experiments::minionn::construct_minionn_;
+use experiments::resnet32::{construct_resnet_32,construct_resnet_32_split,construct_resnet_32_second_split,construct_resnet_32_split_a};
 use neural_network::{ndarray::Array4, npy::NpyData};
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
@@ -12,8 +12,9 @@ const RANDOMNESS: [u8; 32] = [
     0x11, 0xe0, 0x8f, 0xbc, 0x89, 0xa7, 0x34, 0x01, 0x45, 0x86, 0x82, 0xb6, 0x51, 0xda, 0xf4, 0x76,
     0x5d, 0xc9, 0x8d, 0xea, 0x23, 0xf2, 0x90, 0x8f, 0x9d, 0x03, 0xf2, 0x77, 0xd3, 0x4a, 0x52, 0xd2,
 ];
+
 fn get_args() -> ArgMatches<'static> {
-    App::new("minionn-server-c")
+    App::new("resnet32-server-b")
         // .arg(
         //     Arg::with_name("ip_a")
         //         .short("i_a")
@@ -62,26 +63,26 @@ fn get_args() -> ArgMatches<'static> {
         //         .help("Server C port (default 8000)")
         //         .required(false),
         // )
-        .arg(
-            Arg::with_name("weights")
-                .short("w")
-                .long("weights")
-                .takes_value(true)
-                .help("Path to weights")
-                .required(true),
-        )
+        // .arg(
+        //     Arg::with_name("weights")
+        //         .short("w")
+        //         .long("weights")
+        //         .takes_value(true)
+        //         .help("Path to weights")
+        //         .required(true),
+        // )
         .get_matches()
 }
 
 fn main(){
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
     let layers:usize = 0;
-    let args = get_args();
+    // let args = get_args();
 
-    let weights_c = args.value_of("weights").unwrap();
-    let mut network_c = construct_minionn_second_split(None, 1, layers, &mut rng,layers);
-    // let mut network_c = construct_minionn_test(None, 1, layers, &mut rng);
-    network_c.from_numpy(&weights_c).unwrap();
+    // let weights_b = args.value_of("weights").unwrap();
+    let mut network_b = construct_resnet_32_second_split(None, 1, layers, &mut rng,layers);
+    // let mut network_b = construct_minionn_test(None, 1, layers, &mut rng);
+    // network_b.from_numpy(&weights_b).unwrap();
 
     // let ip_a = args.value_of("ip_a").unwrap();
     // let port_a = args.value_of("port_a").unwrap_or("8000");
@@ -91,7 +92,6 @@ fn main(){
     // let port_b = args.value_of("port_a").unwrap_or("8000");
     // let server_b_addr = format!("{}:{}", ip_b, port_b);
 
-    
     // let ip_c = args.value_of("ip_a").unwrap();
     // let port_c = args.value_of("port_a").unwrap_or("8000");
     // let server_c_addr = format!("{}:{}", ip_b, port_b);
@@ -100,5 +100,5 @@ fn main(){
     let server_c_addr = "10.30.8.7:8000";
 
 
-    nn_server_c(&server_a_addr,&server_b_addr,&server_c_addr,&network_c,&mut rng);
+    nn_server_b(&server_a_addr,&server_b_addr,&server_c_addr,&network_b,&mut rng);
 }

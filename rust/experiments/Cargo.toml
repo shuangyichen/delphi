@@ -112,5 +112,21 @@ path = "src/inference/minionn/server_b.rs"
 name = "minionn-server-c"
 path = "src/inference/minionn/server_c.rs"
 
+[[bin]]
+name = "resnet32-user"
+path = "src/latency/resnet32/user.rs"
+
+[[bin]]
+name = "resnet32-server-a"
+path = "src/latency/resnet32/server_a.rs"
+
+[[bin]]
+name = "resnet32-server-b"
+path = "src/latency/resnet32/server_b.rs"
+
+[[bin]]
+name = "resnet32-server-c"
+path = "src/latency/resnet32/server_c.rs"
+
 [features]
 timer = ["protocols/timer"]

@@ -11,34 +11,38 @@ const RANDOMNESS: [u8; 32] = [
 fn get_args() -> ArgMatches<'static> {
     App::new("resnet32-server")
         .arg(
-            Arg::with_name("layers")
-                .short("l")
-                .long("layers")
+            Arg::with_name("weights")
+                .short("w")
+                .long("weights")
                 .takes_value(true)
-                .help("Number of polynomial layers (6/12/14/16/18/20/22/24/26)")
+                .help("Path to weights")
                 .required(true),
         )
-        .arg(
-            Arg::with_name("port")
-                .short("p")
-                .long("port")
-                .takes_value(true)
-                .help("Server port (default 8000)")
-                .required(false),
-        )
+        // .arg(
+        //     Arg::with_name("port")
+        //         .short("p")
+        //         .long("port")
+        //         .takes_value(true)
+        //         .help("Server port (default 8000)")
+        //         .required(false),
+        // )
         .get_matches()
 }
 
 fn main() {
-    let vs = tch::nn::VarStore::new(tch::Device::cuda_if_available());
+    // let vs = tch::nn::VarStore::new(tch::Device::cuda_if_available());
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
     let args = get_args();
+    // let mut weights = args.value_of("weights").unwrap();
 
-    let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
-    let port = args.value_of("port").unwrap_or("8000");
-    let server_addr = format!("0.0.0.0:{}", port);
+    // let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
+    // let port = args.value_of("port").unwrap_or("8000");
+    // let server_addr = format!("0.0.0.0:{}", port);
+    let server_addr = "127.0.0.1:8001";
+    let layers:usize = 0; 
 
-    let network = construct_resnet_32(Some(&vs.root()), 1, layers, &mut rng);
+    let mut network = construct_resnet_32(None, 1, layers, &mut rng);
+    // network.from_numpy(&weights).unwrap();
 
     experiments::nn_server(&server_addr, &network, &mut rng);
 }

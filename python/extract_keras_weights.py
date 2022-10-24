@@ -13,7 +13,7 @@ from resnet import resnet32_model
 from tensorflow.keras.datasets import cifar10, cifar100
 from tensorflow.keras.utils import get_custom_objects
 from os import path
-
+from tensorflow.keras.models import load_model
 def build_model(model_builder, approx):
     """Construct model following given architecture and approx layers"""
     ACTIVATION_NUM = 0
@@ -31,6 +31,12 @@ def build_model(model_builder, approx):
 
     # Load the model_builder module
     model = model_builder.build()
+    model.summary()
+    # for i, layer in enumerate(model.layers):
+    #     print(i)
+    #     print(layer.name)
+    #     A, b = layer.get_weights()
+    #     print(A.shape)
     # This is necessary since quantization will rebuild the network
     ACTIVATION_NUM = 0
     return model
@@ -368,6 +374,7 @@ if __name__ == "__main__":
     # Build model
     model = build_model(model_builder, args.approx or [])
     model.load_weights(weights_path)
+    # model = load_model(weights_path)
     if args.test_acc:
         acc = test_accuracy(model)
         print(f"Accuracy: {acc}%\n")
@@ -379,7 +386,7 @@ if __name__ == "__main__":
             print(f"Quantized Accuracy: {acc}%")
     model.summary()
     # Serialize weights for Rust
-    # serialize_weights(model, save_path)
+    serialize_weights(model, save_path)
     # serialize_weights_additive_share(model, save_path)
     # serialize_weights_additive_share_test(model, save_path)
-    serialize_weights_split_additive_share(model, save_path,2)
+    # serialize_weights_split_additive_share(model, save_path,2)

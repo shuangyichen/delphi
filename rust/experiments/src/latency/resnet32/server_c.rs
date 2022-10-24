@@ -1,8 +1,9 @@
 use experiments::nn_server_c;
 use clap::{App, Arg, ArgMatches};
-use experiments::minionn::construct_minionn;
+// use experiments::minionn::construct_minionn;
 // use experiments::minionn::construct_minionn_test;
-use experiments::minionn::construct_minionn_second_split;
+use experiments::resnet32::construct_resnet_32_second_split;
+
 use neural_network::{ndarray::Array4, npy::NpyData};
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
@@ -13,7 +14,7 @@ const RANDOMNESS: [u8; 32] = [
     0x5d, 0xc9, 0x8d, 0xea, 0x23, 0xf2, 0x90, 0x8f, 0x9d, 0x03, 0xf2, 0x77, 0xd3, 0x4a, 0x52, 0xd2,
 ];
 fn get_args() -> ArgMatches<'static> {
-    App::new("minionn-server-c")
+    App::new("resnet32-server-c")
         // .arg(
         //     Arg::with_name("ip_a")
         //         .short("i_a")
@@ -62,26 +63,26 @@ fn get_args() -> ArgMatches<'static> {
         //         .help("Server C port (default 8000)")
         //         .required(false),
         // )
-        .arg(
-            Arg::with_name("weights")
-                .short("w")
-                .long("weights")
-                .takes_value(true)
-                .help("Path to weights")
-                .required(true),
-        )
+        // .arg(
+        //     Arg::with_name("weights")
+        //         .short("w")
+        //         .long("weights")
+        //         .takes_value(true)
+        //         .help("Path to weights")
+        //         .required(true),
+        // )
         .get_matches()
 }
 
 fn main(){
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
     let layers:usize = 0;
-    let args = get_args();
+    // let args = get_args();
 
-    let weights_c = args.value_of("weights").unwrap();
-    let mut network_c = construct_minionn_second_split(None, 1, layers, &mut rng,layers);
+    // let weights_c = args.value_of("weights").unwrap();
+    let mut network_c = construct_resnet_32_second_split(None, 1, layers, &mut rng,layers);
     // let mut network_c = construct_minionn_test(None, 1, layers, &mut rng);
-    network_c.from_numpy(&weights_c).unwrap();
+    // network_c.from_numpy(&weights_c).unwrap();
 
     // let ip_a = args.value_of("ip_a").unwrap();
     // let port_a = args.value_of("port_a").unwrap_or("8000");

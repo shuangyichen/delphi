@@ -14,7 +14,7 @@ const RANDOMNESS: [u8; 32] = [
 ];
 
 fn get_args() -> ArgMatches<'static> {
-    App::new("minionn-server-a")
+    App::new("minionn-server-b")
         // .arg(
         //     Arg::with_name("ip_a")
         //         .short("i_a")

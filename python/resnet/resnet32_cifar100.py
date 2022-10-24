@@ -105,7 +105,7 @@ class Cifar100Model(Trainable):
         LAYER_NUM = 0
         self.cur = K.variable(0)
         self.ratio = K.variable(1)
-        
+
         def approx_activation(x):
             nonlocal LAYER_NUM
             relu = tf.keras.activations.relu(x, max_value=6.0)
@@ -118,7 +118,7 @@ class Cifar100Model(Trainable):
                 print(f"Approx {LAYER_NUM}: relu")
             LAYER_NUM += 1
             return x
-        
+
         get_custom_objects().update({'approx_activation': Activation(approx_activation)})
 
         # Build model
@@ -222,7 +222,7 @@ class Cifar100Model(Trainable):
         # Calculate validation loss/accuracy for PBT
         loss, accuracy = self.model.evaluate(x_val, y_val, verbose=0)
         _, test_accuracy = self.model.evaluate(x_test, y_test, verbose=0)
-       
+
         cur_perf = performance(accuracy,
                                self.approx_activations,
                                self.total_activations)
@@ -232,7 +232,7 @@ class Cifar100Model(Trainable):
             self.accuracy = test_accuracy
             self.performance = cur_perf
             self._save(self.path)
-        
+
         return {
             "accuracy": accuracy,
             "learning_rate": self.lr,
@@ -272,7 +272,7 @@ class Cifar100Model(Trainable):
             state = pickle.loads(f.read())
         self.epoch = state['epoch']
 
-        # If we want to do approximation swapping off of the 
+        # If we want to do approximation swapping off of the
         # restored model reset the total period
         if state['transfer']:
             self.total = self.epoch + self.swap_period
@@ -339,7 +339,8 @@ if __name__ == "__main__":
 
     pbt = PopulationBasedTraining(
         time_attr="training_iteration",
-        reward_attr="performance",
+        metric="mean_accuracy",
+        mode="max",
         perturbation_interval=10,
         hyperparam_mutations={
             "lr": lambda: random.uniform(.0001, 1),

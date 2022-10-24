@@ -293,7 +293,7 @@ where
         // println!("total num {}", total_num);
 
         //define cg, processing the last layer
-        let layer = &neural_network_architecture.layers[total_layer-2];
+        let layer = &neural_network_architecture.layers[total_layer-1];
         match layer {
             LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
             }
@@ -340,7 +340,7 @@ where
             };
             let start_user_2 = Instant::now();
             state.relu_next_layer_randomizers.extend_from_slice(input_share.as_slice().unwrap());
-            state.linear_randomizer.insert(total_layer-2,input_share);
+            state.linear_randomizer.insert(total_layer-1,input_share);
             let duration2 = start_user_2.elapsed();
             println!("User l layer processed time part 3: {:?}", duration2);
         }
@@ -2261,7 +2261,7 @@ where
         writer: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerState<P>,
-    ) -> Result<Input<AdditiveShare<P>>, bincode::Error> {
+    ) -> Result<(), bincode::Error> {
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
             assert!(
@@ -2360,7 +2360,7 @@ where
             }
         }
 
-        let next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
+        // let next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
         // let layer_size = next_input.len();
         // let relu_output_randomizers = state.relu_output_randomizers
         //                 [num_consumed_relus..(num_consumed_relus + layer_size)]
@@ -2372,10 +2372,11 @@ where
         //     .into();
         // next_input.randomize_local_share(&next_layer_derandomizer);
         // println!("receiving intermeidate result from user");
-        // let sent_message = MsgSend::new(&next_layer_input);
-        // crate::bytes::serialize(writer, &sent_message)?;
-        // timer_end!(start_time);
-        Ok(next_input)
+        let sent_message = MsgSend::new(&next_layer_input);
+        crate::bytes::serialize(writer, &sent_message)?;
+        timer_end!(start_time);
+        Ok(())
+        // Ok(next_input)
     }
 
 
@@ -2469,24 +2470,24 @@ where
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
         timer_end!(start_time);
-        let layer = neural_network.layers.last().unwrap();
-        let input_dims = layer.input_dimensions();
+        // let layer = neural_network.layers.last().unwrap();
+        // let input_dims = layer.input_dimensions();
         let mut next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
-        let layer_size = next_input.len();
-        // let total_num = state.relu_output_randomizers.as_ref().unwrap().iter().count();
-        let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
-                        [state.num_relu-layer_size..state.num_relu]
-                        .to_vec();
-        // num_consumed_relus += layer_size;
-        let mut next_layer_derand:Input<P::Field> = ndarray::Array1::from_iter(relu_output_randomizers)
-            .into_shape(input_dims)
-            .expect("shape should be correct")
-            .into();
+        // let layer_size = next_input.len();
+        // // let total_num = state.relu_output_randomizers.as_ref().unwrap().iter().count();
+        // let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
+        //                 [state.num_relu-layer_size..state.num_relu]
+        //                 .to_vec();
+        // // num_consumed_relus += layer_size;
+        // let mut next_layer_derand:Input<P::Field> = ndarray::Array1::from_iter(relu_output_randomizers)
+        //     .into_shape(input_dims)
+        //     .expect("shape should be correct")
+        //     .into();
         // println!("***************next_layer_derandomizer 222 *********************");
         //             for (i,nl_inp) in  next_layer_derand.iter().enumerate(){
         //                 println!("{}",nl_inp);
         //             }
-        next_input.randomize_local_share(&next_layer_derand);
+        next_input.randomize_local_share(&next_layer_derandomizer);
 
         for share in next_input.iter_mut() {
             share.inner.signed_reduce_in_place();
@@ -2660,7 +2661,7 @@ where
         let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
         let total_layer = architecture.layers.iter().count();
         for (i, layer) in architecture.layers.iter().enumerate() {
-            if i<total_layer-2{
+            if i<total_layer-1{
             match layer {
                 LayerInfo::NLL(dims, nll_info) => {
                     match nll_info {

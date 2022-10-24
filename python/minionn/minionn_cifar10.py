@@ -330,7 +330,8 @@ if __name__ == "__main__":
 
     pbt = PopulationBasedTraining(
         time_attr="training_iteration",
-        reward_attr="performance",
+        metric="mean_accuracy",
+        mode="max",
         perturbation_interval=10,
         hyperparam_mutations={
             "lr": lambda: random.uniform(.0001, 1),

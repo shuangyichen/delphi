@@ -941,7 +941,7 @@ where
         let mut input: Input<AdditiveShare<P>> = match &layer {
             LinearLayer::Conv2d { .. } | LinearLayer::FullyConnected { .. } => {
                 let recv: MsgRcv<P> = crate::bytes::deserialize(reader).unwrap();
-                println!("receving online msg from A");
+                // println!("receving online msg from A");
                 recv.msg()
             }
             _ => Input::zeros(input_derandomizer.dim()),
