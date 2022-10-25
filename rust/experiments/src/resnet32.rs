@@ -635,6 +635,16 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
         &relu_layers,
         rng,
     );
+    resnet_1_block(
+        &mut network,
+        vs,
+        5,      // layer_size,
+        32,     // c_out
+        (3, 3), // kernel_size
+        2,      // stride
+        &relu_layers,
+        rng,
+    );
     conv_1_block_plus(
         &mut network,
         vs,
