@@ -276,8 +276,8 @@ fn resnet_block_init<R: RngCore + CryptoRng>(
     rng: &mut R,
     input_dims: (usize, usize, usize, usize),
 ) {
-    // conv_2_block(nn, vs, kernel_size, c_out, stride, relu_layers, rng,input_dims);
-    iden_block_init(nn, vs, kernel_size, relu_layers, rng, input_dims);
+    conv_block_init(nn, vs, kernel_size, c_out, stride, relu_layers, rng,input_dims);
+    // iden_block_init(nn, vs, kernel_size, relu_layers, rng, input_dims);
     for _ in 0..(layer_size - 1) {
         iden_block(nn, vs, kernel_size, relu_layers, rng)
     }
