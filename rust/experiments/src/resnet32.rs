@@ -751,7 +751,7 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         },
     };
     // Dimensions of input image.
-    let input_dims = (batch_size, 16, 16, 16);
+    let input_dims = (batch_size, 32, 16, 16);
     // Dimensions of first kernel
     // let kernel_dims = (16, 3, 3, 3);
 
