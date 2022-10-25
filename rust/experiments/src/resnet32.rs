@@ -539,7 +539,7 @@ pub fn construct_resnet_32_split_a<R: RngCore + CryptoRng>(
         5,      // layer_size,
         64,     // c_out
         (3, 3), // kernel_size
-        1,      // stride
+        2,      // stride
         &relu_layers,
         rng,
     );
@@ -661,7 +661,7 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
         5,      // layer_size,
         64,     // c_out
         (3, 3), // kernel_size
-        1,      // stride
+        2,      // stride
         &relu_layers,
         rng,
     );
@@ -771,7 +771,7 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         },
     };
     // Dimensions of input image.
-    let input_dims = (batch_size, 64, 16, 16);
+    let input_dims = (batch_size, 64, 8, 8);
     // Dimensions of first kernel
     // let kernel_dims = (16, 3, 3, 3);
 
