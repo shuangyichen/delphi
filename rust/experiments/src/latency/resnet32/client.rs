@@ -71,7 +71,7 @@ fn main() {
     let image_vec: Vec<f64> = NpyData::from_bytes(&buf).unwrap().to_vec();
     let mut image = Array4::from_shape_vec((1, 3, 32, 32), image_vec).unwrap();
     // network.from_numpy(&weights).unwrap();
-    let server_addr = "127.0.0.1:8001";
+    let server_addr = "10.30.8.11:8000";
     let output_size :usize = 100;
     let mut result = experiments::nn_client(&server_addr, &architecture,(image.clone()).into(), &mut rng);
     let sm = softmax(&result);
