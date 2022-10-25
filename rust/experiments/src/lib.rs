@@ -84,6 +84,7 @@ pub fn nn_client<R: RngCore + CryptoRng>(
     input: Input<TenBitExpFP>,
     rng: &mut R,
 ) -> Input<TenBitExpFP>{
+    let start_preprocessing = Instant::now();
     let (client_state, offline_read, offline_write) = {
         let (mut reader, mut writer) = client_connect(server_addr);
         (
@@ -93,7 +94,9 @@ pub fn nn_client<R: RngCore + CryptoRng>(
             writer.count(),
         )
     };
-
+    let duration_preprocessing = start_preprocessing.elapsed();
+    println!("Preprocessing time : {:?}", duration_preprocessing);
+    let start_eval = Instant::now();
     let (client_output, online_read, online_write) = {
         let (mut reader, mut writer) = client_connect(server_addr);
         (
@@ -109,6 +112,8 @@ pub fn nn_client<R: RngCore + CryptoRng>(
             writer.count(),
         )
     };
+    let duration_eval = start_eval.elapsed();
+    println!("Eval time : {:?}", duration_eval);
     add_to_trace!(|| "Offline Communication", || format!(
         "Read {} bytes\nWrote {} bytes",
         offline_read, offline_write
@@ -453,7 +458,7 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
         // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
         thread::sleep(time::Duration::from_millis(2000));
         let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-        thread::sleep(time::Duration::from_millis(4000));
+        thread::sleep(time::Duration::from_millis(8000));
         let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
         // let (mut reader_a, mut writer_a) = client_connect(server_c_addr);
         NNProtocol::offline_server_b_protocol_r2(

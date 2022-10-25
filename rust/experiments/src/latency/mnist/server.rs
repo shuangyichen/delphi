@@ -8,37 +8,76 @@ const RANDOMNESS: [u8; 32] = [
     0x5d, 0xc9, 0x8d, 0xea, 0x23, 0xf2, 0x90, 0x8f, 0x9d, 0x03, 0xf2, 0x77, 0xd3, 0x4a, 0x52, 0xd2,
 ];
 
+// fn get_args() -> ArgMatches<'static> {
+//     App::new("mnist-server")
+//         .arg(
+//             Arg::with_name("layers")
+//                 .short("l")
+//                 .long("layers")
+//                 .takes_value(true)
+//                 .help("Number of polynomial layers (0-3)")
+//                 .required(true),
+//         )
+//         .arg(
+//             Arg::with_name("port")
+//                 .short("p")
+//                 .long("port")
+//                 .takes_value(true)
+//                 .help("Port to listen on (default 8000)")
+//                 .required(false),
+//         )
+//         .get_matches()
+// }
+
+// fn main() {
+//     let vs = tch::nn::VarStore::new(tch::Device::cuda_if_available());
+//     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
+//     let args = get_args();
+
+//     let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
+//     let port = args.value_of("port").unwrap_or("8000");
+//     let server_addr = format!("0.0.0.0:{}", port);
+
+//     let network = construct_mnist(Some(&vs.root()), 1, layers, &mut rng);
+
+//     experiments::nn_server(&server_addr, &network, &mut rng);
+}
+
 fn get_args() -> ArgMatches<'static> {
     App::new("mnist-server")
-        .arg(
-            Arg::with_name("layers")
-                .short("l")
-                .long("layers")
-                .takes_value(true)
-                .help("Number of polynomial layers (0-3)")
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("port")
-                .short("p")
-                .long("port")
-                .takes_value(true)
-                .help("Port to listen on (default 8000)")
-                .required(false),
-        )
+        // .arg(
+        //     Arg::with_name("weights")
+        //         .short("w")
+        //         .long("weights")
+        //         .takes_value(true)
+        //         .help("Path to weights")
+        //         .required(true),
+        // )
+        // .arg(
+        //     Arg::with_name("port")
+        //         .short("p")
+        //         .long("port")
+        //         .takes_value(true)
+        //         .help("Server port (default 8000)")
+        //         .required(false),
+        // )
         .get_matches()
 }
 
 fn main() {
-    let vs = tch::nn::VarStore::new(tch::Device::cuda_if_available());
+    // let vs = tch::nn::VarStore::new(tch::Device::cuda_if_available());
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
-    let args = get_args();
+    // let args = get_args();
+    // let mut weights = args.value_of("weights").unwrap();
 
-    let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
-    let port = args.value_of("port").unwrap_or("8000");
-    let server_addr = format!("0.0.0.0:{}", port);
+    // let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
+    // let port = args.value_of("port").unwrap_or("8000");
+    // let server_addr = format!("0.0.0.0:{}", port);
+    let server_addr = "10.30.8.11:8000";
+    let layers:usize = 0; 
 
-    let network = construct_mnist(Some(&vs.root()), 1, layers, &mut rng);
+    let mut network = construct_mnist(None, 1, layers, &mut rng);
+    // network.from_numpy(&weights).unwrap();
 
     experiments::nn_server(&server_addr, &network, &mut rng);
 }
