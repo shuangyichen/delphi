@@ -104,7 +104,7 @@ fn conv_1_block<R: RngCore + CryptoRng>(
         rng,
     );
     nn.layers.push(Layer::LL(conv_1));
-    // add_activation_layer(nn, relu_layers);
+    add_activation_layer(nn, relu_layers);
     // let cur_input_dims = nn.layers.last().as_ref().unwrap().output_dimensions();
     // let c_in = cur_input_dims.1;
 
@@ -120,15 +120,52 @@ fn conv_1_block<R: RngCore + CryptoRng>(
     // add_activation_layer(nn, relu_layers);
 }
 
-fn conv_2_block<R: RngCore + CryptoRng>(
+fn conv_1_block_plus<R: RngCore + CryptoRng>(
     nn: &mut NeuralNetwork<TenBitAS, TenBitExpFP>,
-    cur_input_dims: (usize, usize, usize,usize),
     vs: Option<&tch::nn::Path>,
     (k_h, k_w): (usize, usize),
     num_output_channels: usize,
     stride: usize,
     relu_layers: &[usize],
     rng: &mut R,
+) {
+    let cur_input_dims = nn.layers.last().as_ref().unwrap().output_dimensions();
+    let c_in = cur_input_dims.1;
+
+    let (conv_1, _) = sample_conv_layer(
+        vs,
+        cur_input_dims,
+        (num_output_channels, c_in, k_h, k_w),
+        stride,
+        Padding::Same,
+        rng,
+    );
+    nn.layers.push(Layer::LL(conv_1));
+    add_activation_layer(nn, relu_layers);
+    let cur_input_dims = nn.layers.last().as_ref().unwrap().output_dimensions();
+    let c_in = cur_input_dims.1;
+
+    let (conv_2, _) = sample_conv_layer(
+        vs,
+        cur_input_dims,
+        (c_in, c_in, k_h, k_w), // Kernel dims
+        1,                      // Stride = 1
+        Padding::Same,
+        rng,
+    );
+    nn.layers.push(Layer::LL(conv_2));
+    // add_activation_layer(nn, relu_layers);
+}
+
+fn conv_2_block<R: RngCore + CryptoRng>(
+    nn: &mut NeuralNetwork<TenBitAS, TenBitExpFP>,
+    vs: Option<&tch::nn::Path>,
+    (k_h, k_w): (usize, usize),
+    num_output_channels: usize,
+    stride: usize,
+    relu_layers: &[usize],
+    rng: &mut R,
+    cur_input_dims: (usize, usize, usize,usize),
 ) {
     // let cur_input_dims = nn.layers.last().as_ref().unwrap().output_dimensions();
     // let c_in = cur_input_dims.1;
@@ -205,7 +242,7 @@ fn resnet_block_init<R: RngCore + CryptoRng>(
     rng: &mut R,
     input_dims: (usize, usize, usize, usize),
 ) {
-    conv_block_init(nn, vs, kernel_size, c_out, stride, relu_layers, rng,input_dims);
+    conv_2_block(nn, vs, kernel_size, c_out, stride, relu_layers, rng,input_dims);
     for _ in 0..(layer_size - 1) {
         iden_block(nn, vs, kernel_size, relu_layers, rng)
     }
@@ -439,16 +476,16 @@ pub fn construct_resnet_32_split_a<R: RngCore + CryptoRng>(
     add_activation_layer(&mut network, &relu_layers);
 
     
-    // resnet_1_block(
-    //     &mut network,
-    //     vs,
-    //     5,      // layer_size,
-    //     16,     // c_out
-    //     (3, 3), // kernel_size
-    //     1,      // stride
-    //     &relu_layers,
-    //     rng,
-    // );
+    resnet_1_block(
+        &mut network,
+        vs,
+        5,      // layer_size,
+        16,     // c_out
+        (3, 3), // kernel_size
+        1,      // stride
+        &relu_layers,
+        rng,
+    );
 
     // resnet_block(
     //     &mut network,
@@ -551,7 +588,8 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
     );
     network.layers.push(Layer::LL(conv_1));
     add_activation_layer(&mut network, &relu_layers);
-    conv_1_block(
+
+    conv_1_block_plus(
         &mut network,
         vs,
         (3, 3),
