@@ -276,11 +276,11 @@ fn resnet_block_init<R: RngCore + CryptoRng>(
     rng: &mut R,
     input_dims: (usize, usize, usize, usize),
 ) {
-    // conv_block_init(nn, vs, kernel_size, c_out, stride, relu_layers, rng,input_dims);
-    iden_block_init(nn, vs, kernel_size, relu_layers, rng, input_dims);
-    // for _ in 0..(layer_size - 4) {
-    //     iden_block(nn, vs, kernel_size, relu_layers, rng)
-    // }
+    conv_block_init(nn, vs, kernel_size, c_out, stride, relu_layers, rng,input_dims);
+    // iden_block_init(nn, vs, kernel_size, relu_layers, rng, input_dims);
+    for _ in 0..(layer_size - 1) {
+        iden_block(nn, vs, kernel_size, relu_layers, rng)
+    }
 }
 
 fn resnet_block<R: RngCore + CryptoRng>(
@@ -523,7 +523,7 @@ pub fn construct_resnet_32_split_a<R: RngCore + CryptoRng>(
         rng,
     );
 
-    resnet_1_block(
+    resnet_block(
         &mut network,
         vs,
         5,      // layer_size,
@@ -635,7 +635,7 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
         &relu_layers,
         rng,
     );
-    resnet_1_block(
+    resnet_block(
         &mut network,
         vs,
         5,      // layer_size,
@@ -649,7 +649,7 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
         &mut network,
         vs,
         (3, 3),
-        32,  //out_channel
+        64,  //out_channel
         2,
         &relu_layers,
         rng,
@@ -770,7 +770,7 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         &mut network,
         vs,
         5,      // layer_size,
-        32,     // c_out
+        64,     // c_out
         (3, 3), // kernel_size
         2,      // stride
         &relu_layers,
@@ -789,16 +789,16 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
     //     rng,
     // );
 
-    resnet_block(
-        &mut network,
-        vs,
-        5,      // layer_size,
-        64,     // c_out
-        (3, 3), // kernel_size
-        2,      // stride
-        &relu_layers,
-        rng,
-    );
+    // resnet_block(
+    //     &mut network,
+    //     vs,
+    //     5,      // layer_size,
+    //     64,     // c_out
+    //     (3, 3), // kernel_size
+    //     2,      // stride
+    //     &relu_layers,
+    //     rng,
+    // );
     let avg_pool_input_dims = network.layers.last().unwrap().output_dimensions();
     network.layers.push(Layer::LL(sample_avg_pool_layer(
         avg_pool_input_dims,
