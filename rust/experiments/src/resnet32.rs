@@ -640,7 +640,7 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
         vs,
         (3, 3),
         32,  //out_channel
-        1,
+        2,
         &relu_layers,
         rng,
     );
@@ -762,7 +762,7 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         5,      // layer_size,
         32,     // c_out
         (3, 3), // kernel_size
-        1,      // stride
+        2,      // stride
         &relu_layers,
         rng,
         input_dims,
