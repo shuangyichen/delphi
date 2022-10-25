@@ -278,7 +278,7 @@ fn resnet_block_init<R: RngCore + CryptoRng>(
 ) {
     // conv_block_init(nn, vs, kernel_size, c_out, stride, relu_layers, rng,input_dims);
     iden_block_init(nn, vs, kernel_size, relu_layers, rng, input_dims);
-    for _ in 0..(layer_size - 3) {
+    for _ in 0..(layer_size - 4) {
         iden_block(nn, vs, kernel_size, relu_layers, rng)
     }
 }
@@ -310,10 +310,10 @@ fn resnet_1_block<R: RngCore + CryptoRng>(
     rng: &mut R,
 ) {
     conv_block(nn, vs, kernel_size, c_out, stride, relu_layers, rng);
-    iden_block(nn, vs, kernel_size, relu_layers, rng);
-    // for _ in 0..layer_size-1 {
-    //     iden_block(nn, vs, kernel_size, relu_layers, rng)
-    // }
+    // iden_block(nn, vs, kernel_size, relu_layers, rng);
+    for _ in 0..2 {
+        iden_block(nn, vs, kernel_size, relu_layers, rng)
+    }
 }
 
 fn resnet_2_block<R: RngCore + CryptoRng>(
