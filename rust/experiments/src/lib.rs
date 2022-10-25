@@ -255,6 +255,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
             };
     //l+1 layer linear preprocessing
     let start_user_2 = Instant::now();
+    let start_l_process = Instant::now();
     NNProtocol::offline_server_a_l_protocol(
         &mut reader_u,
         &mut writer_u,
@@ -268,7 +269,8 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &lsmphe,
         &mut sa_state,
     );
-    
+    let duration_l_process = start_l_process.elapsed();
+    println!("Preprocessing Time for l layer: {:?}", duration_l_process);
     println!("l layer preprocessed");
 
     NNProtocol::offline_server_relu_protocol(
