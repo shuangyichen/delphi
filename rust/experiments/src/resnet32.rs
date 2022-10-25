@@ -105,19 +105,19 @@ fn conv_1_block<R: RngCore + CryptoRng>(
     );
     nn.layers.push(Layer::LL(conv_1));
     add_activation_layer(nn, relu_layers);
-    // let cur_input_dims = nn.layers.last().as_ref().unwrap().output_dimensions();
-    // let c_in = cur_input_dims.1;
+    let cur_input_dims = nn.layers.last().as_ref().unwrap().output_dimensions();
+    let c_in = cur_input_dims.1;
 
-    // let (conv_2, _) = sample_conv_layer(
-    //     vs,
-    //     cur_input_dims,
-    //     (c_in, c_in, k_h, k_w), // Kernel dims
-    //     1,                      // Stride = 1
-    //     Padding::Same,
-    //     rng,
-    // );
-    // nn.layers.push(Layer::LL(conv_2));
-    // add_activation_layer(nn, relu_layers);
+    let (conv_2, _) = sample_conv_layer(
+        vs,
+        cur_input_dims,
+        (c_in, c_in, k_h, k_w), // Kernel dims
+        1,                      // Stride = 1
+        Padding::Same,
+        rng,
+    );
+    nn.layers.push(Layer::LL(conv_2));
+    add_activation_layer(nn, relu_layers);
 }
 
 fn conv_1_block_plus<R: RngCore + CryptoRng>(
