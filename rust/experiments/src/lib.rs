@@ -456,7 +456,7 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
         // let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
         thread::sleep(time::Duration::from_millis(2000));
         let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-        thread::sleep(time::Duration::from_millis(10000));
+        thread::sleep(time::Duration::from_millis(15000));
         let (mut reader_a, mut writer_a) = client_connect(server_a_addr);
         // let (mut reader_a, mut writer_a) = client_connect(server_c_addr);
         NNProtocol::offline_server_b_protocol_r2(
