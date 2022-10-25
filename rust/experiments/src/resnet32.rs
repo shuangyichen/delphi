@@ -278,7 +278,7 @@ fn resnet_block_init<R: RngCore + CryptoRng>(
 ) {
     // conv_2_block(nn, vs, kernel_size, c_out, stride, relu_layers, rng,input_dims);
     iden_block_init(nn, vs, kernel_size, relu_layers, rng, input_dims);
-    for _ in 4..(layer_size - 1) {
+    for _ in 0..(layer_size - 1) {
         iden_block(nn, vs, kernel_size, relu_layers, rng)
     }
 }
@@ -311,7 +311,7 @@ fn resnet_1_block<R: RngCore + CryptoRng>(
 ) {
     conv_1_block(nn, vs, kernel_size, c_out, stride, relu_layers, rng);
     // iden_block(nn, vs, kernel_size, relu_layers, rng);
-    for _ in 0..3 {
+    for _ in 0..layer_size-1 {
         iden_block(nn, vs, kernel_size, relu_layers, rng)
     }
 }
@@ -512,7 +512,7 @@ pub fn construct_resnet_32_split_a<R: RngCore + CryptoRng>(
     add_activation_layer(&mut network, &relu_layers);
 
     
-    resnet_1_block(
+    resnet_block(
         &mut network,
         vs,
         5,      // layer_size,
@@ -625,7 +625,7 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
     network.layers.push(Layer::LL(conv_1));
     add_activation_layer(&mut network, &relu_layers);
 
-    resnet_1_block(
+    resnet_block(
         &mut network,
         vs,
         5,      // layer_size,
@@ -639,7 +639,7 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
         &mut network,
         vs,
         (3, 3),
-        16,  //out_channel
+        32,  //out_channel
         1,
         &relu_layers,
         rng,
@@ -760,7 +760,7 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         &mut network,
         vs,
         5,      // layer_size,
-        16,     // c_out
+        32,     // c_out
         (3, 3), // kernel_size
         1,      // stride
         &relu_layers,
@@ -768,16 +768,16 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         input_dims,
     );
 
-    resnet_block(
-        &mut network,
-        vs,
-        5,      // layer_size,
-        32,     // c_out
-        (3, 3), // kernel_size
-        2,      // stride
-        &relu_layers,
-        rng,
-    );
+    // resnet_block(
+    //     &mut network,
+    //     vs,
+    //     5,      // layer_size,
+    //     32,     // c_out
+    //     (3, 3), // kernel_size
+    //     2,      // stride
+    //     &relu_layers,
+    //     rng,
+    // );
 
     resnet_block(
         &mut network,
