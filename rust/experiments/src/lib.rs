@@ -295,7 +295,8 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &mut sa_state,
     );
     let duration2 = start2.elapsed();
-    thread::sleep(time::Duration::from_millis(1000));
+    thread::sleep(time::Duration::from_millis(4000));
+    println!("Offline r2 done");
     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
 
     let start3 = Instant::now();
