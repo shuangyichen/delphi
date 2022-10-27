@@ -425,6 +425,7 @@ where
                         Output::zeros(output_dims)
                     }
             };
+            let start_l = Instant::now();
             for share in &mut out_share {
                 share.inner.signed_reduce_in_place();
             }
@@ -439,6 +440,8 @@ where
             state.linear_post_application_share.insert(0,out_share);
             // state.relu_next_layer_randomizers.splice(0..0,state.linear_randomizer[&0].as_slice().unwrap().iter().clone());
             state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
+            let duration = start_l.elapsed();
+            println!("Preprocessing Time for l ABC P2 : {:?}", duration);
             // println!("{} {} {} {}",b,c,h,w);
             // println!("{} ",b*c*h*w);
 

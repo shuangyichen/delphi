@@ -313,7 +313,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     let duration3_relu_abc_2 = start_relu_abc_2.elapsed();
     // let duration = duration3+duration2+duration1;
     let duration_pre_ua = duration_pre_ua_1+duration_pre_ua_2;
-    let duration_pre_abc = duration_pre_abc_1+duration_pre_abc_2+duration_relu_abc+duration3_relu_abc_2;
+    let duration_pre_abc = duration_pre_abc_1+duration_relu_abc+duration3_relu_abc_2;
     println!("Preprocessing Time U-A part1: {:?}", duration_pre_ua);
     println!("Preprocessing Time ABC : {:?}", duration_pre_abc);
 
