@@ -1456,7 +1456,7 @@ where
             //     }
             // }
             // let duration = start_a_online.elapsed();
-            println!("Split 2 Online Time from Server A: {:?}", duration);
+            // println!("Split 2 Online Time ABC: {:?}", duration);
             state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
         }
 
@@ -1561,7 +1561,7 @@ where
         }
     }
     let duration = start_b_online.elapsed();
-    println!("Split 2 Online Time from Server B: {:?}", duration);
+    println!("Split 2 Online Time ABC {:?}", duration);
     // println!("final output");
     // println!("final output {}",next_layer_input.iter().count());
     // for (i,out) in next_layer_input.iter().enumerate(){

@@ -234,13 +234,15 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // println!("server b connected");
     // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
     // println!("server c connected");
-    let start1 = Instant::now();
-    let start_user = Instant::now();
+    // let start1 = Instant::now();
+    let start_pre_ua = Instant::now();
     //***************Split 1 preprocessing  *********
     let (mut sa_split1,pk,sfhe) =  NNProtocol::offline_server_linear_protocol(&mut reader_u, &mut writer_u, &nn1, rng).unwrap();
-    let duration_user_1 = start_user.elapsed();
-    //***************Split 2 preprocessing   **********
+    let duration_pre_ua_1 = start_pre_ua.elapsed();
+    // println!("Preprocessing of M1: {:?}", duration_user_1);
 
+    //***************Split 2 preprocessing   **********
+    let start_pre_abc_1 = Instant::now();
     let (mut sa_state,cpk,rsmphe,lsmphe) = {
         let (mut sa_state,cpk ,rsmphe_,lsmphe_) = NNProtocol::offline_server_a_protocol(
                         &mut reader_b,
@@ -253,8 +255,9 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
                
                  (sa_state,cpk,rsmphe_,lsmphe_)
             };
+    let duration_pre_abc_1 = start_pre_abc_1.elapsed();
     //l+1 layer linear preprocessing
-    let start_user_2 = Instant::now();
+    let start_pre_abc_2 = Instant::now();
     NNProtocol::offline_server_a_l_protocol(
         &mut reader_u,
         &mut writer_u,
@@ -268,9 +271,10 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &lsmphe,
         &mut sa_state,
     );
+    let duration_pre_abc_2 = start_pre_abc_2.elapsed();
     
     println!("l layer preprocessed");
-
+    let start_pre_ua_2 = Instant::now();
     NNProtocol::offline_server_relu_protocol(
         &mut reader_u,
         &mut writer_u,
@@ -278,14 +282,16 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         rng,
         &mut sa_split1,
     );
+    let duration_pre_ua_2 = start_pre_ua_2.elapsed();
+
     println!("User A relu done");
-    let duration_user_2 = start_user_2.elapsed();
-    let duration1 = start1.elapsed();
+    // let duration_user_2 = start_user_2.elapsed();
+    // let duration1 = start1.elapsed();
 
     // thread::sleep(time::Duration::from_millis(1000));
     let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
     // let start = Instant::now();
-    let start2 = Instant::now();
+    let start_relu_abc = Instant::now();
     NNProtocol::offline_server_a_protocol_r2(
         &mut reader_b,
         &mut writer_b,
@@ -294,19 +300,22 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         sa_state.num_relu,  //?
         &mut sa_state,
     );
-    let duration2 = start2.elapsed();
+    let duration_relu_abc = start_relu_abc.elapsed();
     thread::sleep(time::Duration::from_millis(1000));
     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
 
-    let start3 = Instant::now();
+    let start_relu_abc_2 = Instant::now();
     NNProtocol::offline_server_a_protocol_r3(
         &mut reader_c,
         sa_state.num_relu,
         &mut sa_state,
     );
-    let duration3 = start3.elapsed();
-    let duration = duration3+duration2+duration1;
-    println!("Preprocessing Time from A: {:?}", duration);
+    let duration3_relu_abc_2 = start_relu_abc_2.elapsed();
+    // let duration = duration3+duration2+duration1;
+    let duration_pre_ua = duration_pre_ua_1+duration_pre_ua_2;
+    let duration_pre_abc = duration_pre_abc_1+duration_pre_abc_2+duration_relu_abc+duration3_relu_abc_2;
+    println!("Preprocessing Time U-A part1: {:?}", duration_pre_ua);
+    println!("Preprocessing Time ABC : {:?}", duration_pre_abc);
 
     
 
@@ -316,9 +325,10 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     //U-------A online
     // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
     // let start_a_online_1 = Instant::now();
-    let start_user_3 = Instant::now();
+    let start_user_a = Instant::now();
     let next_input = NNProtocol::online_root_server_protocol(&mut reader_u, &mut writer_u, &nn1, &sa_split1).unwrap();
-    let duration_user_3 = start_user_3.elapsed();
+    let duration_inf_ua = start_user_a.elapsed();
+    println!("Online Time ua : {:?}", duration_inf_ua);
     // //A----B----C online
     let last_share = NNProtocol::online_server_a_protocol(
         server_a_addr,
@@ -329,7 +339,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &sa_state,
     );
     // let duration = start_a_online.elapsed();
-    println!("Online Time of split 1 : {:?}", duration_user_3);
+    // println!("Online Time ua : {:?}", duration_inf_ua);
 
 
     //Output
@@ -340,7 +350,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // let (mut reader_u, mut writer_u) = client_connect(user_addr);
 
     // let out_channel = architecture2.layers[]
-    let start_user_4 = Instant::now();
+    // let start_user_4 = Instant::now();
     NNProtocol::root_server_output(
         &mut writer_u,
         &mut reader_b,
@@ -352,13 +362,13 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         sfhe,
         out_channel,
     );
-    let duration_user_4 = start_user_4.elapsed();
-    let duration_user = duration_user_4+duration_user_3+duration_user_1;
-    println!("User Online time 1: {:?}", duration_user_1);
-    // println!("User Online time 2: {:?}", duration_user_2);
-    println!("User Online time 3: {:?}", duration_user_3);
-    println!("User Online time 4: {:?}", duration_user_4);
-    println!("User Online time: {:?}", duration_user);
+    // let duration_user_4 = start_user_4.elapsed();
+    // let duration_user = duration_user_4+duration_user_3+duration_user_1;
+    // println!("User Online time 1: {:?}", duration_user_1);
+    // // println!("User Online time 2: {:?}", duration_user_2);
+    // println!("User Online time 3: {:?}", duration_user_3);
+    // println!("User Online time 4: {:?}", duration_user_4);
+    // println!("User Online time: {:?}", duration_user);
 }
 
 pub fn nn_server_a<R: RngCore + CryptoRng>(
