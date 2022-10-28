@@ -1278,7 +1278,8 @@ where
         let mut num_consumed_relus = 0;
         let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
         let mut duration = start_a_online_1.elapsed();
-
+        let mut total_ab_count = 0;
+        let mut total_ac_count = 0;
         // let last_share :Output<AdditiveShare<P>> = 
         // let next_layer_input = input;
         
@@ -1321,7 +1322,9 @@ where
                             num_consumed_relus += layer_size;
                             // let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
                             let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
-                          
+                            let reader_b_cost = reader_b.count();
+                            let writer_b_cost = writer_b.count();
+                            total_ab_count = total_ab_count + reader_b_cost +writer_b_cost;
                             let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
                             // println!("ReLU r2");
                             let output =ReluProtocol::eval_server_a_protocol(
@@ -1341,6 +1344,9 @@ where
                             .into();
                             let duration = start.elapsed();
                             println!("Time : {:?}", duration);
+                            let reader_c_cost = reader_c.count();
+                            // let writer_b_cost = writer_b.count();
+                            total_ac_count = total_ac_count+ reader_c_cost;
                             // println!("ReLU output value");
                             // for (i,inp) in next_layer_input.iter().enumerate(){
                             //     if i <10{
@@ -1426,6 +1432,12 @@ where
                                 share.signed_reduce_in_place();
                             }
                         }
+                        let reader_b_cost = reader_b.count();
+                        let writer_b_cost = writer_b.count();
+                        let reader_c_cost = reader_c.count();
+                        let writer_c_cost = writer_c.count();
+                        total_ac_count = total_ac_count+ reader_c_cost +writer_c_cost;
+                        total_ab_count = total_ab_count+reader_b_cost+writer_b_cost;
                     
                     // if i != (architecture.layers.len() - 1)
                     //     && architecture.layers[i + 1].is_linear()
@@ -1451,6 +1463,8 @@ where
             duration = duration + tmp_duration;
         }
             let total_layers = architecture.layers.len();
+            println!("A B online total cost {} bytes", total_ab_count);
+            println!("A C online total cost {} bytes", total_ac_count);
             // let last_share = state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
             // println!("Last layer index {}",total_layers-1);
             // for (i, op) in last_share.iter().enumerate(){
@@ -1485,6 +1499,7 @@ where
             );
             (layer.input_dimensions(), layer.output_dimensions())
         };
+        let mut total_bc = 0;
 
         let mut num_consumed_relus = 0;
 
@@ -1520,7 +1535,9 @@ where
                                 rng,
                             );
                 num_consumed_relus += layer_size;
-
+                let reader_c_cost = reader_c.count();
+                let writer_c_cost = writer_c.count();
+                total_bc = total_bc+ reader_c_cost + writer_c_cost;
             }
             Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
             Layer::LL(layer) => {
@@ -1565,6 +1582,7 @@ where
     }
     let duration = start_b_online.elapsed();
     println!("Split 2 Online Time ABC {:?}", duration);
+    println!("BC online total cost {} bytes", total_bc);
     // println!("final output");
     // println!("final output {}",next_layer_input.iter().count());
     // for (i,out) in next_layer_input.iter().enumerate(){
