@@ -308,7 +308,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         &mut sa_state,
     );
     let duration_relu_abc = start_relu_abc.elapsed();
-    thread::sleep(time::Duration::from_millis(1000));
+    thread::sleep(time::Duration::from_millis(3000));
     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
 
     let start_relu_abc_2 = Instant::now();
