@@ -296,7 +296,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // let duration1 = start1.elapsed();
 
     // thread::sleep(time::Duration::from_millis(1000));
-    let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+    // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
     // let start = Instant::now();
     let start_relu_abc = Instant::now();
     NNProtocol::offline_server_a_protocol_r2(
