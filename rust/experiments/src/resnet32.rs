@@ -275,7 +275,7 @@ fn resnet_block_init<R: RngCore + CryptoRng>(
     input_dims: (usize, usize, usize, usize),
 ) {
     // conv_2_block(nn, vs, kernel_size, c_out, stride, relu_layers, rng,input_dims);
-    iden_block_init(nn, vs, kernel_size, relu_layers, rng);
+    iden_block_init(nn, vs, kernel_size, relu_layers, rng,input_dims);
     for _ in 1..(layer_size - 1) {
         iden_block(nn, vs, kernel_size, relu_layers, rng)
     }
@@ -625,8 +625,9 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
     resnet_1_block(
         &mut network,
         vs,
+        5,
+        16,
         (3, 3),
-        16,  //out_channel
         1,
         &relu_layers,
         rng,
