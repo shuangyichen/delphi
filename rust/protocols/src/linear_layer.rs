@@ -423,6 +423,7 @@ where
         let r_u: OfflineClientMsgRcv = crate::bytes::deserialize(readera).unwrap();
         let lserver_share_b: OfflineRootServerMsgRcv = crate::bytes::deserialize(readerb).unwrap();
         let lserver_share_c: OfflineRootServerMsgRcv = crate::bytes::deserialize(readerc).unwrap();
+        let start_l = Instant::now();
         let lserver_share_b_vec  = lserver_share_b.msg();
         let lserver_share_c_vec  = lserver_share_c.msg();
 
@@ -442,6 +443,8 @@ where
         // println!("l final decrypt ");
         let mut share_next = Input::zeros(output_dims);
         rserver_cg.postprocess(&mut share_next);
+        let duration = start_l.elapsed();
+        println!("Preprocessing Time for l ABC P1 : {:?}", duration);
         Ok(share_next)
 
     }
@@ -941,7 +944,7 @@ where
         let mut input: Input<AdditiveShare<P>> = match &layer {
             LinearLayer::Conv2d { .. } | LinearLayer::FullyConnected { .. } => {
                 let recv: MsgRcv<P> = crate::bytes::deserialize(reader).unwrap();
-                // println!("receving online msg from A");
+                println!("receving online msg from A");
                 recv.msg()
             }
             _ => Input::zeros(input_derandomizer.dim()),
