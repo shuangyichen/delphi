@@ -425,6 +425,7 @@ where
                         Output::zeros(output_dims)
                     }
             };
+            let start_l = Instant::now();
             for share in &mut out_share {
                 share.inner.signed_reduce_in_place();
             }
@@ -439,6 +440,8 @@ where
             state.linear_post_application_share.insert(0,out_share);
             // state.relu_next_layer_randomizers.splice(0..0,state.linear_randomizer[&0].as_slice().unwrap().iter().clone());
             state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
+            let duration = start_l.elapsed();
+            println!("Preprocessing Time for l ABC P2 : {:?}", duration);
             // println!("{} {} {} {}",b,c,h,w);
             // println!("{} ",b*c*h*w);
 
@@ -1275,7 +1278,8 @@ where
         let mut num_consumed_relus = 0;
         let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
         let mut duration = start_a_online_1.elapsed();
-
+        let mut total_ab_count = 0;
+        let mut total_ac_count = 0;
         // let last_share :Output<AdditiveShare<P>> = 
         // let next_layer_input = input;
         
@@ -1318,7 +1322,9 @@ where
                             num_consumed_relus += layer_size;
                             // let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
                             let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
-                          
+                            let reader_b_cost = reader_b.count();
+                            let writer_b_cost = writer_b.count();
+                            total_ab_count = total_ab_count + reader_b_cost +writer_b_cost;
                             let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
                             // println!("ReLU r2");
                             let output =ReluProtocol::eval_server_a_protocol(
@@ -1338,6 +1344,9 @@ where
                             .into();
                             let duration = start.elapsed();
                             println!("Time : {:?}", duration);
+                            let reader_c_cost = reader_c.count();
+                            // let writer_b_cost = writer_b.count();
+                            total_ac_count = total_ac_count+ reader_c_cost;
                             // println!("ReLU output value");
                             // for (i,inp) in next_layer_input.iter().enumerate(){
                             //     if i <10{
@@ -1423,6 +1432,12 @@ where
                                 share.signed_reduce_in_place();
                             }
                         }
+                        let reader_b_cost = reader_b.count();
+                        let writer_b_cost = writer_b.count();
+                        let reader_c_cost = reader_c.count();
+                        let writer_c_cost = writer_c.count();
+                        total_ac_count = total_ac_count+ reader_c_cost +writer_c_cost;
+                        total_ab_count = total_ab_count+reader_b_cost+writer_b_cost;
                     
                     // if i != (architecture.layers.len() - 1)
                     //     && architecture.layers[i + 1].is_linear()
@@ -1448,6 +1463,8 @@ where
             duration = duration + tmp_duration;
         }
             let total_layers = architecture.layers.len();
+            println!("A B online total cost {} bytes", total_ab_count);
+            println!("A C online total cost {} bytes", total_ac_count);
             // let last_share = state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
             // println!("Last layer index {}",total_layers-1);
             // for (i, op) in last_share.iter().enumerate(){
@@ -1456,7 +1473,7 @@ where
             //     }
             // }
             // let duration = start_a_online.elapsed();
-            println!("Split 2 Online Time from Server A: {:?}", duration);
+            // println!("Split 2 Online Time ABC: {:?}", duration);
             state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
         }
 
@@ -1482,6 +1499,7 @@ where
             );
             (layer.input_dimensions(), layer.output_dimensions())
         };
+        let mut total_bc = 0;
 
         let mut num_consumed_relus = 0;
 
@@ -1517,7 +1535,9 @@ where
                                 rng,
                             );
                 num_consumed_relus += layer_size;
-
+                let reader_c_cost = reader_c.count();
+                let writer_c_cost = writer_c.count();
+                total_bc = total_bc+ reader_c_cost + writer_c_cost;
             }
             Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
             Layer::LL(layer) => {
@@ -1561,7 +1581,8 @@ where
         }
     }
     let duration = start_b_online.elapsed();
-    println!("Split 2 Online Time from Server B: {:?}", duration);
+    println!("Split 2 Online Time ABC {:?}", duration);
+    println!("BC online total cost {} bytes", total_bc);
     // println!("final output");
     // println!("final output {}",next_layer_input.iter().count());
     // for (i,out) in next_layer_input.iter().enumerate(){
@@ -2261,7 +2282,7 @@ where
         writer: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerState<P>,
-    ) -> Result<(), bincode::Error> {
+    ) -> Result<Input<AdditiveShare<P>>, bincode::Error> {
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
             assert!(
@@ -2360,7 +2381,7 @@ where
             }
         }
 
-        // let next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
+        let next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
         // let layer_size = next_input.len();
         // let relu_output_randomizers = state.relu_output_randomizers
         //                 [num_consumed_relus..(num_consumed_relus + layer_size)]
@@ -2372,11 +2393,10 @@ where
         //     .into();
         // next_input.randomize_local_share(&next_layer_derandomizer);
         // println!("receiving intermeidate result from user");
-        let sent_message = MsgSend::new(&next_layer_input);
-        crate::bytes::serialize(writer, &sent_message)?;
-        timer_end!(start_time);
-        Ok(())
-        // Ok(next_input)
+        // let sent_message = MsgSend::new(&next_layer_input);
+        // crate::bytes::serialize(writer, &sent_message)?;
+        // timer_end!(start_time);
+        Ok(next_input)
     }
 
 
@@ -2470,24 +2490,24 @@ where
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
         timer_end!(start_time);
-        // let layer = neural_network.layers.last().unwrap();
-        // let input_dims = layer.input_dimensions();
+        let layer = neural_network.layers.last().unwrap();
+        let input_dims = layer.input_dimensions();
         let mut next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
-        // let layer_size = next_input.len();
-        // // let total_num = state.relu_output_randomizers.as_ref().unwrap().iter().count();
-        // let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
-        //                 [state.num_relu-layer_size..state.num_relu]
-        //                 .to_vec();
-        // // num_consumed_relus += layer_size;
-        // let mut next_layer_derand:Input<P::Field> = ndarray::Array1::from_iter(relu_output_randomizers)
-        //     .into_shape(input_dims)
-        //     .expect("shape should be correct")
-        //     .into();
+        let layer_size = next_input.len();
+        // let total_num = state.relu_output_randomizers.as_ref().unwrap().iter().count();
+        let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
+                        [state.num_relu-layer_size..state.num_relu]
+                        .to_vec();
+        // num_consumed_relus += layer_size;
+        let mut next_layer_derand:Input<P::Field> = ndarray::Array1::from_iter(relu_output_randomizers)
+            .into_shape(input_dims)
+            .expect("shape should be correct")
+            .into();
         // println!("***************next_layer_derandomizer 222 *********************");
         //             for (i,nl_inp) in  next_layer_derand.iter().enumerate(){
         //                 println!("{}",nl_inp);
         //             }
-        next_input.randomize_local_share(&next_layer_derandomizer);
+        next_input.randomize_local_share(&next_layer_derand);
 
         for share in next_input.iter_mut() {
             share.inner.signed_reduce_in_place();
@@ -2661,7 +2681,7 @@ where
         let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
         let total_layer = architecture.layers.iter().count();
         for (i, layer) in architecture.layers.iter().enumerate() {
-            if i<total_layer-1{
+            if i<total_layer-2{
             match layer {
                 LayerInfo::NLL(dims, nll_info) => {
                     match nll_info {
