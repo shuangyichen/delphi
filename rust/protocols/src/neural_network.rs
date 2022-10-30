@@ -2282,7 +2282,7 @@ where
         writer: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerState<P>,
-    ) -> Result<Input<AdditiveShare<P>>, bincode::Error> {
+    ) -> Result<(), bincode::Error> {
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
             assert!(
@@ -2381,7 +2381,7 @@ where
             }
         }
 
-        let next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
+        // let next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
         // let layer_size = next_input.len();
         // let relu_output_randomizers = state.relu_output_randomizers
         //                 [num_consumed_relus..(num_consumed_relus + layer_size)]
@@ -2393,10 +2393,10 @@ where
         //     .into();
         // next_input.randomize_local_share(&next_layer_derandomizer);
         // println!("receiving intermeidate result from user");
-        // let sent_message = MsgSend::new(&next_layer_input);
-        // crate::bytes::serialize(writer, &sent_message)?;
+        let sent_message = MsgSend::new(&next_layer_input);
+        crate::bytes::serialize(writer, &sent_message)?;
         // timer_end!(start_time);
-        Ok(next_input)
+        Ok(())
     }
 
 

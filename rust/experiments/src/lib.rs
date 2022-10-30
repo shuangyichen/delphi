@@ -84,6 +84,7 @@ pub fn nn_client<R: RngCore + CryptoRng>(
     input: Input<TenBitExpFP>,
     rng: &mut R,
 ) -> Input<TenBitExpFP>{
+    let start_pre = Instant::now();
     let (client_state, offline_read, offline_write) = {
         let (mut reader, mut writer) = client_connect(server_addr);
         (
@@ -93,7 +94,9 @@ pub fn nn_client<R: RngCore + CryptoRng>(
             writer.count(),
         )
     };
-
+    let duration = start_pre.elapsed();
+    println!("Preprocessing Time : {:?}",duration);
+    let start_inf = Instant::now();
     let (client_output, online_read, online_write) = {
         let (mut reader, mut writer) = client_connect(server_addr);
         (
@@ -109,14 +112,18 @@ pub fn nn_client<R: RngCore + CryptoRng>(
             writer.count(),
         )
     };
+    let duration2 = start_inf.elapsed();
+    println!("Inference Time : {:?}",duration);
     add_to_trace!(|| "Offline Communication", || format!(
         "Read {} bytes\nWrote {} bytes",
         offline_read, offline_write
     ));
+    println!("Preprocessing communication {} bytes",offline_read+offline_write);
     add_to_trace!(|| "Online Communication", || format!(
         "Read {} bytes\nWrote {} bytes",
         online_read, online_write
     ));
+    println!("Inference communication {} bytes",online_read+online_write);
     client_output
 }
 

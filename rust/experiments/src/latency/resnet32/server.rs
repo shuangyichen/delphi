@@ -38,7 +38,7 @@ fn main() {
     // let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
     // let port = args.value_of("port").unwrap_or("8000");
     // let server_addr = format!("0.0.0.0:{}", port);
-    let server_addr = "10.30.8.11:8001";
+    let server_addr = "10.30.8.11:8000";
     let layers:usize = 0; 
 
     let mut network = construct_resnet_32(None, 1, layers, &mut rng);
