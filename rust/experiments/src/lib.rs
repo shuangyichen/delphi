@@ -113,7 +113,7 @@ pub fn nn_client<R: RngCore + CryptoRng>(
         )
     };
     let duration2 = start_inf.elapsed();
-    println!("Inference Time : {:?}",duration);
+    println!("Inference Time : {:?}",duration2);
     add_to_trace!(|| "Offline Communication", || format!(
         "Read {} bytes\nWrote {} bytes",
         offline_read, offline_write
