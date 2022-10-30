@@ -332,6 +332,7 @@ where
                             let duration1 = start_user.elapsed();
                             println!("User l layer processed time part 2: {:?}", duration1);
                             if state.linear_randomizer.keys().any(|k| k == &(total_layer-2 - 1)) {
+                                println!("Avgpool");
                                 let mut prev_input_share = state.linear_randomizer.get(&(total_layer-2 - 1)).unwrap().clone();
                                 let prev_layer = &neural_network_architecture.layers[total_layer-3];
                                 let mut c_input_share = Input::zeros(dims.input_dimensions());
@@ -370,6 +371,7 @@ where
                                 };
                                 share
                             }else{
+                                println!("conv");
                                 LinearProtocol::<P>::offline_user_l_protocol(
                                     writer_a, 
                                     &mut cg_handler,
@@ -2803,7 +2805,7 @@ where
                     ).unwrap();
                     // If this is not the last layer, and if the next layer
                     // is also linear, randomize the output correctly.
-                    if i != (architecture.layers.len() - 1)
+                    if i != (architecture.layers.len() - 3)
                         && architecture.layers[i + 1].is_linear()
                     {
                         let mut randomizer = NNProtocol::transform(&state.linear_randomizer[&(i + 1)],layer.output_dimensions());
