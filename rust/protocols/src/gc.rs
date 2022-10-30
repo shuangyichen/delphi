@@ -1011,4 +1011,64 @@ where
         timer_end!(start_time);
         Ok(results)
     }
+
+
+    pub fn online_user_protocol<R: Read + Send>(
+        reader: &mut IMuxSync<R>,
+        num_relus: usize,
+        server_input_wires: &[Wire],
+        client_input_wires: &[Wire],
+        evaluators: &[GarbledCircuit],
+        next_layer_randomizers: &[AdditiveShare<P>],
+    ) -> Result<Vec<AdditiveShare<P>>, bincode::Error> {
+        let start_time = timer_start!(|| "ReLU online protocol");
+
+        let rcv_time = timer_start!(|| "Receiving inputs");
+        let in_msg: ClientLabelMsgRcv = crate::bytes::deserialize(reader)?;
+        let mut garbler_wires = in_msg.msg();
+        timer_end!(rcv_time);
+
+        let eval_time = timer_start!(|| "Evaluating GCs");
+        let c = make_relu::<P>();
+        let num_evaluator_inputs = c.num_evaluator_inputs();
+        let num_garbler_inputs = c.num_garbler_inputs();
+        garbler_wires
+            .iter_mut()
+            .zip(server_input_wires.chunks(num_garbler_inputs / 2))
+            .for_each(|(w1, w2)| w1.extend_from_slice(w2));
+
+        assert_eq!(num_relus, garbler_wires.len());
+        assert_eq!(num_evaluator_inputs * num_relus, client_input_wires.len());
+        // We access the input wires in reverse.
+        let c = make_relu::<P>();
+        let mut results = client_input_wires
+            .par_chunks(num_evaluator_inputs)
+            .zip(garbler_wires)
+            .zip(evaluators)
+            .map(|((eval_inps, garbler_inps), gc)| {
+                let mut c = c.clone();
+                let result = gc
+                    .eval(&mut c, &garbler_inps, eval_inps)
+                    .expect("evaluation failed");
+                let result = fancy_garbling::util::u128_from_bits(result.as_slice());
+                FixedPoint::new(P::Field::from_repr(u64::try_from(result).unwrap().into())).into()
+            })
+            .collect::<Vec<AdditiveShare<P>>>();
+        // for (i,res) in results.iter().enumerate(){
+        //     // if i==0{
+        //     //     for (j,re) in res.iter().enumerate(){
+        //             if i<10{
+        //                 println!("{}",res.inner);
+        //             }
+        //         // }
+        //     // }
+        // }
+        results
+            .iter_mut()
+            .zip(next_layer_randomizers)
+            .for_each(|(s, r)| *s = FixedPoint::<P>::randomize_local_share(s, &r.inner.inner));
+        timer_end!(eval_time);
+        timer_end!(start_time);
+        Ok(results)
+    }
 }

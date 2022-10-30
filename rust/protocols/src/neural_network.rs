@@ -67,9 +67,9 @@ pub struct UserState<P: FixedPointParameters> {
     pub relu_server_labels: Option<Vec<Vec<Wire>>>,
     pub relu_client_labels: Option<Vec<Vec<Wire>>>,
     pub relu_current_layer_randomizers: Vec<AdditiveShare<P>>,
-    pub relu_next_layer_randomizers: Vec<P::Field>,
+    pub relu_next_layer_randomizers: Vec<AdditiveShare<P>>,
     /// Randomizers for the input of a linear layer.
-    pub linear_randomizer: BTreeMap<usize, Input<P::Field>>,
+    pub linear_randomizer: BTreeMap<usize, Input<AdditiveShare<P>>>,
     /// Shares of the output of a linear layer
     pub linear_post_application_share: BTreeMap<usize, Output<AdditiveShare<P>>>,
     pub num_relu: usize,
@@ -300,44 +300,89 @@ where
             LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
             }
             LayerInfo::LL(dims, linear_layer_info) => {
+
                 let start_user = Instant::now();
                 let input_dims = dims.input_dimensions();
                 let output_dims = dims.output_dimensions();
-                let input_share = match &linear_layer_info {
-                    LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
-                        let mut cg_handler = match &linear_layer_info {
-                            LinearLayerInfo::Conv2d { .. } => {
-                                println!("Conv2d");
-                                SealUserCG::Conv2D(user_cg::Conv2D::new(
-                                    &lsmphe,
-                                    &linear_layer_info,
+
+                    let input_share = match &linear_layer_info {
+                        LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
+                            let mut cg_handler = match &linear_layer_info {
+                                LinearLayerInfo::Conv2d { .. } => {
+                                    println!("Conv2d");
+                                    SealUserCG::Conv2D(user_cg::Conv2D::new(
+                                        &lsmphe,
+                                        &linear_layer_info,
+                                        input_dims,
+                                        output_dims,
+                                    ))
+                                }
+                                LinearLayerInfo::FullyConnected => {
+                                    println!("FullyConnected");
+                                    SealUserCG::FullyConnected(user_cg::FullyConnected::new(
+                                        &lsmphe,
+                                        &linear_layer_info,
+                                        input_dims,
+                                        output_dims,
+                                    ))
+                                }
+                                _ => unreachable!(),
+                            };
+                            // println!("offline_user_l_protocol");
+                            let duration1 = start_user.elapsed();
+                            println!("User l layer processed time part 2: {:?}", duration1);
+                            if state.linear_randomizer.keys().any(|k| k == &(total_layer-2 - 1)) {
+                                let mut prev_input_share = state.linear_randomizer.get(&(total_layer-2 - 1)).unwrap().clone();
+                                let prev_layer = &neural_network_architecture.layers[total_layer-3];
+                                let mut c_input_share = Input::zeros(dims.input_dimensions());
+                                let share = match &prev_layer {
+                                    &LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
+                                        let mut prev_input_add_share = Input::zeros(dims.input_dimensions());
+                                        prev_input_add_share
+                                    }
+                                    &LayerInfo::NLL(dims, NonLinearLayerInfo::PolyApprox { .. }) => {
+                                        let mut prev_input_add_share = Input::zeros(dims.input_dimensions());
+                                        prev_input_add_share
+                                    }
+                                    &LayerInfo::LL(dims, prev_linear_layer_info) => {
+                                    let share = match &prev_linear_layer_info {
+                                        _ => {
+                                            // let mut prev_input_add_share = Input::zeros(dims.input_dimensions());
+
+                                            // prev_input_add_share.iter_mut()
+                                            //     .zip(prev_input_share)
+                                            //     .for_each(|(a,b)|{
+                                            //         *a = AdditiveShare::new(FixedPoint::from(*b));
+                                            //     });
+                                            prev_linear_layer_info.evaluate_naive(&prev_input_share, &mut c_input_share);
+                                            LinearProtocol::<P>::offline_user_l_pool_protocol(
+                                                writer_a, 
+                                                &mut cg_handler,
+                                                input_dims,
+                                                rng,
+                                                &mut c_input_share,
+                                            ).unwrap();
+                                            prev_input_share
+                                        }
+                                    };
+                                    share
+                                    }
+                                };
+                                share
+                            }else{
+                                LinearProtocol::<P>::offline_user_l_protocol(
+                                    writer_a, 
+                                    &mut cg_handler,
                                     input_dims,
-                                    output_dims,
-                                ))
+                                    rng,
+                                ).unwrap()
                             }
-                            LinearLayerInfo::FullyConnected => {
-                                println!("FullyConnected");
-                                SealUserCG::FullyConnected(user_cg::FullyConnected::new(
-                                    &lsmphe,
-                                    &linear_layer_info,
-                                    input_dims,
-                                    output_dims,
-                                ))
-                            }
-                            _ => unreachable!(),
-                        };
-                        // println!("offline_user_l_protocol");
-                        let duration1 = start_user.elapsed();
-                        println!("User l layer processed time part 2: {:?}", duration1);
-                        LinearProtocol::<P>::offline_user_l_protocol(
-                            writer_a, 
-                            &mut cg_handler,
-                            input_dims,
-                            rng,
-                        ).unwrap()
-                    }
-                    &LinearLayerInfo::AvgPool { .. } | &LinearLayerInfo::Identity => {Input::zeros(dims.input_dimensions())}
-            };
+
+                        }
+                        &LinearLayerInfo::AvgPool { .. } | &LinearLayerInfo::Identity => {Input::zeros(dims.input_dimensions())}
+                };
+                
+               
             let start_user_2 = Instant::now();
             state.relu_next_layer_randomizers.extend_from_slice(input_share.as_slice().unwrap());
             state.linear_randomizer.insert(total_layer-2,input_share);
@@ -345,6 +390,7 @@ where
             println!("User l layer processed time part 3: {:?}", duration2);
         }
     }
+}
     // let duration2 = start_user_2.elapsed();
     // // let duration1 = start_user.elapsed();
     // let duration = duration1+duration2;
@@ -357,7 +403,7 @@ where
     // let outshare_num = state.linear_post_application_share.iter().count();
     // println!("inshare_num {}",inshare_num);
     // println!("outshare_num {}",outshare_num);
-}
+
 
     pub fn offline_server_a_l_protocol<'a,R: Read + Send, W: Write + Send>(
         reader_a: &mut IMuxSync<R>,
@@ -1970,7 +2016,7 @@ where
                                 }
                                 _ => unreachable!(),
                             };
-                            LinearProtocol::<P>::offline_client_protocol(
+                            LinearProtocol::<P>::offline_user_protocol(
                                 reader,
                                 writer,
                                 layer.input_dimensions(),
@@ -1990,10 +2036,15 @@ where
                                     .evaluate_naive(prev_output_share, &mut output_share);
                                 (Input::zeros(dims.input_dimensions()), output_share)
                             } else {
+                                let mut inshare = Input::zeros(dims.input_dimensions());
+                                let mut outshare = Output::zeros(dims.output_dimensions());
+                                if i==layer_total-3{
+                                    inshare = LinearProtocol::generate_randomness(dims.input_dimensions(),rng);
+                                };
                                 // Otherwise, just return randomizers of 0
                                 (
-                                    Input::zeros(dims.input_dimensions()),
-                                    Output::zeros(dims.output_dimensions()),
+                                    inshare,
+                                    outshare,
                                 )
                             }
                         }
@@ -2597,31 +2648,31 @@ where
                             timer_end!(start_time);
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {
-                            let start_time = timer_start!(|| "Approx layer");
-                            let layer_size = next_layer_input.len();
-                            assert_eq!(dims.input_dimensions(), next_layer_input.dim());
-                            let triples = &state.approx_state
-                                [num_consumed_triples..(num_consumed_triples + layer_size)];
-                            num_consumed_triples += layer_size;
-                            let output = QuadApproxProtocol::online_client_protocol::<
-                                FPBeaversMul<P>,
-                                _,
-                                _,
-                            >(
-                                CLIENT, // party_index: 1
-                                reader,
-                                writer,
-                                &poly,
-                                next_layer_input.as_slice().unwrap(),
-                                triples,
-                            )?;
-                            next_layer_input = ndarray::Array1::from_iter(output)
-                                .into_shape(dims.output_dimensions())
-                                .expect("shape should be correct")
-                                .into();
-                            next_layer_input
-                                .randomize_local_share(&state.linear_randomizer[&(i + 1)]);
-                            timer_end!(start_time);
+                            // let start_time = timer_start!(|| "Approx layer");
+                            // let layer_size = next_layer_input.len();
+                            // assert_eq!(dims.input_dimensions(), next_layer_input.dim());
+                            // let triples = &state.approx_state
+                            //     [num_consumed_triples..(num_consumed_triples + layer_size)];
+                            // num_consumed_triples += layer_size;
+                            // let output = QuadApproxProtocol::online_client_protocol::<
+                            //     FPBeaversMul<P>,
+                            //     _,
+                            //     _,
+                            // >(
+                            //     CLIENT, // party_index: 1
+                            //     reader,
+                            //     writer,
+                            //     &poly,
+                            //     next_layer_input.as_slice().unwrap(),
+                            //     triples,
+                            // )?;
+                            // next_layer_input = ndarray::Array1::from_iter(output)
+                            //     .into_shape(dims.output_dimensions())
+                            //     .expect("shape should be correct")
+                            //     .into();
+                            // next_layer_input
+                            //     .randomize_local_share(&state.linear_randomizer[&(i + 1)]);
+                            // timer_end!(start_time);
                         }
                     }
                 }
@@ -2678,7 +2729,8 @@ where
         let mut num_consumed_triples = 0;
 
         let start_time = timer_start!(|| "Client online phase");
-        let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
+        let mut randomizer = NNProtocol::transform(&state.linear_randomizer[&0],first_layer_in_dims);
+        let (mut next_layer_input, _) = input.share_with_randomness(&randomizer);
         let total_layer = architecture.layers.iter().count();
         for (i, layer) in architecture.layers.iter().enumerate() {
             if i<total_layer-2{
@@ -2713,7 +2765,7 @@ where
                                 .into_iter()
                                 .flat_map(|l| l.clone())
                                 .collect::<Vec<_>>();
-                            let output = ReluProtocol::online_client_protocol(
+                            let output = ReluProtocol::online_user_protocol(
                                 reader,
                                 layer_size,              // num_relus
                                 &layer_server_labels,    // Labels for layer
@@ -2754,7 +2806,8 @@ where
                     if i != (architecture.layers.len() - 1)
                         && architecture.layers[i + 1].is_linear()
                     {
-                        next_layer_input.randomize_local_share(&state.linear_randomizer[&(i + 1)]);
+                        let mut randomizer = NNProtocol::transform(&state.linear_randomizer[&(i + 1)],layer.output_dimensions());
+                        next_layer_input.randomize_local_share(&randomizer);
                     }
                     timer_end!(start_time);
                 }

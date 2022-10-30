@@ -189,7 +189,7 @@ where
         let mut server_r: Output<FixedPoint<P>> = Output::zeros(output_dims);
         server_r.iter_mut()
         .for_each(|s_r|{
-          *s_r  = FixedPoint::from(generate_random_number(rng).0)
+          *s_r  = FixedPoint::from(generate_random_number(rng).0)  //FP
         });
 
 
@@ -198,7 +198,7 @@ where
         server_randomness.iter_mut()
         .zip(server_r.iter_mut())
         .for_each(|(s_ra,s_r)|{
-            *s_ra = (*s_r).inner
+            *s_ra = (*s_r).inner //P field
         });
         // TODO
         // for r in &mut server_randomness {
@@ -209,7 +209,7 @@ where
         server_randomness_c
             .iter_mut()
             .zip(&server_randomness)
-            .for_each(|(e1, e2)| *e1 = e2.into_repr().0);
+            .for_each(|(e1, e2)| *e1 = e2.into_repr().0); //
 
         // for s in &server_randomness{
         //     println!("SSSS:{}",*s);
@@ -496,12 +496,53 @@ where
 
     }
 
+    pub fn offline_user_l_pool_protocol<W: Write + Send, RNG: RngCore + CryptoRng>(
+        writer: &mut IMuxSync<W>,
+        user_cg: &mut SealUserCG,
+        input_dims: (usize, usize, usize, usize),
+        rng: &mut RNG,
+        input_share: &mut Input<AdditiveShare<P>>,
+    )-> Result<(),bincode::Error>{
+        let start_user = Instant::now();
+        
+        // let (n1, n2) = generate_random_number(rng);
+        let mut r2: Input<AdditiveShare<P>>  = Input::zeros(input_dims);
+
+
+        r2.iter_mut()
+          .zip(input_share.iter_mut())
+          .for_each(|(a,b)|{
+              *a = -(*b)
+          });
+        // println!("r u preprocessing ");
+        let mut r_u = user_cg.preprocess(&r2.to_repr());
+
+        let sent_message = OfflineServerMsgSend::new(&r_u);
+        let duration1 = start_user.elapsed();
+        crate::bytes::serialize(writer, &sent_message).unwrap();
+        // println!("r u sent ");
+        // let start_user_2 = Instant::now();
+        // let layer_randomness = input_share
+        //     .iter()
+        //     .map(|r: &AdditiveShare<P>| r.inner.inner)
+        //     .collect::<Vec<_>>();
+        // let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
+        //     .into_shape(input_dims)
+        //     .unwrap();
+        // let duration2 = start_user_2.elapsed();
+        let duration = duration1;
+    
+        println!("User l layer processed time part 1: {:?}", duration);
+        //return r2
+        Ok(())
+    }
+
     pub fn offline_user_l_protocol<W: Write + Send, RNG: RngCore + CryptoRng>(
         writer: &mut IMuxSync<W>,
         user_cg: &mut SealUserCG,
         input_dims: (usize, usize, usize, usize),
         rng: &mut RNG,
-    )-> Result<Input<P::Field>, bincode::Error>{
+    )-> Result<Input<AdditiveShare<P>>, bincode::Error>{
         let start_user = Instant::now();
         let mut r1_ = Input::zeros(input_dims);
         let mut r2_ = Input::zeros(input_dims);
@@ -532,20 +573,20 @@ where
         let duration1 = start_user.elapsed();
         crate::bytes::serialize(writer, &sent_message).unwrap();
         // println!("r u sent ");
-        let start_user_2 = Instant::now();
-        let layer_randomness = r1
-            .iter()
-            .map(|r: &AdditiveShare<P>| r.inner.inner)
-            .collect::<Vec<_>>();
-        let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
-            .into_shape(input_dims)
-            .unwrap();
-        let duration2 = start_user_2.elapsed();
-        let duration = duration1+duration2;
+        // let start_user_2 = Instant::now();
+        // let layer_randomness = r1
+        //     .iter()
+        //     .map(|r: &AdditiveShare<P>| r.inner.inner)
+        //     .collect::<Vec<_>>();
+        // let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
+        //     .into_shape(input_dims)
+        //     .unwrap();
+        // let duration2 = start_user_2.elapsed();
+        let duration = duration1;
     
         println!("User l layer processed time part 1: {:?}", duration);
         //return r2
-        Ok(layer_randomness.into())
+        Ok(r1)
     }
 
     pub fn generate_randomness<RNG: RngCore + CryptoRng>(
@@ -799,6 +840,7 @@ where
     // Output randomness to share the input in the online phase, and an additive
     // share of the output of after the linear function has been applied.
     // Basically, r and -(Lr + s).
+
     pub fn offline_client_protocol<
         'a,
         R: Read + Send,
@@ -812,6 +854,7 @@ where
         client_cg: &mut SealClientCG,
         rng: &mut RNG,
     ) -> Result<(Input<P::Field>, Output<AdditiveShare<P>>), bincode::Error> {
+    // ) -> Result<(Input<AdditiveShare<P>>, Output<AdditiveShare<P>>), bincode::Error> {
         // TODO: Add batch size
         let start_time = timer_start!(|| "Linear offline protocol");
         let preprocess_time = timer_start!(|| "Client preprocessing");
@@ -881,6 +924,90 @@ where
         timer_end!(start_time);
 
         Ok((layer_randomness.into(), client_share_next))
+    }
+    pub fn offline_user_protocol<
+        'a,
+        R: Read + Send,
+        W: Write + Send,
+        RNG: RngCore + CryptoRng,
+    >(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        input_dims: (usize, usize, usize, usize),
+        output_dims: (usize, usize, usize, usize),
+        client_cg: &mut SealClientCG,
+        rng: &mut RNG,
+    // ) -> Result<(Input<P::Field>, Output<AdditiveShare<P>>), bincode::Error> {
+    ) -> Result<(Input<AdditiveShare<P>>, Output<AdditiveShare<P>>), bincode::Error> {
+        // TODO: Add batch size
+        let start_time = timer_start!(|| "Linear offline protocol");
+        let preprocess_time = timer_start!(|| "Client preprocessing");
+
+
+        let mut r1_ = Input::zeros(input_dims);
+        let mut r2_ = Input::zeros(input_dims);
+        // let (n1, n2) = generate_random_number(rng);
+        r1_.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(r_1,r_2)|{
+            (*r_1, *r_2) = generate_random_number_r(rng)
+          });
+
+        
+
+        let mut r1: Input<AdditiveShare<P>>  = Input::zeros(input_dims); 
+        let mut r2: Input<AdditiveShare<P>>  = Input::zeros(input_dims);
+
+        r1.iter_mut()
+          .zip(r1_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+        r2.iter_mut()
+          .zip(r2_.iter_mut())
+          .for_each(|(a,b)|{
+              *a = AdditiveShare::new(FixedPoint::from(*b))
+          });
+        //***************************************
+        // Generate random share -> r2 = -r1 (because the secret being shared is zero).
+        // let client_share: Input<FixedPoint<P>> = Input::zeros(input_dims);
+        // let (r1, r2) = client_share.share(rng);
+        //***************************************
+
+        // Preprocess and encrypt client secret share for sending
+        let ct_vec = client_cg.preprocess(&r2.to_repr());
+        timer_end!(preprocess_time);
+
+        // Send layer_i randomness for processing by server.
+        let send_time = timer_start!(|| "Sending input");
+        let sent_message = OfflineClientMsgSend::new(&ct_vec);
+        crate::bytes::serialize(writer, &sent_message)?;
+        timer_end!(send_time);
+
+        let rcv_time = timer_start!(|| "Receiving Result");
+        let enc_result: OfflineClientMsgRcv = crate::bytes::deserialize(reader)?;
+        timer_end!(rcv_time);
+
+        let post_time = timer_start!(|| "Post-processing");
+        let mut client_share_next = Input::zeros(output_dims);
+        // Decrypt + reshape resulting ciphertext and free C++ allocations
+        client_cg.decrypt(enc_result.msg());
+        client_cg.postprocess(&mut client_share_next);
+
+        // Should be equal to -(L*r1 - s)
+        assert_eq!(client_share_next.dim(), output_dims);
+        // Extract the inner field element.
+        // let layer_randomness = r1
+        //     .iter()
+        //     .map(|r: &AdditiveShare<P>| r.inner.inner)
+        //     .collect::<Vec<_>>();
+        // let layer_randomness = ndarray::Array1::from_vec(layer_randomness)
+        //     .into_shape(input_dims)
+        //     .unwrap();
+        // timer_end!(post_time);
+        // timer_end!(start_time);
+
+        Ok((r1, client_share_next))
     }
 
     pub fn online_client_protocol<W: Write + Send>(
