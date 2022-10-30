@@ -55,15 +55,15 @@ def quantize(model):
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
     tflite_quant_model = converter.convert()
-   
+
     # Convert quantized weights back to keras model
     interpreter = tf.lite.Interpreter(model_content=tflite_quant_model)
     interpreter.allocate_tensors()
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
-    all_layers_details = interpreter.get_tensor_details() 
+    all_layers_details = interpreter.get_tensor_details()
 
-    for quant_layer in all_layers_details:   
+    for quant_layer in all_layers_details:
         name = quant_layer['name']
         if 'model' in name:
             layer_name = re.split('/', name)[1]
@@ -361,7 +361,7 @@ if __name__ == "__main__":
     if args.test_acc:
         dataset = cifar100 if args.model else cifar10
 
-    # Resolve paths 
+    # Resolve paths
     weights_path = path.abspath(args.weights_path)
     save_path = path.abspath(args.save_path) if args.save_path else os.path.curdir
 
@@ -382,4 +382,4 @@ if __name__ == "__main__":
     # serialize_weights(model, save_path)
     # serialize_weights_additive_share(model, save_path)
     # serialize_weights_additive_share_test(model, save_path)
-    serialize_weights_split_additive_share(model, save_path,2)
+    serialize_weights_split_additive_share(model, save_path,5)
