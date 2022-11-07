@@ -441,7 +441,7 @@ where
             // state.relu_next_layer_randomizers.splice(0..0,state.linear_randomizer[&0].as_slice().unwrap().iter().clone());
             state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
             let duration = start_l.elapsed();
-            println!("Preprocessing Time for l ABC P2 : {:?}", duration);
+            // println!("Preprocessing Time for l ABC P2 : {:?}", duration);
             // println!("{} {} {} {}",b,c,h,w);
             // println!("{} ",b*c*h*w);
 
@@ -615,11 +615,15 @@ where
         let mut tmp_shares:BTreeMap<usize,Input<AdditiveShare<P>>> = BTreeMap::new();
         let mut relu_layers = Vec::new();
         let (mut rsmphe_, mut lsmphe_, rlk_r1)= crate::root_server_keygen_r1(reader_b,reader_c,writer_b, writer_c);
-
+        let reader_b_cost = 0;
+        let writer_b_cost = 0;
+        let reader_c_cost = 0;
+        let writer_c_cost = 0;
         let (lsmphe, rsmphe)= crate::root_server_keygen_r2(lsmphe_, rsmphe_, rlk_r1.clone(), reader_b,reader_c);
 
         for (i, layer) in neural_network_architecture.layers.iter().enumerate() {
             if i>1{
+                // let start = Instant::now();
             match layer {
                 LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
                     println!("ReLU");
@@ -638,7 +642,8 @@ where
                     let start = Instant::now();
                     let input_dims = dims.input_dimensions();
                     let output_dims = dims.output_dimensions();
-                    // println!("{} {} {} {}",output_dims.0,output_dims.1,output_dims.2,output_dims.3);
+                    println!("{} {} {} {}",input_dims.0,input_dims.1,input_dims.2,input_dims.3);
+                    println!("{} {} {} {}",output_dims.0,output_dims.1,output_dims.2,output_dims.3);
                     let (in_share, mut out_share) = match &linear_layer_info {
                         LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
                             let mut cg_handler = match &linear_layer_info {
@@ -762,8 +767,20 @@ where
                     out_shares.insert(i, out_share);
                     let duration = start.elapsed();
                     println!("Time : {:?}", duration);
+                    // let reader_b_cost_cur = reader_b.count();
+                    // let writer_b_cost_cur = writer_b.count();
+                    // let reader_c_cost_cur = reader_c.count();
+                    // let writer_c_cost_cur = writer_c.count();
+                    // let cur_cost = reader_b_cost_cur - reader_b_cost + writer_b_cost_cur-writer_b_cost + reader_c_cost_cur - reader_c_cost + writer_c_cost_cur-writer_c_cost ;
+                    // reader_b_cost = reader_b_cost_cur;
+                    // writer_b_cost = writer_b_cost_cur;
+                    // reader_c_cost = reader_c_cost_cur;
+                    // writer_c_cost = writer_c_cost_cur;
+                    // println!("Communicaton : {} bytes", cur_cost);
                 }
             }
+            // let duration = start.elapsed();
+
         }
         }
 
@@ -1438,7 +1455,7 @@ where
                         let writer_c_cost = writer_c.count();
                         total_ac_count = total_ac_count+ reader_c_cost +writer_c_cost;
                         total_ab_count = total_ab_count+reader_b_cost+writer_b_cost;
-                    
+                        println!("Online total cost {} bytes", reader_c_cost +writer_c_cost+reader_b_cost+writer_b_cost);
                     // if i != (architecture.layers.len() - 1)
                     //     && architecture.layers[i + 1].is_linear()
                     // {
@@ -1463,8 +1480,8 @@ where
             duration = duration + tmp_duration;
         }
             let total_layers = architecture.layers.len();
-            println!("A B online total cost {} bytes", total_ab_count);
-            println!("A C online total cost {} bytes", total_ac_count);
+            // println!("A B online total cost {} bytes", total_ab_count);
+            // println!("A C online total cost {} bytes", total_ac_count);
             // let last_share = state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
             // println!("Last layer index {}",total_layers-1);
             // for (i, op) in last_share.iter().enumerate(){
@@ -1555,6 +1572,10 @@ where
                 //         });
                 // }
                 let input_dim = layer.input_dimensions();
+                let (b, c, h, w) = layer.input_dimensions();
+                println!("Input dimension: {} {} {} {}", b,c,h,w);
+                let (b2, c2, h2, w2) = layer.output_dimensions();
+                println!("Ouput dimension: {} {} {} {}", b2,c2,h2,w2);
                 // println!("input dimension {} {} {} {}",b,c,h,w);
                 next_layer_input = Output::zeros(layer.output_dimensions());
                 // for stream in serverb_listener.incoming() {

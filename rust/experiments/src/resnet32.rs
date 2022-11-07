@@ -684,38 +684,38 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         input_dims,
     );
 
-    resnet_block(
-        &mut network,
-        vs,
-        5,      // layer_size,
-        32,     // c_out
-        (3, 3), // kernel_size
-        2,      // stride
-        &relu_layers,
-        rng,
-    );
+    // resnet_block(
+    //     &mut network,
+    //     vs,
+    //     5,      // layer_size,
+    //     32,     // c_out
+    //     (3, 3), // kernel_size
+    //     2,      // stride
+    //     &relu_layers,
+    //     rng,
+    // );
 
-    resnet_block(
-        &mut network,
-        vs,
-        5,      // layer_size,
-        64,     // c_out
-        (3, 3), // kernel_size
-        2,      // stride
-        &relu_layers,
-        rng,
-    );
-    let avg_pool_input_dims = network.layers.last().unwrap().output_dimensions();
-    network.layers.push(Layer::LL(sample_avg_pool_layer(
-        avg_pool_input_dims,
-        (2, 2),
-        2,
-    )));
+    // resnet_block(
+    //     &mut network,
+    //     vs,
+    //     5,      // layer_size,
+    //     64,     // c_out
+    //     (3, 3), // kernel_size
+    //     2,      // stride
+    //     &relu_layers,
+    //     rng,
+    // );
+    // let avg_pool_input_dims = network.layers.last().unwrap().output_dimensions();
+    // network.layers.push(Layer::LL(sample_avg_pool_layer(
+    //     avg_pool_input_dims,
+    //     (2, 2),
+    //     2,
+    // )));
 
-    let fc_input_dims = network.layers.last().unwrap().output_dimensions();
-    let (fc, _) = sample_fc_layer(vs, fc_input_dims, 10, rng);
-    network.layers.push(Layer::LL(fc));
-    assert!(network.validate());
+    // let fc_input_dims = network.layers.last().unwrap().output_dimensions();
+    // let (fc, _) = sample_fc_layer(vs, fc_input_dims, 10, rng);
+    // network.layers.push(Layer::LL(fc));
+    // assert!(network.validate());
 
     network
 }

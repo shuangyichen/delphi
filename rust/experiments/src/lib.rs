@@ -197,7 +197,7 @@ pub fn nn_user<R: RngCore + CryptoRng>(
     );
     let reader_cost_ = reader_a.count();
     let writer_cost_ = writer_a.count();
-    println!("U A online total cost {} bytes", reader_cost_-reader_cost+writer_cost_-writer_cost);
+    // println!("U A online total cost {} bytes", reader_cost_-reader_cost+writer_cost_-writer_cost);
     // let duration1 = start_user.elapsed();
 
     println!("User Server finish eval");
@@ -262,6 +262,8 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
                
                  (sa_state,cpk,rsmphe_,lsmphe_)
             };
+    let conv_com = reader_b.count() +writer_b.count() +reader_c.count() +writer_c.count();
+    println!("Conv Preprocessing comm : {}", conv_com);
     let duration_pre_abc_1 = start_pre_abc_1.elapsed();
     //l+1 layer linear preprocessing
     let start_pre_abc_2 = Instant::now();
@@ -321,8 +323,8 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // let duration = duration3+duration2+duration1;
     let duration_pre_ua = duration_pre_ua_1+duration_pre_ua_2;
     let duration_pre_abc = duration_pre_abc_1+duration_relu_abc+duration3_relu_abc_2;
-    println!("Preprocessing Time U-A part1: {:?}", duration_pre_ua);
-    println!("Preprocessing Time ABC : {:?}", duration_pre_abc);
+    // println!("Preprocessing Time U-A part1: {:?}", duration_pre_ua);
+    // println!("Preprocessing Time ABC : {:?}", duration_pre_abc);
 
     
 
@@ -486,11 +488,11 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
         let reader_cost = reader_b.count();
         let writer_cost = writer_b.count();
         let ab_total_cost = reader_cost+writer_cost;
-        println!("A B preprocessing total cost {} bytes", ab_total_cost);
+        // println!("A B preprocessing total cost {} bytes", ab_total_cost);
         let reader_c_cost = reader_c.count();
         let writer_c_cost = writer_c.count();
         let bc_total_cost = reader_c_cost+writer_c_cost;
-        println!("B C preprocessing total cost {} bytes", bc_total_cost);
+        // println!("B C preprocessing total cost {} bytes", bc_total_cost);
         sb_state
     };
     
@@ -565,7 +567,7 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
         reader_cost = reader_c.count();
         writer_cost = writer_c.count();
         total_cost = total_cost+reader_cost+writer_cost;
-        println!("A C preprocessing total cost {} bytes", total_cost);
+        // println!("A C preprocessing total cost {} bytes", total_cost);
         sc_state
     };
     println!("Offline finished");
