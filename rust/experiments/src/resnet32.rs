@@ -446,6 +446,17 @@ pub fn construct_resnet_32_split_a<R: RngCore + CryptoRng>(
         &relu_layers,
         rng,
     );
+    
+    add_activation_layer(&mut network, &relu_layers);
+    conv_1_block(
+        &mut network,
+        vs,
+        (3, 3),
+        64,  //out_channel
+        2,
+        &relu_layers,
+        rng,
+    );
     add_activation_layer(&mut network, &relu_layers);
     
     // resnet_1_block(
@@ -574,7 +585,17 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
         &mut network,
         vs,
         (3, 3),
-        32,  //out_channel
+        64,  //out_channel
+        2,
+        &relu_layers,
+        rng,
+    );
+    add_activation_layer(&mut network, &relu_layers);
+    conv_1_block(
+        &mut network,
+        vs,
+        (3, 3),
+        64,  //out_channel
         1,
         &relu_layers,
         rng,
@@ -676,7 +697,7 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         },
     };
     // Dimensions of input image.
-    let input_dims = (batch_size, 32, 16, 16);
+    let input_dims = (batch_size, 64, 8, 8);
     // Dimensions of first kernel
     // let kernel_dims = (16, 3, 3, 3);
 
@@ -695,7 +716,7 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         &mut network,
         vs,
         5,      // layer_size,
-        32,     // c_out
+        64,     // c_out
         (3, 3), // kernel_size
         1,      // stride
         &relu_layers,
@@ -706,7 +727,7 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         &mut network,
         vs,
         (3, 3),
-        32,  //out_channel
+        64,  //out_channel
         1,
         &relu_layers,
         rng,
