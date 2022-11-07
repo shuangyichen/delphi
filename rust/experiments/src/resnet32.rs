@@ -683,6 +683,15 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         rng,
         input_dims,
     );
+    conv_1_block(
+        &mut network,
+        vs,
+        (3, 3),
+        16,  //out_channel
+        1,
+        &relu_layers,
+        rng,
+    );
 
     // resnet_block(
     //     &mut network,
