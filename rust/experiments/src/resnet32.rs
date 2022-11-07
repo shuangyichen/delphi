@@ -437,7 +437,16 @@ pub fn construct_resnet_32_split_a<R: RngCore + CryptoRng>(
     );
     network.layers.push(Layer::LL(conv_1));
     add_activation_layer(&mut network, &relu_layers);
-
+    conv_1_block(
+        &mut network,
+        vs,
+        (3, 3),
+        32,  //out_channel
+        2,
+        &relu_layers,
+        rng,
+    );
+    add_activation_layer(&mut network, &relu_layers);
     
     // resnet_1_block(
     //     &mut network,
@@ -560,6 +569,16 @@ pub fn construct_resnet_32_split<R: RngCore + CryptoRng>(
         &relu_layers,
         rng,
     );
+    add_activation_layer(&mut network, &relu_layers);
+    conv_1_block(
+        &mut network,
+        vs,
+        (3, 3),
+        32,  //out_channel
+        1,
+        &relu_layers,
+        rng,
+    );
     // resnet_block(
     //     &mut network,
     //     vs,
@@ -678,7 +697,7 @@ pub fn construct_resnet_32_second_split<R: RngCore + CryptoRng>(
         5,      // layer_size,
         32,     // c_out
         (3, 3), // kernel_size
-        2,      // stride
+        1,      // stride
         &relu_layers,
         rng,
         input_dims,
