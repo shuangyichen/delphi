@@ -324,6 +324,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
         sa_state.num_relu,
         &mut sa_state,
     );
+    println!("ReLU AB AC preprocessing cost {}",reader_c.count()+reader_b.count()+writer_b.count());
     println!("ReLU total {}", sa_state.num_relu);
     // println!("ReLU Preprocessing {:?}", duration_relu_abc+duration3_relu_abc_2);
     let duration3_relu_abc_2 = start_relu_abc_2.elapsed();
@@ -500,7 +501,7 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
         let reader_c_cost = reader_c.count();
         let writer_c_cost = writer_c.count();
         let bc_total_cost = reader_c_cost+writer_c_cost;
-        println!("B C preprocessing total cost {} bytes", bc_total_cost);
+        println!("B C relu preprocessing total cost {} bytes", bc_total_cost);
         sb_state
     };
     
