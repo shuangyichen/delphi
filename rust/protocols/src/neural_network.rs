@@ -9,7 +9,7 @@ use std::{
     io::{Read, Write},
     marker::PhantomData,
 };
-
+use std::convert::TryInto;
 use algebra::{
     fixed_point::{FixedPoint, FixedPointParameters},
     fp_64::Fp64Parameters,
@@ -1300,6 +1300,7 @@ where
                             // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
                             let output_dims = dims.output_dimensions();
                             let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;//next_layer_input.len();
+                            println!("ReLU size {}", layer_size);
                             let mut rb_garbler_wires : Vec<Vec<Wire>>  = Vec::with_capacity(layer_size);
                          
                             rb_garbler_wires =  ReluProtocol::<P>::online_server_a_protocol(&mut reader_b);
@@ -1344,6 +1345,8 @@ where
                             .into();
                             let duration = start.elapsed();
                             println!("Time : {:?}", duration);
+                            let avg_relu = duration/layer_size.try_into().unwrap();;
+                            println!("Single ReLU Time : {:?}", duration);
                             let reader_c_cost = reader_c.count();
                             // let writer_b_cost = writer_b.count();
                             total_ac_count = total_ac_count+ reader_c_cost;
@@ -1353,6 +1356,7 @@ where
                             //         println!("{}", inp);
                             //     }
                             // }
+                            println!("AB AC relu {} bytes",reader_c_cost+reader_b_cost +writer_b_cost);
                            
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {}
@@ -1511,7 +1515,7 @@ where
             // let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
             match layer {
             Layer::NLL(NonLinearLayer::ReLU(dims)) => {
-                println!("ReLU");
+                println!("ReLU {}", i);
                 assert_eq!(dims.input_dimensions(), next_layer_input.dim());
 
                 let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
@@ -1538,6 +1542,7 @@ where
                 let reader_c_cost = reader_c.count();
                 let writer_c_cost = writer_c.count();
                 total_bc = total_bc+ reader_c_cost + writer_c_cost;
+                println!("BC relu {}", reader_c_cost + writer_c_cost);
             }
             Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
             Layer::LL(layer) => {
