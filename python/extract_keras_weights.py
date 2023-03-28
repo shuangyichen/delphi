@@ -351,6 +351,8 @@ if __name__ == "__main__":
     parser.add_argument('model', type=int, help='<REQUIRED> Use Minionn (0) or Resnet32 (1)')
     parser.add_argument('-w', '--weights_path', required=True, type=str,
                         help='<REQUIRED> Path to model weights')
+    parser.add_argument('-sp', '--split_layer', required=True, type=int,
+                        help='<REQUIRED> Path to model weights')
     parser.add_argument('-s', '--save_path', required=False, type=str,
                         help='Path to save (default is cwd)')
     parser.add_argument('-q', '--quantize', required=False, action="store_true",
@@ -363,6 +365,7 @@ if __name__ == "__main__":
 
     # Select correct model and dataset
     model_builder = resnet32_model if args.model else minionn_model
+    split_layer = args.split_layer
     dataset = None
     if args.test_acc:
         dataset = cifar100 if args.model else cifar10
@@ -386,7 +389,7 @@ if __name__ == "__main__":
             print(f"Quantized Accuracy: {acc}%")
     model.summary()
     # Serialize weights for Rust
-    serialize_weights(model, save_path)
+    # serialize_weights(model, save_path)
     # serialize_weights_additive_share(model, save_path)
     # serialize_weights_additive_share_test(model, save_path)
-    # serialize_weights_split_additive_share(model, save_path,2)
+    serialize_weights_split_additive_share(model, save_path,split_layer)
