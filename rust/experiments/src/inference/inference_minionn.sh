@@ -26,7 +26,7 @@ python3 ../../../../python/extract_keras_weights.py 0 --weights_path  ../../../.
 
 if [ $INDEX -eq 0 ]
 then
-    cargo +nightly run --release --bin minionn-user --ip_a $IP_A  --ip_u $IP_U --split $SPLIT
+    cargo +nightly run --release --bin minionn-user -- --ip_a $IP_A  --ip_u $IP_U --split $SPLIT
 fi
 if [ $INDEX -eq 1 ]
 then
