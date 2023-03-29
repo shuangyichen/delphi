@@ -6,8 +6,8 @@ use std::{io::BufReader, net::TcpStream};
 use experiments::nn_client;
 use neural_network::{ndarray::Array4, npy::NpyData};
 use clap::{App, Arg, ArgMatches};
-use experiments::minionn::construct_minionn_split;
-use experiments::resnet32::construct_resnet_32_split;
+// use experiments::minionn::construct_minionn_split;
+use experiments::resnet32::construct_resnet_32_user;
 use std::io::Read;
 use std::path::Path;
 use rand::ChaChaRng;
@@ -22,54 +22,46 @@ const RANDOMNESS: [u8; 32] = [
 
 fn get_args() -> ArgMatches<'static> {
     App::new("resnet-32-user")
-        // .arg(
-        //     Arg::with_name("ip_a")
-        //         .short("i_a")
-        //         .long("ip_a")
-        //         .takes_value(true)
-        //         .help("Server A IP address")
-        //         .required(true),
-        // )
-        // .arg(
-        //     Arg::with_name("port_a")
-        //         .short("p_a")
-        //         .long("port_a")
-        //         .takes_value(true)
-        //         .help("Server A port (default 8000)")
-        //         .required(false),
-        // )
-        // .arg(
-        //     Arg::with_name("ip_b")
-        //         .short("i_b")
-        //         .long("ip_b")
-        //         .takes_value(true)
-        //         .help("Server B IP address")
-        //         .required(true),
-        // )
-        // .arg(
-        //     Arg::with_name("port_b")
-        //         .short("p_b")
-        //         .long("port_b")
-        //         .takes_value(true)
-        //         .help("Server B port (default 8000)")
-        //         .required(false),
-        // )
-        // .arg(
-        //     Arg::with_name("ip_c")
-        //         .short("i_c")
-        //         .long("ip_c")
-        //         .takes_value(true)
-        //         .help("Server C IP address")
-        //         .required(true),
-        // )
-        // .arg(
-        //     Arg::with_name("port_c")
-        //         .short("p_c")
-        //         .long("port_c")
-        //         .takes_value(true)
-        //         .help("Server C port (default 8000)")
-        //         .required(false),
-        // )
+        .arg(
+            Arg::with_name("ip_a")
+                .short("i_a")
+                .long("ip_a")
+                .takes_value(true)
+                .help("Server A IP address")
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("port_a")
+                .short("p_a")
+                .long("port_a")
+                .takes_value(true)
+                .help("Server A port (default 8000)")
+                .required(false),
+        )
+        .arg(
+            Arg::with_name("ip_u")
+                .short("i_u")
+                .long("ip_u")
+                .takes_value(true)
+                .help("User IP address")
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("port_u")
+                .short("p_u")
+                .long("port_u")
+                .takes_value(true)
+                .help("User port (default 8000)")
+                .required(false),
+        )
+        .arg(
+            Arg::with_name("split")
+                .short("s")
+                .long("split")
+                .takes_value(true)
+                .help("Split layer index")
+                .required(true),
+        )
         // .arg(
         //     Arg::with_name("weights")
         //         .short("w")
@@ -88,23 +80,20 @@ fn main() {
 
     let layers:usize = 0; 
 
-    // let ip_a = args.value_of("ip_a").unwrap();
-    // let port_a = args.value_of("port_a").unwrap_or("8000");
-    // let server_a_addr = format!("{}:{}", ip_a, port_a);
+    let ip_a = args.value_of("ip_a").unwrap();
+    let port_a = args.value_of("port_a").unwrap_or("8000");
+    let server_a_addr = format!("{}:{}", ip_a, port_a);
 
-    // let ip_b = args.value_of("ip_a").unwrap();
-    // let port_b = args.value_of("port_a").unwrap_or("8000");
-    // let server_b_addr = format!("{}:{}", ip_b, port_b);
+    let ip_u = args.value_of("ip_u").unwrap();
+    let port_u = args.value_of("port_u").unwrap_or("8000");
+    let user_addr = format!("{}:{}", ip_u, port_u);
 
-    // let ip_c = args.value_of("ip_a").unwrap();
-    // let port_c = args.value_of("port_a").unwrap_or("8000");
-    // let server_c_addr = format!("{}:{}", ip_b, port_b);
-    let user_addr = "10.30.8.5:8000";
-    let server_a_addr = "10.30.8.15:8000";
 
-    let split_layer:usize = 1;
-    let output_size :usize = 10;
-    let network = construct_resnet_32_split(None, 1, layers, &mut rng,split_layer);
+    // let split_layer:usize = 1;
+    let split_layer:usize = args.value_of("split").unwrap().parse().unwrap();
+    let output_size :usize = 100;
+    let network = construct_resnet_32_user(None,split_layer,&mut rng);
+    // let network = construct_resnet_32_split(None, 1, layers, &mut rng,split_layer);
     // let network = construct_minionn_test(None, 1, layers, &mut rng);
     let architecture = (&network).into();
 

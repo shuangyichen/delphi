@@ -7,6 +7,116 @@ use rand::{CryptoRng, RngCore};
 
 use super::*;
 
+pub fn construct_resnet_32_user<R: RngCore + CryptoRng>(
+    // nn: &mut NeuralNetwork<TenBitAS, TenBitExpFP>,
+    vs: Option<&tch::nn::Path>,
+    split_layer: usize,
+    rng: &mut R,
+)-> NeuralNetwork<TenBitAS, TenBitExpFP>{
+    let mut nn = construct_resnet_32(None,1,0,rng);
+    let layers = nn.layers.len();
+    // println!("Full network {} layers", layers);
+    let out_layers = layers-split_layer;
+
+    let mut tmp_network = match &vs {
+        Some(vs) => NeuralNetwork {
+            layers: vec![],
+            eval_method: ::neural_network::EvalMethod::TorchDevice(vs.device()),
+        },
+        None => NeuralNetwork {
+            layers: vec![],
+            ..Default::default()
+        },
+    };
+    while tmp_network.layers.len() < out_layers-1{
+        let layer = nn.layers.pop().unwrap();
+        tmp_network.layers.push(layer);
+    }
+    // while output_network.layers.len() < out_layers{
+    //     let layer = tmp_network.layers.pop().unwrap();
+    //     output_network.layers.push(layer);
+    // }
+    println!("User network {} layers", nn.layers.len());
+    nn
+
+}
+
+pub fn construct_resnet_32_gateway<R: RngCore + CryptoRng>(
+    // nn: &mut NeuralNetwork<TenBitAS, TenBitExpFP>,
+    vs: Option<&tch::nn::Path>,
+    split_layer: usize,
+    rng: &mut R,
+)-> NeuralNetwork<TenBitAS, TenBitExpFP>{
+    let mut nn = construct_resnet_32(None,1,0,rng);
+    let layers = nn.layers.len();
+    // println!("Full network {} layers", layers);
+    let out_layers = layers-split_layer;
+
+    let mut tmp_network = match &vs {
+        Some(vs) => NeuralNetwork {
+            layers: vec![],
+            eval_method: ::neural_network::EvalMethod::TorchDevice(vs.device()),
+        },
+        None => NeuralNetwork {
+            layers: vec![],
+            ..Default::default()
+        },
+    };
+    while tmp_network.layers.len() < out_layers{
+        let layer = nn.layers.pop().unwrap();
+        tmp_network.layers.push(layer);
+    }
+    // while output_network.layers.len() < out_layers{
+    //     let layer = tmp_network.layers.pop().unwrap();
+    //     output_network.layers.push(layer);
+    // }
+    println!("gateway network {} layers", nn.layers.len());
+    nn
+
+}
+pub fn construct_resnet_32_remote<R: RngCore + CryptoRng>(
+    // nn: &mut NeuralNetwork<TenBitAS, TenBitExpFP>,
+    vs: Option<&tch::nn::Path>,
+    split_layer: usize,
+    rng: &mut R,
+)-> NeuralNetwork<TenBitAS, TenBitExpFP>{
+    let mut nn = construct_resnet_32(None,1,0,rng);
+    let layers = nn.layers.len();
+    // println!("Full network {} layers", layers);
+    let out_layers = layers-split_layer;
+    let mut output_network = match &vs {
+        Some(vs) => NeuralNetwork {
+            layers: vec![],
+            eval_method: ::neural_network::EvalMethod::TorchDevice(vs.device()),
+        },
+        None => NeuralNetwork {
+            layers: vec![],
+            ..Default::default()
+        },
+    };
+    let mut tmp_network = match &vs {
+        Some(vs) => NeuralNetwork {
+            layers: vec![],
+            eval_method: ::neural_network::EvalMethod::TorchDevice(vs.device()),
+        },
+        None => NeuralNetwork {
+            layers: vec![],
+            ..Default::default()
+        },
+    };
+    while tmp_network.layers.len() < out_layers{
+        let layer = nn.layers.pop().unwrap();
+        tmp_network.layers.push(layer);
+    }
+    while output_network.layers.len() < out_layers{
+        let layer = tmp_network.layers.pop().unwrap();
+        output_network.layers.push(layer);
+    }
+    println!("Remote network {} layers", output_network.layers.len());
+    output_network
+
+}
+
 // It may be the case that down-sampling happens here.
 fn conv_block<R: RngCore + CryptoRng>(
     nn: &mut NeuralNetwork<TenBitAS, TenBitExpFP>,
