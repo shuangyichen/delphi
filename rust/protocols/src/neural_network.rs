@@ -1937,7 +1937,7 @@ where
         // println!("total layer {}",layer_total);
 
         for (i, layer) in neural_network_architecture.layers.iter().enumerate() {
-            if i< layer_total-1{
+            if i< layer_total-2{
             match layer {
                 LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
                     relu_layers.push(i);
