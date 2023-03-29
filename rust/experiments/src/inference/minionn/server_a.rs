@@ -136,8 +136,8 @@ fn main() {
     network1.from_numpy(&weights_1).unwrap();
 
     //split 2 
-    // let network2 = construct_minionn_remote(None, split_layer,&mut rng);
-    let network2 = construct_minionn_second_split(None, 1, 0, &mut rng,2);
+    let network2 = construct_minionn_remote(None, split_layer,&mut rng);
+    // let network2 = construct_minionn_second_split(None, 1, 0, &mut rng,2);
     let architecture2 = (&network2).into();
 
     nn_root_server(&user_addr,&server_a_addr,&server_b_addr,&server_c_addr,&network1,&architecture2,&mut rng,out_channel);

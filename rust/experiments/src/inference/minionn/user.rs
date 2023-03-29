@@ -117,8 +117,8 @@ fn main() {
     // let split_layer:usize = 1;
     let split_layer:usize = args.value_of("split").unwrap().parse().unwrap();
     let output_size :usize = 10;
-    // let network = construct_minionn_user(None, split_layer,&mut rng);
-    let network = construct_minionn_split(None, 1, layers, &mut rng,2);
+    let network = construct_minionn_user(None, split_layer,&mut rng);
+    // let network = construct_minionn_split(None, 1, layers, &mut rng,2);
     let architecture = (&network).into();
 
     let mut buf = vec![];

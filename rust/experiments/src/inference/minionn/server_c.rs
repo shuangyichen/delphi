@@ -88,8 +88,8 @@ fn main(){
 
     let weights_c = args.value_of("weights").unwrap();
     let split_layer:usize = args.value_of("split").unwrap().parse().unwrap();
-    // let mut network_c = construct_minionn_remote(None, split_layer,&mut rng);
-    let mut network_c = construct_minionn_second_split(None, 1, layers, &mut rng,2);
+    let mut network_c = construct_minionn_remote(None, split_layer,&mut rng);
+    // let mut network_c = construct_minionn_second_split(None, 1, layers, &mut rng,2);
     network_c.from_numpy(&weights_c).unwrap();
 
     let ip_a = args.value_of("ip_a").unwrap();
