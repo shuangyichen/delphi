@@ -22,7 +22,7 @@ IP_B="10.30.8.5"
 IP_C="10.30.8.11"
 SPLIT=2
 
-python3 ../../../../python/extract_keras_weights.py 0 --weights_path  ../../../../python/minionn/pretrained/relu/model --split_layer $SPLIT
+# python3 ../../../../python/extract_keras_weights.py 0 --weights_path  ../../../../python/minionn/pretrained/relu/model --split_layer $SPLIT
 
 if [ $INDEX -eq 0 ]
 then
