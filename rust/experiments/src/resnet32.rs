@@ -547,7 +547,7 @@ pub fn construct_resnet_32<R: RngCore + CryptoRng>(
     )));
 
     let fc_input_dims = network.layers.last().unwrap().output_dimensions();
-    let (fc, _) = sample_fc_layer(vs, fc_input_dims, 10, rng);
+    let (fc, _) = sample_fc_layer(vs, fc_input_dims, 100, rng);
     network.layers.push(Layer::LL(fc));
     assert!(network.validate());
 
