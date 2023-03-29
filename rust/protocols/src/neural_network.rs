@@ -293,7 +293,7 @@ where
         // println!("total num {}", total_num);
 
         //define cg, processing the last layer
-        let layer = &neural_network_architecture.layers[total_layer-2];
+        let layer = &neural_network_architecture.layers[total_layer-1];
         match layer {
             LayerInfo::NLL(dims, NonLinearLayerInfo::ReLU) => {
             }
@@ -340,7 +340,7 @@ where
             };
             let start_user_2 = Instant::now();
             state.relu_next_layer_randomizers.extend_from_slice(input_share.as_slice().unwrap());
-            state.linear_randomizer.insert(total_layer-2,input_share);
+            state.linear_randomizer.insert(total_layer-1,input_share);
             let duration2 = start_user_2.elapsed();
             println!("User l layer processed time part 3: {:?}", duration2);
         }
@@ -2026,7 +2026,7 @@ where
                  .get(&(i - 1))
                  .expect("should exist because every ReLU should be preceeded by a linear layer");
              current_layer_shares.extend_from_slice(current_layer_output_shares.as_slice().unwrap());
-             if (i+1)< layer_total-2{
+             if (i+1)< layer_total-1{
              let next_layer_randomizers = in_shares
                  .get(&(i + 1))
                  .expect("should exist because every ReLU should be succeeded by a linear layer");

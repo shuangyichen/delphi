@@ -28,7 +28,7 @@ pub fn construct_minionn_user<R: RngCore + CryptoRng>(
             ..Default::default()
         },
     };
-    while tmp_network.layers.len() < out_layers-2{
+    while tmp_network.layers.len() < out_layers-1{
         let layer = nn.layers.pop().unwrap();
         tmp_network.layers.push(layer);
     }
@@ -36,7 +36,7 @@ pub fn construct_minionn_user<R: RngCore + CryptoRng>(
     //     let layer = tmp_network.layers.pop().unwrap();
     //     output_network.layers.push(layer);
     // }
-    // println!("User network {} layers", nn.layers.len());
+    println!("User network {} layers", nn.layers.len());
     nn
 
 }
