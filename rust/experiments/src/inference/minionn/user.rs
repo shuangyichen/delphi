@@ -6,6 +6,7 @@ use std::{io::BufReader, net::TcpStream};
 use experiments::nn_client;
 use neural_network::{ndarray::Array4, npy::NpyData};
 use clap::{App, Arg, ArgMatches};
+use experiments::minionn::construct_minionn_split;
 use experiments::minionn::construct_minionn_user;
 use std::io::Read;
 use std::path::Path;
