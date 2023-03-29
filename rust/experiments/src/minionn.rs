@@ -28,7 +28,7 @@ pub fn construct_minionn_user<R: RngCore + CryptoRng>(
             ..Default::default()
         },
     };
-    while tmp_network.layers.len() < out_layers-1{
+    while tmp_network.layers.len() < out_layers-2{
         let layer = nn.layers.pop().unwrap();
         tmp_network.layers.push(layer);
     }
