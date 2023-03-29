@@ -15,7 +15,7 @@ pub fn construct_minionn_user<R: RngCore + CryptoRng>(
 )-> NeuralNetwork<TenBitAS, TenBitExpFP>{
     let mut nn = construct_minionn(None,1,0,rng);
     let layers = nn.layers.len();
-    println!("Full network {} layers", layers);
+    // println!("Full network {} layers", layers);
     let out_layers = layers-split_layer;
 
     let mut tmp_network = match &vs {
@@ -36,7 +36,7 @@ pub fn construct_minionn_user<R: RngCore + CryptoRng>(
     //     let layer = tmp_network.layers.pop().unwrap();
     //     output_network.layers.push(layer);
     // }
-    println!("User network {} layers", nn.layers.len());
+    // println!("User network {} layers", nn.layers.len());
     nn
 
 }
@@ -49,7 +49,7 @@ pub fn construct_minionn_gateway<R: RngCore + CryptoRng>(
 )-> NeuralNetwork<TenBitAS, TenBitExpFP>{
     let mut nn = construct_minionn(None,1,0,rng);
     let layers = nn.layers.len();
-    println!("Full network {} layers", layers);
+    // println!("Full network {} layers", layers);
     let out_layers = layers-split_layer;
 
     let mut tmp_network = match &vs {
@@ -82,7 +82,7 @@ pub fn construct_minionn_remote<R: RngCore + CryptoRng>(
 )-> NeuralNetwork<TenBitAS, TenBitExpFP>{
     let mut nn = construct_minionn(None,1,0,rng);
     let layers = nn.layers.len();
-    println!("Full network {} layers", layers);
+    // println!("Full network {} layers", layers);
     let out_layers = layers-split_layer;
     let mut output_network = match &vs {
         Some(vs) => NeuralNetwork {

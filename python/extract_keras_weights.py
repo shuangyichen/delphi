@@ -336,7 +336,7 @@ def serialize_weights_split_additive_share(model, save_path,split):
                 b_shape = b.shape
                 np.random.seed(1)
                 A1 = np.random.random(a_shape)
-                print(A1[0:10])
+                # print(A1[0:10])
                 A2 = A-A1
                 np.random.seed(1)
                 b1 = np.random.random(b_shape)
