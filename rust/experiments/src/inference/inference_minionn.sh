@@ -18,8 +18,8 @@
 INDEX=$1
 IP_U="10.30.8.7" 
 IP_A="10.30.8.15"
-IP_B="10.30.8.11"
-IP_C="10.30.8.5"
+IP_B="10.30.8.5"
+IP_C="10.30.8.11"
 SPLIT=2
 
 python3 ../../../../python/extract_keras_weights.py 0 --weights_path  ../../../../python/minionn/pretrained/relu/model --split_layer $SPLIT
