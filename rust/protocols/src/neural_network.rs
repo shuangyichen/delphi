@@ -342,7 +342,7 @@ where
             state.relu_next_layer_randomizers.extend_from_slice(input_share.as_slice().unwrap());
             state.linear_randomizer.insert(total_layer-1,input_share);
             let duration2 = start_user_2.elapsed();
-            println!("User l layer processed time part 3: {:?}", duration2);
+            // println!("User l layer processed time part 3: {:?}", duration2);
         }
     }
     // let duration2 = start_user_2.elapsed();
@@ -441,7 +441,7 @@ where
             // state.relu_next_layer_randomizers.splice(0..0,state.linear_randomizer[&0].as_slice().unwrap().iter().clone());
             state.num_relu += output_dims.0*output_dims.1*output_dims.2*output_dims.3;
             let duration = start_l.elapsed();
-            println!("Preprocessing Time for l ABC P2 : {:?}", duration);
+            // println!("Preprocessing Time for l ABC P2 : {:?}", duration);
             // println!("{} {} {} {}",b,c,h,w);
             // println!("{} ",b*c*h*w);
 
@@ -543,7 +543,7 @@ where
             }
         }
         crate::rcv_sign(reader_b);
-        println!("b rec signal for l");
+        // println!("b rec signal for l");
     }
 
     pub fn offline_server_c_l_protocol<'a ,R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
@@ -1300,7 +1300,7 @@ where
                             // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
                             let output_dims = dims.output_dimensions();
                             let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;//next_layer_input.len();
-                            println!("ReLU size {}", layer_size);
+                            // println!("ReLU size {}", layer_size);
                             let mut rb_garbler_wires : Vec<Vec<Wire>>  = Vec::with_capacity(layer_size);
                          
                             rb_garbler_wires =  ReluProtocol::<P>::online_server_a_protocol(&mut reader_b);
@@ -1346,7 +1346,7 @@ where
                             let duration = start.elapsed();
                             println!("Time : {:?}", duration);
                             let avg_relu = duration/layer_size.try_into().unwrap();;
-                            println!("Single ReLU Time : {:?}", duration);
+                            // println!("Single ReLU Time : {:?}", duration);
                             let reader_c_cost = reader_c.count();
                             // let writer_b_cost = writer_b.count();
                             total_ac_count = total_ac_count+ reader_c_cost;
@@ -1356,7 +1356,7 @@ where
                             //         println!("{}", inp);
                             //     }
                             // }
-                            println!("AB AC relu {} bytes",reader_c_cost+reader_b_cost +writer_b_cost);
+                            // println!("AB AC relu {} bytes",reader_c_cost+reader_b_cost +writer_b_cost);
                            
                         }
                         NonLinearLayerInfo::PolyApprox { poly, .. } => {}

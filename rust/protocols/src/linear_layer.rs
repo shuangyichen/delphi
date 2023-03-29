@@ -444,7 +444,7 @@ where
         let mut share_next = Input::zeros(output_dims);
         rserver_cg.postprocess(&mut share_next);
         let duration = start_l.elapsed();
-        println!("Preprocessing Time for l ABC P1 : {:?}", duration);
+        // println!("Preprocessing Time for l ABC P1 : {:?}", duration);
         Ok(share_next)
 
     }
@@ -543,7 +543,7 @@ where
         let duration2 = start_user_2.elapsed();
         let duration = duration1+duration2;
     
-        println!("User l layer processed time part 1: {:?}", duration);
+        // println!("User l layer processed time part 1: {:?}", duration);
         //return r2
         Ok(layer_randomness.into())
     }
@@ -913,7 +913,7 @@ where
         layer: &LinearLayerInfo<AdditiveShare<P>, FixedPoint<P>>,
         next_layer_input: &mut Output<AdditiveShare<P>>,
     ) -> Result<(), bincode::Error> {
-        println!("Function online_server_a_protocol");
+        // println!("Function online_server_a_protocol");
         // let start = timer_start!(|| "Linear online protocol");
         match layer {
             LinearLayerInfo::Conv2d { .. } | LinearLayerInfo::FullyConnected => {
@@ -944,7 +944,7 @@ where
         let mut input: Input<AdditiveShare<P>> = match &layer {
             LinearLayer::Conv2d { .. } | LinearLayer::FullyConnected { .. } => {
                 let recv: MsgRcv<P> = crate::bytes::deserialize(reader).unwrap();
-                println!("receving online msg from A");
+                // println!("receving online msg from A");
                 recv.msg()
             }
             _ => Input::zeros(input_derandomizer.dim()),

@@ -36,7 +36,7 @@ pub fn construct_resnet_32_user<R: RngCore + CryptoRng>(
     //     let layer = tmp_network.layers.pop().unwrap();
     //     output_network.layers.push(layer);
     // }
-    println!("User network {} layers", nn.layers.len());
+    // println!("User network {} layers", nn.layers.len());
     nn
 
 }
