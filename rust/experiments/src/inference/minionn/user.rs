@@ -71,11 +71,19 @@ fn get_args() -> ArgMatches<'static> {
         //         .required(false),
         // )
         .arg(
-            Arg::with_name("weights")
-                .short("w")
-                .long("weights")
+            Arg::with_name("class")
+                .short("c")
+                .long("class")
                 .takes_value(true)
-                .help("Path to weights")
+                .help("Path to class")
+                .required(false),
+        )
+        .arg(
+            Arg::with_name("image")
+                .short("i")
+                .long("image")
+                .takes_value(true)
+                .help("Path to image")
                 .required(false),
         )
         .arg(
@@ -104,6 +112,8 @@ fn main() {
     let port_u = args.value_of("port_u").unwrap_or("8000");
     let user_addr = format!("{}:{}", ip_u, port_u);
 
+    let class_str = args.value_of("class").unwrap();
+    let image_str = args.value_of("image").unwrap();
     // let ip_b = args.value_of("ip_a").unwrap();
     // let port_b = args.value_of("port_a").unwrap_or("8000");
     // let server_b_addr = format!("{}:{}", ip_b, port_b);
@@ -122,14 +132,14 @@ fn main() {
     let architecture = (&network).into();
 
     let mut buf = vec![];
-    std::fs::File::open(Path::new("class.npy"))
+    std::fs::File::open(Path::new(class_str))
         .unwrap()
         .read_to_end(&mut buf)
         .unwrap();
     let class: i64 = NpyData::from_bytes(&buf).unwrap().to_vec()[0];
 
     buf = vec![];
-    std::fs::File::open(Path::new("image.npy"))
+    std::fs::File::open(Path::new(image_str))
         .unwrap()
         .read_to_end(&mut buf)
         .unwrap();

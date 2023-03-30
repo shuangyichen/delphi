@@ -89,14 +89,14 @@ fn get_args() -> ArgMatches<'static> {
                 .help("Split layer index")
                 .required(true),
         )
-        // .arg(
-        //     Arg::with_name("weights")
-        //         .short("w")
-        //         .long("weights")
-        //         .takes_value(true)
-        //         .help("Path to weights")
-        //         .required(true),
-        // )
+        .arg(
+            Arg::with_name("weights")
+                .short("w")
+                .long("weights")
+                .takes_value(true)
+                .help("Path to weights")
+                .required(false),
+        )
         .get_matches()
 }
 

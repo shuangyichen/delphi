@@ -62,6 +62,22 @@ fn get_args() -> ArgMatches<'static> {
                 .help("Split layer index")
                 .required(true),
         )
+        .arg(
+            Arg::with_name("class")
+                .short("c")
+                .long("class")
+                .takes_value(true)
+                .help("Path to class")
+                .required(false),
+        )
+        .arg(
+            Arg::with_name("image")
+                .short("i")
+                .long("image")
+                .takes_value(true)
+                .help("Path to image")
+                .required(false),
+        )
         // .arg(
         //     Arg::with_name("weights")
         //         .short("w")
@@ -88,7 +104,8 @@ fn main() {
     let port_u = args.value_of("port_u").unwrap_or("8000");
     let user_addr = format!("{}:{}", ip_u, port_u);
 
-
+    let class_str = args.value_of("class").unwrap();
+    let image_str = args.value_of("image").unwrap();
     // let split_layer:usize = 1;
     let split_layer:usize = args.value_of("split").unwrap().parse().unwrap();
     let output_size :usize = 100;
@@ -98,14 +115,14 @@ fn main() {
     let architecture = (&network).into();
 
     let mut buf = vec![];
-    std::fs::File::open(Path::new("class_100.npy"))
+    std::fs::File::open(Path::new(class_str))
         .unwrap()
         .read_to_end(&mut buf)
         .unwrap();
     let class: i64 = NpyData::from_bytes(&buf).unwrap().to_vec()[0];
 
     buf = vec![];
-    std::fs::File::open(Path::new("image_100.npy"))
+    std::fs::File::open(Path::new(image_str))
         .unwrap()
         .read_to_end(&mut buf)
         .unwrap();
