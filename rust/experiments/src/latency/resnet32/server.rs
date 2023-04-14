@@ -10,22 +10,22 @@ const RANDOMNESS: [u8; 32] = [
 
 fn get_args() -> ArgMatches<'static> {
     App::new("resnet32-server")
-        .arg(
-            Arg::with_name("layers")
-                .short("l")
-                .long("layers")
-                .takes_value(true)
-                .help("Number of polynomial layers (6/12/14/16/18/20/22/24/26)")
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("port")
-                .short("p")
-                .long("port")
-                .takes_value(true)
-                .help("Server port (default 8000)")
-                .required(false),
-        )
+        // .arg(
+        //     Arg::with_name("layers")
+        //         .short("l")
+        //         .long("layers")
+        //         .takes_value(true)
+        //         .help("Number of polynomial layers (6/12/14/16/18/20/22/24/26)")
+        //         .required(true),
+        // )
+        // .arg(
+        //     Arg::with_name("port")
+        //         .short("p")
+        //         .long("port")
+        //         .takes_value(true)
+        //         .help("Server port (default 8000)")
+        //         .required(false),
+        // )
         .get_matches()
 }
 
@@ -34,11 +34,11 @@ fn main() {
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
     let args = get_args();
 
-    let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
-    let port = args.value_of("port").unwrap_or("8000");
-    let server_addr = format!("0.0.0.0:{}", port);
+    // let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
+    // let port = args.value_of("port").unwrap_or("8000");
+    let server_addr = "142.1.174.152:8000";
 
-    let network = construct_resnet_32(Some(&vs.root()), 1, layers, &mut rng);
+    let network = construct_resnet_32(Some(&vs.root()), 1, 0, &mut rng);
 
     experiments::nn_server(&server_addr, &network, &mut rng);
 }

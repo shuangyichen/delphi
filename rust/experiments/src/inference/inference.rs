@@ -55,7 +55,7 @@ pub fn run(
 ) {
     let mut server_rng = ChaChaRng::from_seed(RANDOMNESS);
     let mut client_rng = ChaChaRng::from_seed(RANDOMNESS);
-    let server_addr = "127.0.0.1:8001";
+    let server_addr = "142.1.174.152:8000";
     let mut client_output = Output::zeros((1, 10, 0, 0));
     crossbeam::thread::scope(|s| {
         let server_output = s.spawn(|_| nn_server(&server_addr, &network, &mut server_rng));
