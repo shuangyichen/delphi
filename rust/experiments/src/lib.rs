@@ -95,6 +95,7 @@ pub fn nn_client<R: RngCore + CryptoRng>(
         )
     };
     let duration = start_pre.elapsed();
+    thread::sleep(time::Duration::from_millis(2000));
     println!("Preprocessing Time : {:?}",duration);
     let start_inf = Instant::now();
     let (client_output, online_read, online_write) = {
@@ -132,6 +133,7 @@ pub fn nn_server<R: RngCore + CryptoRng>(
     nn: &NeuralNetwork<TenBitAS, TenBitExpFP>,
     rng: &mut R,
 ) {
+    println!("Preprocessing phase start");
     let (server_state, offline_read, offline_write) = {
         let (mut reader, mut writer) = server_connect(server_addr);
         (
@@ -140,7 +142,8 @@ pub fn nn_server<R: RngCore + CryptoRng>(
             writer.count(),
         )
     };
-
+    println!("Preprocessing phase finished");
+    let start_inf = Instant::now();
     let (next_input, online_read, online_write) = {
         let (mut reader, mut writer) = server_connect(server_addr);
         (
@@ -150,6 +153,8 @@ pub fn nn_server<R: RngCore + CryptoRng>(
             writer.count(),
         )
     };
+    let duration_inf = start_inf.elapsed();
+    println!("Inference Time : {:?}", duration_inf);
     add_to_trace!(|| "Offline Communication", || format!(
         "Read {} bytes\nWrote {} bytes",
         offline_read, offline_write

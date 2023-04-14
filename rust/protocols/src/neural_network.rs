@@ -1807,6 +1807,7 @@ where
         )?;
         timer_end!(approx_time);
         timer_end!(start_time);
+        println!("Server prep finished");
         Ok((ServerState {
             linear_state,
             relu_encoders,
