@@ -117,8 +117,11 @@ vector<Plaintext> HE_preprocess_noise(const uint64_t* const* secret_share, const
     for (auto &vec: noise) {
         generate(begin(vec), end(vec), gen);
     }
+    vector<Plaintext> enc_noise(data.out_ct);
 
     // Puncture the vector with secret share where an actual convolution result value lives
+    // #pragma omp parallel for num_threads(numThreads) schedule(dynamic)
+    for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
     for (int out_c = 0; out_c < data.out_chans; out_c++) {
         int ct_idx = out_c / (2*data.chans_per_half);
         int half_idx = (out_c % (2*data.chans_per_half)) / data.chans_per_half;
@@ -136,8 +139,8 @@ vector<Plaintext> HE_preprocess_noise(const uint64_t* const* secret_share, const
     }
     
     // Encrypt all the noise vectors
-    vector<Plaintext> enc_noise(data.out_ct);
-    for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
+    // vector<Plaintext> enc_noise(data.out_ct);
+    // for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
         batch_encoder.encode(noise[ct_idx], enc_noise[ct_idx]);
     }
     return enc_noise; 
@@ -146,7 +149,7 @@ vector<Plaintext> HE_preprocess_noise(const uint64_t* const* secret_share, const
 
 
 vector<Ciphertext> MPHE_preprocess_noise(const uint64_t* const* secret_share, const Metadata &data,
-        BatchEncoder &batch_encoder, Encryptor &encryptor) {
+        BatchEncoder &batch_encoder, Encryptor &encryptor, Evaluator &evaluator) {
     // Create uniform distribution
     random_device rd;
     mt19937 engine(rd());
@@ -161,6 +164,9 @@ vector<Ciphertext> MPHE_preprocess_noise(const uint64_t* const* secret_share, co
     }
 
     // Puncture the vector with secret share where an actual convolution result value lives
+    // #pragma omp parallel for num_threads(numThreads) schedule(static)
+    vector<Ciphertext> enc_noise(data.out_ct);
+    for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
     for (int out_c = 0; out_c < data.out_chans; out_c++) {
         int ct_idx = out_c / (2*data.chans_per_half);
         int half_idx = (out_c % (2*data.chans_per_half)) / data.chans_per_half;
@@ -179,11 +185,12 @@ vector<Ciphertext> MPHE_preprocess_noise(const uint64_t* const* secret_share, co
     }
     
     // Encrypt all the noise vectors
-    vector<Ciphertext> enc_noise(data.out_ct);
-    for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
+    // vector<Ciphertext> enc_noise(data.out_ct);
+    // for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
         Plaintext tmp;
         batch_encoder.encode(noise[ct_idx], tmp);
         encryptor.encrypt(tmp,enc_noise[ct_idx]);
+        evaluator.mod_switch_to_next_inplace(enc_noise[ct_idx]);
     }
     return enc_noise; 
 }
@@ -240,6 +247,7 @@ vector<T> filter_rotations(T &input, const Metadata &data, Evaluator *evaluator,
     
     // For each element of the filter, rotate the padded image s.t. the top
     // left position always contains the first element of the image it touches
+    // #pragma omp parallel for num_threads(numThreads) schedule(static)
     for (int f_row = 0; f_row < data.filter_h; f_row++) {
         int row_offset = f_row * data.image_w - offset;
         for (int f_col = 0; f_col < data.filter_w; f_col++) {
@@ -275,6 +283,7 @@ vector<vector<Ciphertext>> HE_encrypt_rotations(vector<vector<uv64>> &rotations,
     vector<vector<Plaintext>> encoded_rots(rotations.size(),
                                         vector<Plaintext>(rotations[0].size()));
     // printf("encoding\n");
+    // #pragma omp parallel for num_threads(numThreads) schedule(dynamic)
     for (int ct_idx = 0; ct_idx < rotations.size(); ct_idx++) {
         for (int f = 0; f < rotations[0].size(); f++) {
             // Plaintext tmp;
@@ -291,6 +300,7 @@ vector<vector<Plaintext>> HE_encode_rotations(vector<vector<uv64>> &rotations,
         const Metadata &data, BatchEncoder &batch_encoder) {
     vector<vector<Plaintext>> enc_rots(rotations.size(),
                                         vector<Plaintext>(rotations[0].size()));
+    // #pragma omp parallel for num_threads(numThreads) schedule(dynamic)
     for (int ct_idx = 0; ct_idx < rotations.size(); ct_idx++) {
         for (int f = 0; f < rotations[0].size(); f++) {
             batch_encoder.encode(rotations[ct_idx][f], enc_rots[ct_idx][f]);
@@ -305,6 +315,7 @@ vector<vector<Plaintext>> HE_encode_rotations(vector<vector<uv64>> &rotations,
 vector<Ciphertext> HE_encrypt(vector<uv64> &pt, const Metadata &data,
         Encryptor &encryptor, BatchEncoder &batch_encoder) {
     vector<Ciphertext> ct(pt.size());
+    // #pragma omp parallel for num_threads(numThreads) schedule(static)
     for (int ct_idx = 0; ct_idx < pt.size(); ct_idx++) {
         Plaintext tmp;
         batch_encoder.encode(pt[ct_idx], tmp);
@@ -347,132 +358,337 @@ vector<Ciphertext> HE_encrypt(vector<uv64> &pt, const Metadata &data,
  * half where inp_chans % chans_per_half != 0. This enables a further
  * optimization for the repeating half.
  */
-vector<vector<vector<Plaintext>>> HE_preprocess_filters(const u64* const* const* filters,
-        const Metadata &data, BatchEncoder &batch_encoder) {
-    // Mask is convolutions x cts per convolution x mask size
-    vector<vector<vector<uv64>>> masks(
-            data.convs,
-            vector<vector<uv64>>(
-                data.inp_ct,
-                vector<uv64>(data.filter_size, uv64(data.slot_count, 0))));
-    // Since a half in a permutation may have a variable number of rotations we
-    // use this index to track where we are at in the masks tensor
-    int conv_idx = 0;
-    // Build each half permutation as well as it's inward rotations
-    for (int perm = 0; perm < data.half_perms; perm += 2) {
-        // We populate two different half permutations at a time (if we have at
-        // least 2). The second permutation is what you'd get by flipping the
-        // columns of the first
-        for (int half = 0; half < data.inp_halves; half++) {
-            int ct_idx = half / 2;
-            int half_idx = half % 2;
-            int inp_base = half * data.chans_per_half;
+// vector<vector<vector<Plaintext>>> HE_preprocess_filters(const u64* const* const* filters,
+//         const Metadata &data, BatchEncoder &batch_encoder) {
+//     // Mask is convolutions x cts per convolution x mask size
+//     vector<vector<vector<uv64>>> masks(
+//             data.convs,
+//             vector<vector<uv64>>(
+//                 data.inp_ct,
+//                 vector<uv64>(data.filter_size, uv64(data.slot_count, 0))));
+//     // Since a half in a permutation may have a variable number of rotations we
+//     // use this index to track where we are at in the masks tensor
+//     int conv_idx = 0;
+//     // Build each half permutation as well as it's inward rotations
+//     // #pragma omp parallel for num_threads(numThreads) schedule(static)
+//     for (int perm = 0; perm < data.half_perms; perm += 2) {
+//         // We populate two different half permutations at a time (if we have at
+//         // least 2). The second permutation is what you'd get by flipping the
+//         // columns of the first
+//         for (int half = 0; half < data.inp_halves; half++) {
+//             int ct_idx = half / 2;
+//             int half_idx = half % 2;
+//             int inp_base = half * data.chans_per_half;
 
-            // The output channel the current ct starts from
-            int out_base = (((perm/2) + ct_idx)*2*data.chans_per_half) % data.out_mod;
-            // If we're on the last output half, the first and last halves aren't
-            // in the same ciphertext, and the last half has repeats, then do 
-            // repeated packing and skip the second half
-            bool last_out = ((out_base + data.out_in_last) == data.out_chans)
-                            && data.out_halves != 2;
-            bool half_repeats = last_out && data.last_repeats;
-            // If the half is repeating we do possibly less number of rotations
-            int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
-            // Generate all inward rotations of each half
-            for (int rot = 0; rot < total_rots; rot++) {
-                for (int chan = 0; chan < data.chans_per_half
-                                   && (chan + inp_base) < data.inp_chans; chan++) {
-                    for (int f = 0; f < data.filter_size; f++) {
-                        // Pull the value of this mask
-                        int f_w = f % data.filter_w;
-                        int f_h = f / data.filter_w;
-                        // Set the coefficients of this channel for both
-                        // permutations
-                        u64 val, val2;
-                        int out_idx, out_idx2;
+//             // The output channel the current ct starts from
+//             int out_base = (((perm/2) + ct_idx)*2*data.chans_per_half) % data.out_mod;
+//             // If we're on the last output half, the first and last halves aren't
+//             // in the same ciphertext, and the last half has repeats, then do 
+//             // repeated packing and skip the second half
+//             bool last_out = ((out_base + data.out_in_last) == data.out_chans)
+//                             && data.out_halves != 2;
+//             bool half_repeats = last_out && data.last_repeats;
+//             // If the half is repeating we do possibly less number of rotations
+//             int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
+//             // Generate all inward rotations of each half
+//             for (int rot = 0; rot < total_rots; rot++) {
+//                 for (int chan = 0; chan < data.chans_per_half
+//                                    && (chan + inp_base) < data.inp_chans; chan++) {
+//                     for (int f = 0; f < data.filter_size; f++) {
+//                         // Pull the value of this mask
+//                         int f_w = f % data.filter_w;
+//                         int f_h = f / data.filter_w;
+//                         // Set the coefficients of this channel for both
+//                         // permutations
+//                         u64 val, val2;
+//                         int out_idx, out_idx2;
 
-                        // If this is a repeating half we first pad out_chans to
-                        // nearest power of 2 before repeating
-                        if (half_repeats) {
-                            out_idx = neg_mod(chan-rot, data.repeat_chans) + out_base;
-                            // If we're on a padding channel then val should be 0
-                            val = (out_idx < data.out_chans)
-                                ? filters[out_idx][inp_base + chan][f] : 0;
-                            // cout <<"filter"<<val<<endl;
-                            // Second value will always be 0 since the second
-                            // half is empty if we are repeating
-                            val2 = 0;
-                        } else {
-                            int offset = neg_mod(chan-rot, data.chans_per_half);
-                            if (half_idx) {
-                                // If out_halves < 1 we may repeat within a
-                                // ciphertext
-                                // TODO: Add the log optimization for this case
-                                if (data.out_halves > 1)
-                                    out_idx = offset + out_base + data.chans_per_half;
-                                else
-                                    out_idx = offset + out_base;
-                                out_idx2 = offset + out_base;
-                            } else {
-                                out_idx = offset + out_base;
-                                out_idx2 = offset + out_base + data.chans_per_half;
-                            }
-                            val = (out_idx < data.out_chans)
-                                ? filters[out_idx][inp_base+chan][f] : 0;
-                            val2 = (out_idx2 < data.out_chans)
-                                ? filters[out_idx2][inp_base+chan][f] : 0;
-                        }
-                        // Iterate through the whole image and figure out which
-                        // values the filter value touches - this is the same
-                        // as for input packing
-                        for(int curr_h = 0; curr_h < data.image_h; curr_h += data.stride_h) {
-                            for(int curr_w = 0; curr_w < data.image_w; curr_w += data.stride_w) {
-                                // curr_h and curr_w simulate the current top-left position of 
-                                // the filter. This detects whether the filter would fit over
-                                // this section. If it's out-of-bounds we set the mask index to 0
-                                bool zero = ((curr_w+f_w) < data.pad_l) ||
-                                    ((curr_w+f_w) >= (data.image_w+data.pad_l)) ||
-                                    ((curr_h+f_h) < data.pad_t) ||
-                                    ((curr_h+f_h) >= (data.image_h+data.pad_l));
-                                // Calculate which half of ciphertext the output channel 
-                                // falls in and the offest from that half, 
-                                int idx = half_idx * data.pack_num
-                                        + chan * data.image_size
-                                        + curr_h * data.image_h
-                                        + curr_w;
-                                // Add both values to appropiate permutations
-                                masks[conv_idx+rot][ct_idx][f][idx] = zero? 0: val;
-                                if (data.half_perms > 1) {
-                                    masks[conv_idx+data.half_rots+rot][ct_idx][f][idx] = zero? 0: val2;
-                                }
-                            }
-                        }
-                    }
+//                         // If this is a repeating half we first pad out_chans to
+//                         // nearest power of 2 before repeating
+//                         if (half_repeats) {
+//                             out_idx = neg_mod(chan-rot, data.repeat_chans) + out_base;
+//                             // If we're on a padding channel then val should be 0
+//                             val = (out_idx < data.out_chans)
+//                                 ? filters[out_idx][inp_base + chan][f] : 0;
+//                             // cout <<"filter"<<val<<endl;
+//                             // Second value will always be 0 since the second
+//                             // half is empty if we are repeating
+//                             val2 = 0;
+//                         } else {
+//                             int offset = neg_mod(chan-rot, data.chans_per_half);
+//                             if (half_idx) {
+//                                 // If out_halves < 1 we may repeat within a
+//                                 // ciphertext
+//                                 // TODO: Add the log optimization for this case
+//                                 if (data.out_halves > 1)
+//                                     out_idx = offset + out_base + data.chans_per_half;
+//                                 else
+//                                     out_idx = offset + out_base;
+//                                 out_idx2 = offset + out_base;
+//                             } else {
+//                                 out_idx = offset + out_base;
+//                                 out_idx2 = offset + out_base + data.chans_per_half;
+//                             }
+//                             val = (out_idx < data.out_chans)
+//                                 ? filters[out_idx][inp_base+chan][f] : 0;
+//                             val2 = (out_idx2 < data.out_chans)
+//                                 ? filters[out_idx2][inp_base+chan][f] : 0;
+//                         }
+//                         // Iterate through the whole image and figure out which
+//                         // values the filter value touches - this is the same
+//                         // as for input packing
+//                         for(int curr_h = 0; curr_h < data.image_h; curr_h += data.stride_h) {
+//                             for(int curr_w = 0; curr_w < data.image_w; curr_w += data.stride_w) {
+//                                 // curr_h and curr_w simulate the current top-left position of 
+//                                 // the filter. This detects whether the filter would fit over
+//                                 // this section. If it's out-of-bounds we set the mask index to 0
+//                                 bool zero = ((curr_w+f_w) < data.pad_l) ||
+//                                     ((curr_w+f_w) >= (data.image_w+data.pad_l)) ||
+//                                     ((curr_h+f_h) < data.pad_t) ||
+//                                     ((curr_h+f_h) >= (data.image_h+data.pad_l));
+//                                 // Calculate which half of ciphertext the output channel 
+//                                 // falls in and the offest from that half, 
+//                                 int idx = half_idx * data.pack_num
+//                                         + chan * data.image_size
+//                                         + curr_h * data.image_h
+//                                         + curr_w;
+//                                 // Add both values to appropiate permutations
+//                                 masks[conv_idx+rot][ct_idx][f][idx] = zero? 0: val;
+//                                 if (data.half_perms > 1) {
+//                                     masks[conv_idx+data.half_rots+rot][ct_idx][f][idx] = zero? 0: val2;
+//                                 }
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//         conv_idx += 2*data.half_rots;
+//     }
+
+//     // Encode all the masks
+//     vector<vector<vector<Plaintext>>> encoded_masks(
+//             data.convs,
+//             vector<vector<Plaintext>>(
+//                 data.inp_ct,
+//                 vector<Plaintext>(data.filter_size)));
+//     for (int conv = 0; conv < data.convs; conv++) {
+//         for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+//             for (int f = 0; f < data.filter_size; f++) {
+//                 batch_encoder.encode(masks[conv][ct_idx][f],
+//                                          encoded_masks[conv][ct_idx][f]);
+//             } 
+//         } 
+//     }
+//     return encoded_masks;
+// }
+vector<vector<vector<Plaintext>>>
+HE_preprocess_filters(const u64* const* const* filters, const Metadata &data,
+                         BatchEncoder &batch_encoder) {
+  // Mask is convolutions x cts per convolution x mask size
+  vector<vector<vector<Plaintext>>> encoded_masks(
+      data.convs, vector<vector<Plaintext>>(
+                      data.inp_ct, vector<Plaintext>(data.filter_size)));
+  // Since a half in a permutation may have a variable number of rotations we
+  // use this index to track where we are at in the masks tensor
+  // Build each half permutation as well as it's inward rotations
+// #pragma omp parallel for num_threads(numThreads) schedule(static) collapse(2)
+  for (int perm = 0; perm < data.half_perms; perm += 2) {
+    for (int rot = 0; rot < data.half_rots; rot++) {
+      int conv_idx = perm * data.half_rots;
+      for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+        // The output channel the current ct starts from
+        // int out_base = (((perm/2) + ct_idx)*2*data.chans_per_half) %
+        // data.out_mod;
+        int out_base = (perm * data.chans_per_half) % data.out_mod;
+        // Generate all inward rotations of each half -- half_rots loop
+        for (int f = 0; f < data.filter_size; f++) {
+          vector<vector<uint64_t>> masks(2,
+                                         vector<uint64_t>(data.slot_count, 0));
+          for (int half_idx = 0; half_idx < 2; half_idx++) {
+            int inp_base = (2 * ct_idx + half_idx) * data.chans_per_half;
+            for (int chan = 0; chan < data.chans_per_half &&
+                               (chan + inp_base) < data.inp_chans;
+                 chan++) {
+              // Pull the value of this mask
+              int f_w = f % data.filter_w;
+              int f_h = f / data.filter_w;
+              // Set the coefficients of this channel for both
+              // permutations
+              uint64_t val, val2;
+              int out_idx, out_idx2;
+
+              int offset = neg_mod(chan - rot, (int64_t)data.chans_per_half);
+              if (half_idx) {
+                // If out_halves < 1 we may repeat within a
+                // ciphertext
+                // TODO: Add the log optimization for this case
+                if (data.out_halves > 1)
+                  out_idx = offset + out_base + data.chans_per_half;
+                else
+                  out_idx = offset + out_base;
+                out_idx2 = offset + out_base;
+              } else {
+                out_idx = offset + out_base;
+                out_idx2 = offset + out_base + data.chans_per_half;
+              }
+              val = (out_idx < data.out_chans)
+                        ? filters[out_idx][inp_base + chan][f]
+                        : 0;
+                        // ? filters[out_idx][inp_base + chan](f_h, f_w)
+                        // : 0;
+              val2 = (out_idx2 < data.out_chans)
+                         ? filters[out_idx2][inp_base + chan][f]
+                         : 0;
+              // Iterate through the whole image and figure out which
+              // values the filter value touches - this is the same
+              // as for input packing
+              for (int curr_h = 0; curr_h < data.image_h;
+                   curr_h += data.stride_h) {
+                for (int curr_w = 0; curr_w < data.image_w;
+                     curr_w += data.stride_w) {
+                  // curr_h and curr_w simulate the current top-left position of
+                  // the filter. This detects whether the filter would fit over
+                  // this section. If it's out-of-bounds we set the mask index
+                  // to 0
+                  bool zero = ((curr_w + f_w) < data.pad_l) ||
+                              ((curr_w + f_w) >= (data.image_w + data.pad_l)) ||
+                              ((curr_h + f_h) < data.pad_t) ||
+                              ((curr_h + f_h) >= (data.image_h + data.pad_l));
+                  // Calculate which half of ciphertext the output channel
+                  // falls in and the offest from that half,
+                  int idx = half_idx * data.pack_num + chan * data.image_size +
+                            curr_h * data.image_w + curr_w;
+                  // Add both values to appropiate permutations
+                  masks[0][idx] = zero ? 0 : val;
+                  if (data.half_perms > 1) {
+                    masks[1][idx] = zero ? 0 : val2;
+                  }
                 }
+              }
             }
+          }
+          batch_encoder.encode(masks[0],
+                               encoded_masks[conv_idx + rot][ct_idx][f]);
+          if (data.half_perms > 1) {
+            batch_encoder.encode(
+                masks[1],
+                encoded_masks[conv_idx + data.half_rots + rot][ct_idx][f]);
+          }
         }
-        conv_idx += 2*data.half_rots;
+      }
     }
-
-    // Encode all the masks
-    vector<vector<vector<Plaintext>>> encoded_masks(
-            data.convs,
-            vector<vector<Plaintext>>(
-                data.inp_ct,
-                vector<Plaintext>(data.filter_size)));
-    for (int conv = 0; conv < data.convs; conv++) {
-        for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
-            for (int f = 0; f < data.filter_size; f++) {
-                batch_encoder.encode(masks[conv][ct_idx][f],
-                                         encoded_masks[conv][ct_idx][f]);
-            } 
-        } 
-    }
-    return encoded_masks;
+  }
+  return encoded_masks;
 }
 
+vector<vector<vector<Ciphertext>>> MPHE_preprocess_filters(const u64* const* const* filters,
+        const Metadata &data, BatchEncoder &batch_encoder, Encryptor &encryptor) {
+            // Mask is convolutions x cts per convolution x mask size
+//   vector<vector<vector<Plaintext>>> encoded_masks(
+//       data.convs, vector<vector<Plaintext>>(
+//                       data.inp_ct, vector<Plaintext>(data.filter_size)));
+    vector<vector<vector<Ciphertext>>> encrypted_masks(
+            data.convs,
+            vector<vector<Ciphertext>>(
+                data.inp_ct,
+                vector<Ciphertext>(data.filter_size)));
+  // Since a half in a permutation may have a variable number of rotations we
+  // use this index to track where we are at in the masks tensor
+  // Build each half permutation as well as it's inward rotations
+#pragma omp parallel for num_threads(numThreads) schedule(static)
+  for (int perm = 0; perm < data.half_perms; perm += 2) {
+    for (int rot = 0; rot < data.half_rots; rot++) {
+      int conv_idx = perm * data.half_rots;
+      for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+        // The output channel the current ct starts from
+        // int out_base = (((perm/2) + ct_idx)*2*data.chans_per_half) %
+        // data.out_mod;
+        int out_base = (perm * data.chans_per_half) % data.out_mod;
+        // Generate all inward rotations of each half -- half_rots loop
+        for (int f = 0; f < data.filter_size; f++) {
+          vector<vector<uint64_t>> masks(2,
+                                         vector<uint64_t>(data.slot_count, 0));
+          for (int half_idx = 0; half_idx < 2; half_idx++) {
+            int inp_base = (2 * ct_idx + half_idx) * data.chans_per_half;
+            for (int chan = 0; chan < data.chans_per_half &&
+                               (chan + inp_base) < data.inp_chans;
+                 chan++) {
+              // Pull the value of this mask
+              int f_w = f % data.filter_w;
+              int f_h = f / data.filter_w;
+              // Set the coefficients of this channel for both
+              // permutations
+              uint64_t val, val2;
+              int out_idx, out_idx2;
 
+              int offset = neg_mod(chan - rot, (int64_t)data.chans_per_half);
+              if (half_idx) {
+                // If out_halves < 1 we may repeat within a
+                // ciphertext
+                // TODO: Add the log optimization for this case
+                if (data.out_halves > 1)
+                  out_idx = offset + out_base + data.chans_per_half;
+                else
+                  out_idx = offset + out_base;
+                out_idx2 = offset + out_base;
+              } else {
+                out_idx = offset + out_base;
+                out_idx2 = offset + out_base + data.chans_per_half;
+              }
+              val = (out_idx < data.out_chans)
+                        ? filters[out_idx][inp_base + chan][f]
+                        : 0;
+                        // ? filters[out_idx][inp_base + chan](f_h, f_w)
+                        // : 0;
+              val2 = (out_idx2 < data.out_chans)
+                         ? filters[out_idx2][inp_base + chan][f]
+                         : 0;
+              // Iterate through the whole image and figure out which
+              // values the filter value touches - this is the same
+              // as for input packing
+              for (int curr_h = 0; curr_h < data.image_h;
+                   curr_h += data.stride_h) {
+                for (int curr_w = 0; curr_w < data.image_w;
+                     curr_w += data.stride_w) {
+                  // curr_h and curr_w simulate the current top-left position of
+                  // the filter. This detects whether the filter would fit over
+                  // this section. If it's out-of-bounds we set the mask index
+                  // to 0
+                  bool zero = ((curr_w + f_w) < data.pad_l) ||
+                              ((curr_w + f_w) >= (data.image_w + data.pad_l)) ||
+                              ((curr_h + f_h) < data.pad_t) ||
+                              ((curr_h + f_h) >= (data.image_h + data.pad_l));
+                  // Calculate which half of ciphertext the output channel
+                  // falls in and the offest from that half,
+                  int idx = half_idx * data.pack_num + chan * data.image_size +
+                            curr_h * data.image_w + curr_w;
+                  // Add both values to appropiate permutations
+                  masks[0][idx] = zero ? 0 : val;
+                  if (data.half_perms > 1) {
+                    masks[1][idx] = zero ? 0 : val2;
+                  }
+                }
+              }
+            }
+          }
+          Plaintext tmp1;
+          batch_encoder.encode(masks[0],tmp1);
+          encryptor.encrypt(tmp1,encrypted_masks[conv_idx + rot][ct_idx][f]);
+          if (data.half_perms > 1) {
+            Plaintext tmp2;
+            batch_encoder.encode(
+                masks[1],tmp2);
+            encryptor.encrypt(tmp2,encrypted_masks[conv_idx + data.half_rots + rot][ct_idx][f]);
+          }
+        }
+      }
+    }
+  }
+  return encrypted_masks;
+        }
 
+/*
 vector<vector<vector<Ciphertext>>> MPHE_preprocess_filters(const u64* const* const* filters,
         const Metadata &data, BatchEncoder &batch_encoder, Encryptor &encryptor) {
     // Mask is convolutions x cts per convolution x mask size
@@ -485,6 +701,7 @@ vector<vector<vector<Ciphertext>>> MPHE_preprocess_filters(const u64* const* con
     // use this index to track where we are at in the masks tensor
     int conv_idx = 0;
     // Build each half permutation as well as it's inward rotations
+    // #pragma omp parallel for num_threads(numThreads) schedule(static)
     for (int perm = 0; perm < data.half_perms; perm += 2) {
         // We populate two different half permutations at a time (if we have at
         // least 2). The second permutation is what you'd get by flipping the
@@ -601,6 +818,7 @@ vector<vector<vector<Ciphertext>>> MPHE_preprocess_filters(const u64* const* con
             vector<vector<Ciphertext>>(
                 data.inp_ct,
                 vector<Ciphertext>(data.filter_size)));
+    // #pragma omp parallel for num_threads(numThreads) schedule(static)
     for (int conv = 0; conv < data.convs; conv++) {
         for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
             for (int f = 0; f < data.filter_size; f++) {
@@ -612,91 +830,133 @@ vector<vector<vector<Ciphertext>>> MPHE_preprocess_filters(const u64* const* con
     }
     return encrypted_masks;
 }
+*/
 
-vector<vector<Ciphertext>> MPHE_conv(vector<vector<vector<Ciphertext>>> &masks,
+vector<Ciphertext> MPHE_conv(vector<vector<vector<Ciphertext>>> &masks,
         vector<vector<Ciphertext>> &rotations, const Metadata &data, Evaluator &evaluator,
         RelinKeys &relin_keys, Ciphertext &zero) {
-    // cout<<*relin_keys.data()[0][0].data().data()<<endl;
-    vector<vector<Ciphertext>> result(data.convs, vector<Ciphertext>(data.inp_ct));
-    // Init the result vector to all 0
-    for (int conv = 0; conv < data.convs; conv++) {
-        for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) 
-            result[conv][ct_idx] = zero;
+            vector<Ciphertext> result(data.convs);
+
+  // Multiply masks and add for each convolution
+// #pragma omp parallel for num_threads(numThreads) schedule(static)
+  for (int conv_idx = 0; conv_idx < data.convs; conv_idx++) {
+    result[conv_idx] = zero;
+    for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+      for (int f = 0; f < data.filter_size; f++) {
+        Ciphertext tmp;
+        // if (!(masks[conv_idx][ct_idx][f]==0)) {
+          evaluator.multiply(rotations[ct_idx][f],
+                                   masks[conv_idx][ct_idx][f], tmp);
+          evaluator.relinearize_inplace(tmp, relin_keys);
+          evaluator.add_inplace(result[conv_idx], tmp);
+        // }
+      }
     }
-    // Multiply masks and add for each convolution
-    for (int perm = 0; perm < data.half_perms; perm++) {
-        for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
-            // The output channel the current ct starts from
-            int out_base = ((perm/2+ct_idx)*2*data.chans_per_half) % data.out_mod;
-            // If we're on the last output half, the first and last halves aren't
-            // in the same ciphertext, and the last half has repeats, then only 
-            // convolve last_rots number of times
-            bool last_out = ((out_base + data.out_in_last) == data.out_chans)
-                            && data.out_halves != 2;
-            bool half_repeats = last_out && data.last_repeats;
-            int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
-            for (int rot = 0; rot < total_rots; rot++) {
-                for (int f = 0; f < data.filter_size; f++) {
-                    // Note that if a mask is zero this will result in a
-                    // 'transparent' ciphertext which SEAL won't allow by default.
-                    // This isn't a problem however since we're adding the result
-                    // with something else, and the size is known beforehand so
-                    // having some elements be 0 doesn't matter
-                    Ciphertext tmp;
-                    evaluator.multiply(rotations[ct_idx][f],
-                                                 masks[perm*data.half_rots+rot][ct_idx][f],
-                                                 tmp);
-                    evaluator.relinearize_inplace(tmp, relin_keys);
-                    multiplications += 1;
-                    evaluator.add_inplace(result[perm*data.half_rots+rot][ct_idx], tmp);
-                    additions += 1;
-                }
-            }
-        }
-    }
+    evaluator.mod_switch_to_next_inplace(result[conv_idx]);
+  }
+  return result;
+    // // cout<<*relin_keys.data()[0][0].data().data()<<endl;
+    // vector<vector<Ciphertext>> result(data.convs, vector<Ciphertext>(data.inp_ct));
+    // // Init the result vector to all 0
+    // for (int conv = 0; conv < data.convs; conv++) {
+    //     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) 
+    //         result[conv][ct_idx] = zero;
+    // }
+    // // Multiply masks and add for each convolution
+    // // #pragma omp parallel for num_threads(numThreads) schedule(static)
+    // for (int perm = 0; perm < data.half_perms; perm++) {
+    //     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //         // The output channel the current ct starts from
+    //         int out_base = ((perm/2+ct_idx)*2*data.chans_per_half) % data.out_mod;
+    //         // If we're on the last output half, the first and last halves aren't
+    //         // in the same ciphertext, and the last half has repeats, then only 
+    //         // convolve last_rots number of times
+    //         bool last_out = ((out_base + data.out_in_last) == data.out_chans)
+    //                         && data.out_halves != 2;
+    //         bool half_repeats = last_out && data.last_repeats;
+    //         int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
+    //         for (int rot = 0; rot < total_rots; rot++) {
+    //             for (int f = 0; f < data.filter_size; f++) {
+    //                 // Note that if a mask is zero this will result in a
+    //                 // 'transparent' ciphertext which SEAL won't allow by default.
+    //                 // This isn't a problem however since we're adding the result
+    //                 // with something else, and the size is known beforehand so
+    //                 // having some elements be 0 doesn't matter
+    //                 Ciphertext tmp;
+    //                 evaluator.multiply(rotations[ct_idx][f],
+    //                                              masks[perm*data.half_rots+rot][ct_idx][f],
+    //                                              tmp);
+    //                 evaluator.relinearize_inplace(tmp, relin_keys);
+    //                 multiplications += 1;
+    //                 evaluator.add_inplace(result[perm*data.half_rots+rot][ct_idx], tmp);
+    //                 additions += 1;
+    //             }
+    //         }
+    //     }
+    // }
     return result;
 }
 
-vector<vector<Ciphertext>> HE_conv(vector<vector<vector<Plaintext>>> &masks,
+vector<Ciphertext> HE_conv(vector<vector<vector<Plaintext>>> &masks,
         vector<vector<Ciphertext>> &rotations, const Metadata &data, Evaluator &evaluator,
         RelinKeys &relin_keys, Ciphertext &zero) {
-    vector<vector<Ciphertext>> result(data.convs, vector<Ciphertext>(data.inp_ct));
-    // Init the result vector to all 0
-    for (int conv = 0; conv < data.convs; conv++) {
-        for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) 
-            result[conv][ct_idx] = zero;
-    }
-    // Multiply masks and add for each convolution
-    for (int perm = 0; perm < data.half_perms; perm++) {
-        for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
-            // The output channel the current ct starts from
-            int out_base = ((perm/2+ct_idx)*2*data.chans_per_half) % data.out_mod;
-            // If we're on the last output half, the first and last halves aren't
-            // in the same ciphertext, and the last half has repeats, then only 
-            // convolve last_rots number of times
-            bool last_out = ((out_base + data.out_in_last) == data.out_chans)
-                            && data.out_halves != 2;
-            bool half_repeats = last_out && data.last_repeats;
-            int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
-            for (int rot = 0; rot < total_rots; rot++) {
-                for (int f = 0; f < data.filter_size; f++) {
-                    // Note that if a mask is zero this will result in a
-                    // 'transparent' ciphertext which SEAL won't allow by default.
-                    // This isn't a problem however since we're adding the result
-                    // with something else, and the size is known beforehand so
-                    // having some elements be 0 doesn't matter
-                    Ciphertext tmp;
-                    evaluator.multiply_plain(rotations[ct_idx][f],
-                                                 masks[perm*data.half_rots+rot][ct_idx][f],
-                                                 tmp);
-                    evaluator.relinearize_inplace(tmp, relin_keys);
-                    multiplications += 1;
-                    evaluator.add_inplace(result[perm*data.half_rots+rot][ct_idx], tmp);
-                    additions += 1;
-                }
-            }
+            vector<Ciphertext> result(data.convs);
+
+  // Multiply masks and add for each convolution
+// #pragma omp parallel for num_threads(numThreads) schedule(static)
+  for (int conv_idx = 0; conv_idx < data.convs; conv_idx++) {
+    result[conv_idx] = zero;
+    for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+      for (int f = 0; f < data.filter_size; f++) {
+        Ciphertext tmp;
+        if (!masks[conv_idx][ct_idx][f].is_zero()) {
+          evaluator.multiply_plain(rotations[ct_idx][f],
+                                   masks[conv_idx][ct_idx][f], tmp);
+
+          evaluator.add_inplace(result[conv_idx], tmp);
         }
+      }
     }
+    evaluator.mod_switch_to_next_inplace(result[conv_idx]);
+  }
+    // vector<vector<Ciphertext>> result(data.convs, vector<Ciphertext>(data.inp_ct));
+    // // Init the result vector to all 0
+    // for (int conv = 0; conv < data.convs; conv++) {
+    //     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) 
+    //         result[conv][ct_idx] = zero;
+    // }
+    // // Multiply masks and add for each convolution
+    // // #pragma omp parallel for num_threads(numThreads) schedule(static)
+    // for (int perm = 0; perm < data.half_perms; perm++) {
+    //     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //         // The output channel the current ct starts from
+    //         int out_base = ((perm/2+ct_idx)*2*data.chans_per_half) % data.out_mod;
+    //         // If we're on the last output half, the first and last halves aren't
+    //         // in the same ciphertext, and the last half has repeats, then only 
+    //         // convolve last_rots number of times
+    //         bool last_out = ((out_base + data.out_in_last) == data.out_chans)
+    //                         && data.out_halves != 2;
+    //         bool half_repeats = last_out && data.last_repeats;
+    //         int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
+    //         for (int rot = 0; rot < total_rots; rot++) {
+    //             for (int f = 0; f < data.filter_size; f++) {
+    //                 // Note that if a mask is zero this will result in a
+    //                 // 'transparent' ciphertext which SEAL won't allow by default.
+    //                 // This isn't a problem however since we're adding the result
+    //                 // with something else, and the size is known beforehand so
+    //                 // having some elements be 0 doesn't matter
+    //                 Ciphertext tmp;
+    //                 evaluator.multiply_plain(rotations[ct_idx][f],
+    //                                              masks[perm*data.half_rots+rot][ct_idx][f],
+    //                                              tmp);
+    //                 evaluator.relinearize_inplace(tmp, relin_keys);
+    //                 multiplications += 1;
+    //                 evaluator.add_inplace(result[perm*data.half_rots+rot][ct_idx], tmp);
+    //                 additions += 1;
+    //             }
+    //         }
+    //     }
+    // }
     return result;
 }
 
@@ -716,481 +976,681 @@ vector<vector<Ciphertext>> HE_conv(vector<vector<vector<Plaintext>>> &masks,
  * in the final output reducing the vector to dimensions:
  *   inp_ct
  * */
- vector<Ciphertext> HE_output_rotations(vector<vector<Ciphertext>> convs,
+ vector<Ciphertext> HE_output_rotations(vector<Ciphertext> convs,
         const Metadata &data, Evaluator &evaluator, GaloisKeys &gal_keys,
         Ciphertext &zero) {
-    vector<vector<Ciphertext>> partials(data.half_perms,
-                                        vector<Ciphertext>(data.inp_ct));
-    // Init the result vector to all 0
-    vector<Ciphertext> result(data.out_ct);
-    for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
-        result[ct_idx] = zero;
+            vector<Ciphertext> partials(data.half_perms);
+  Ciphertext zero_next_level = zero;
+  evaluator.mod_switch_to_next_inplace(zero_next_level);
+  // Init the result vector to all 0
+  vector<Ciphertext> result(data.out_ct);
+  for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
+    result[ct_idx] = zero_next_level;
+  }
+
+  // For each half perm, add up all the inside channels of each half
+// #pragma omp parallel for num_threads(numThreads) schedule(static)
+  for (int perm = 0; perm < data.half_perms; perm += 2) {
+    partials[perm] = zero_next_level;
+    if (data.half_perms > 1)
+      partials[perm + 1] = zero_next_level;
+    // The output channel the current ct starts from
+    int total_rots = data.half_rots;
+    for (int in_rot = 0; in_rot < total_rots; in_rot++) {
+      int conv_idx = perm * data.half_rots + in_rot;
+      int rot_amt;
+      rot_amt =
+          -neg_mod(-in_rot, (int64_t)data.chans_per_half) * data.image_size;
+    //   cout << "rot_amt 2"<<rot_amt<<endl;
+      evaluator.rotate_rows_inplace(convs[conv_idx], rot_amt, gal_keys);
+      evaluator.add_inplace(partials[perm], convs[conv_idx]);
+      // Do the same for the column swap if it exists
+      if (data.half_perms > 1) {
+        evaluator.rotate_rows_inplace(convs[conv_idx + data.half_rots], rot_amt,
+                                      gal_keys);
+        evaluator.add_inplace(partials[perm + 1],
+                              convs[conv_idx + data.half_rots]);
+      }
     }
-    // For each half perm, add up all the inside channels of each half 
-    for (int perm = 0; perm < data.half_perms; perm+=2) {
-        int rot;
-        // Can save an addition or so by initially setting the partials vector
-        // to a convolution result if it's correctly aligned. Otherwise init to
-        // all 0s
-        if (data.inp_chans <= data.out_chans || data.out_chans == 1) {
-            for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
-                partials[perm][ct_idx] = convs[perm*data.half_rots][ct_idx];
-                if (data.half_perms > 1) 
-                    partials[perm+1][ct_idx] = convs[(perm+1)*data.half_rots][ct_idx];;
-            }
-            rot = 1;
-        } else {
-            for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
-                partials[perm][ct_idx] = zero;
-                if (data.half_perms > 1) 
-                    partials[perm+1][ct_idx] = zero;
-            }
-            rot = 0;
-        }
-        for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
-            // The output channel the current ct starts from
-            int out_base = ((perm/2+ct_idx)*2*data.chans_per_half) % data.out_mod;
-            // Whether we are on the last input half
-            bool last_in = (perm + ct_idx + 1) % (data.inp_ct) == 0;
-            // If we're on the last output half, the first and last halves aren't
-            // in the same ciphertext, and the last half has repeats, then do the
-            // rotations optimization when summing up 
-            bool last_out = ((out_base + data.out_in_last) == data.out_chans)
-                            && data.out_halves != 2;
-            bool half_repeats = last_out && data.last_repeats;
-            int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
-            for (int in_rot = rot; in_rot < total_rots; in_rot++) {
-                int conv_idx = perm * data.half_rots + in_rot;
-                int rot_amt;
-                // If we're on a repeating half the amount we rotate will be
-                // different
-                if (half_repeats)
-                    rot_amt = -neg_mod(-in_rot, data.repeat_chans) * data.image_size;
-                else 
-                    rot_amt = -neg_mod(-in_rot, data.chans_per_half) * data.image_size;
-                // cout << "rotamt 1 "<< rot_amt<<endl;
-                evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
-                                                  rot_amt,
-                                                  gal_keys);
-                evaluator.add_inplace(partials[perm][ct_idx],
-                                          convs[conv_idx][ct_idx]);
-                // Do the same for the column swap if it exists
-                if (data.half_perms > 1) {
-                    // cout << "rotamt 2 "<< rot_amt<<endl;
-                    evaluator.rotate_rows_inplace(convs[conv_idx+data.half_rots][ct_idx],
-                                                      rot_amt,
-                                                      gal_keys);
-                    evaluator.add_inplace(partials[perm+1][ct_idx],
-                                              convs[conv_idx+data.half_rots][ct_idx]);
-                    if (rot_amt != 0)
-                        rot_count += 1;
-                    additions += 1;
-                }
-                if (rot_amt != 0)
-                    rot_count += 1;
-                additions += 1;
-            }
-            // Add up a repeating half
-            if (half_repeats) {
-                // If we're on the last inp_half then we might be able to do
-                // less rotations. We may be able to find a power of 2 less
-                // than chans_per_half that contains all of our needed repeats
-                int size_to_reduce;
-                if (last_in) {
-                    int num_repeats = ceil((float) data.inp_in_last / data.repeat_chans);
-                    //  We round the repeats to the closest power of 2
-                    int effective_repeats;
-                    // When we rotated in the previous loop we cause a bit of overflow 
-                    // (one extra repeat_chans worth). If the extra overflow fits 
-                    // into the modulo of the last repeat_chan we can do one
-                    // less rotation
-                    if (data.repeat_chans*num_repeats % data.inp_in_last == data.repeat_chans - 1)
-                        effective_repeats = pow(2, ceil(log(num_repeats)/log(2)));
-                    else
-                        effective_repeats = pow(2, ceil(log(num_repeats+1)/log(2)));
-                    // If the overflow ended up wrapping around then we simply
-                    // want chans_per_half as our size
-                    size_to_reduce = min(effective_repeats*data.repeat_chans, data.chans_per_half);
-                } else 
-                    size_to_reduce = data.chans_per_half;
-                // Perform the actual rotations
-                for (int in_rot = size_to_reduce/2; in_rot >= data.repeat_chans; in_rot = in_rot/2) {
-                    int rot_amt = in_rot * data.image_size;
-                    Ciphertext tmp = partials[perm][ct_idx];
-                    // cout << "rotamt 3 "<< rot_amt<<endl;
-                    evaluator.rotate_rows_inplace(tmp, rot_amt, gal_keys);
-                    evaluator.add_inplace(partials[perm][ct_idx], tmp);
-                    // Do the same for column swap if exists
-                    if (data.half_perms > 1) {
-                        tmp = partials[perm+1][ct_idx];
-                        // cout << "rotamt 4 "<< rot_amt<<endl;
-                        evaluator.rotate_rows_inplace(tmp, rot_amt, gal_keys);
-                        evaluator.add_inplace(partials[perm+1][ct_idx], tmp);
-                        if (rot_amt != 0)
-                            rot_count += 1;
-                        additions += 1;
-                    }
-                    if (rot_amt != 0)
-                        rot_count += 1;
-                    additions += 1;
-                }
-            }
-            // The correct index for the correct ciphertext in the final output
-            int out_idx = (perm/2 + ct_idx) % data.out_ct;
-            if (perm == 0) {
-                // The first set of convolutions is aligned correctly
-                evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
-                if (data.out_halves == 1 && data.inp_halves > 1) {
-                    // If the output fits in a single half but the input
-                    // doesn't, add the two columns
-                    evaluator.rotate_columns_inplace(partials[perm][ct_idx],
-                                                         gal_keys);
-                    evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
-                    rot_count += 1;
-                    additions += 1;
-                } 
-                // Do the same for column swap if exists and we aren't on a repeat
-                if (data.half_perms > 1 && !half_repeats) {
-                    evaluator.rotate_columns_inplace(partials[perm+1][ct_idx],
-                                                         gal_keys);
-                    evaluator.add_inplace(result[out_idx], partials[perm+1][ct_idx]);
-                    rot_count += 1;
-                    additions += 1;
-                }
-            } else {
-                // Rotate the output ciphertexts by one and add
-                evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
-                additions += 1;
-                // If we're on a tight half we add both halves together and
-                // don't look at the column flip
-                if (half_repeats) {
-                    evaluator.rotate_columns_inplace(partials[perm][ct_idx],
-                                                         gal_keys);
-                    evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
-                    rot_count += 1;
-                    additions += 1;
-                } else if (data.half_perms > 1) {
-                    evaluator.rotate_columns_inplace(partials[perm+1][ct_idx],
-                                                         gal_keys);
-                    evaluator.add_inplace(result[out_idx], partials[perm+1][ct_idx]);
-                    rot_count += 1;
-                    additions += 1;
-                }
-            }
-        }
+    // The correct index for the correct ciphertext in the final output
+    int out_idx = (perm / 2) % data.out_ct;
+    if (perm == 0) {
+      // The first set of convolutions is aligned correctly
+      evaluator.add_inplace(result[out_idx], partials[perm]);
+      ///*
+      if (data.out_halves == 1 && data.inp_halves > 1) {
+        // If the output fits in a single half but the input
+        // doesn't, add the two columns
+        evaluator.rotate_columns_inplace(partials[perm], gal_keys);
+        evaluator.add_inplace(result[out_idx], partials[perm]);
+      }
+      //*/
+      // Do the same for column swap if exists and we aren't on a repeat
+      if (data.half_perms > 1) {
+        evaluator.rotate_columns_inplace(partials[perm + 1], gal_keys);
+        evaluator.add_inplace(result[out_idx], partials[perm + 1]);
+      }
+    } else {
+      // Rotate the output ciphertexts by one and add
+      evaluator.add_inplace(result[out_idx], partials[perm]);
+      // If we're on a tight half we add both halves together and
+      // don't look at the column flip
+      if (data.half_perms > 1) {
+        evaluator.rotate_columns_inplace(partials[perm + 1], gal_keys);
+        evaluator.add_inplace(result[out_idx], partials[perm + 1]);
+      }
     }
+  }
+
+
+
+
+    // vector<vector<Ciphertext>> partials(data.half_perms,
+    //                                     vector<Ciphertext>(data.inp_ct));
+    // // Init the result vector to all 0
+    // vector<Ciphertext> result(data.out_ct);
+    // for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
+    //     result[ct_idx] = zero;
+    // }
+    // // For each half perm, add up all the inside channels of each half 
+    // // #pragma omp parallel for num_threads(numThreads) schedule(static)
+    // for (int perm = 0; perm < data.half_perms; perm+=2) {
+    //     int rot;
+    //     // Can save an addition or so by initially setting the partials vector
+    //     // to a convolution result if it's correctly aligned. Otherwise init to
+    //     // all 0s
+    //     if (data.inp_chans <= data.out_chans || data.out_chans == 1) {
+    //         for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //             partials[perm][ct_idx] = convs[perm*data.half_rots][ct_idx];
+    //             if (data.half_perms > 1) 
+    //                 partials[perm+1][ct_idx] = convs[(perm+1)*data.half_rots][ct_idx];;
+    //         }
+    //         rot = 1;
+    //     } else {
+    //         for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //             partials[perm][ct_idx] = zero;
+    //             if (data.half_perms > 1) 
+    //                 partials[perm+1][ct_idx] = zero;
+    //         }
+    //         rot = 0;
+    //     }
+    //     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //         // The output channel the current ct starts from
+    //         int out_base = ((perm/2+ct_idx)*2*data.chans_per_half) % data.out_mod;
+    //         // Whether we are on the last input half
+    //         bool last_in = (perm + ct_idx + 1) % (data.inp_ct) == 0;
+    //         // If we're on the last output half, the first and last halves aren't
+    //         // in the same ciphertext, and the last half has repeats, then do the
+    //         // rotations optimization when summing up 
+    //         bool last_out = ((out_base + data.out_in_last) == data.out_chans)
+    //                         && data.out_halves != 2;
+    //         bool half_repeats = last_out && data.last_repeats;
+    //         int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
+    //         for (int in_rot = rot; in_rot < total_rots; in_rot++) {
+    //             int conv_idx = perm * data.half_rots + in_rot;
+    //             int rot_amt;
+    //             // If we're on a repeating half the amount we rotate will be
+    //             // different
+    //             if (half_repeats)
+    //                 rot_amt = -neg_mod(-in_rot, data.repeat_chans) * data.image_size;
+    //             else 
+    //                 rot_amt = -neg_mod(-in_rot, data.chans_per_half) * data.image_size;
+    //             // cout << "rotamt 1 "<< rot_amt<<endl;
+    //             evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
+    //                                               rot_amt,
+    //                                               gal_keys);
+    //             evaluator.add_inplace(partials[perm][ct_idx],
+    //                                       convs[conv_idx][ct_idx]);
+    //             // Do the same for the column swap if it exists
+    //             if (data.half_perms > 1) {
+    //                 // cout << "rotamt 2 "<< rot_amt<<endl;
+    //                 evaluator.rotate_rows_inplace(convs[conv_idx+data.half_rots][ct_idx],
+    //                                                   rot_amt,
+    //                                                   gal_keys);
+    //                 evaluator.add_inplace(partials[perm+1][ct_idx],
+    //                                           convs[conv_idx+data.half_rots][ct_idx]);
+    //                 if (rot_amt != 0)
+    //                     rot_count += 1;
+    //                 additions += 1;
+    //             }
+    //             if (rot_amt != 0)
+    //                 rot_count += 1;
+    //             additions += 1;
+    //         }
+    //         // Add up a repeating half
+    //         if (half_repeats) {
+    //             // If we're on the last inp_half then we might be able to do
+    //             // less rotations. We may be able to find a power of 2 less
+    //             // than chans_per_half that contains all of our needed repeats
+    //             int size_to_reduce;
+    //             if (last_in) {
+    //                 int num_repeats = ceil((float) data.inp_in_last / data.repeat_chans);
+    //                 //  We round the repeats to the closest power of 2
+    //                 int effective_repeats;
+    //                 // When we rotated in the previous loop we cause a bit of overflow 
+    //                 // (one extra repeat_chans worth). If the extra overflow fits 
+    //                 // into the modulo of the last repeat_chan we can do one
+    //                 // less rotation
+    //                 if (data.repeat_chans*num_repeats % data.inp_in_last == data.repeat_chans - 1)
+    //                     effective_repeats = pow(2, ceil(log(num_repeats)/log(2)));
+    //                 else
+    //                     effective_repeats = pow(2, ceil(log(num_repeats+1)/log(2)));
+    //                 // If the overflow ended up wrapping around then we simply
+    //                 // want chans_per_half as our size
+    //                 size_to_reduce = min(effective_repeats*data.repeat_chans, data.chans_per_half);
+    //             } else 
+    //                 size_to_reduce = data.chans_per_half;
+    //             // Perform the actual rotations
+    //             for (int in_rot = size_to_reduce/2; in_rot >= data.repeat_chans; in_rot = in_rot/2) {
+    //                 int rot_amt = in_rot * data.image_size;
+    //                 Ciphertext tmp = partials[perm][ct_idx];
+    //                 // cout << "rotamt 3 "<< rot_amt<<endl;
+    //                 evaluator.rotate_rows_inplace(tmp, rot_amt, gal_keys);
+    //                 evaluator.add_inplace(partials[perm][ct_idx], tmp);
+    //                 // Do the same for column swap if exists
+    //                 if (data.half_perms > 1) {
+    //                     tmp = partials[perm+1][ct_idx];
+    //                     // cout << "rotamt 4 "<< rot_amt<<endl;
+    //                     evaluator.rotate_rows_inplace(tmp, rot_amt, gal_keys);
+    //                     evaluator.add_inplace(partials[perm+1][ct_idx], tmp);
+    //                     if (rot_amt != 0)
+    //                         rot_count += 1;
+    //                     additions += 1;
+    //                 }
+    //                 if (rot_amt != 0)
+    //                     rot_count += 1;
+    //                 additions += 1;
+    //             }
+    //         }
+    //         // The correct index for the correct ciphertext in the final output
+    //         int out_idx = (perm/2 + ct_idx) % data.out_ct;
+    //         if (perm == 0) {
+    //             // The first set of convolutions is aligned correctly
+    //             evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
+    //             if (data.out_halves == 1 && data.inp_halves > 1) {
+    //                 // If the output fits in a single half but the input
+    //                 // doesn't, add the two columns
+    //                 evaluator.rotate_columns_inplace(partials[perm][ct_idx],
+    //                                                      gal_keys);
+    //                 evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
+    //                 rot_count += 1;
+    //                 additions += 1;
+    //             } 
+    //             // Do the same for column swap if exists and we aren't on a repeat
+    //             if (data.half_perms > 1 && !half_repeats) {
+    //                 evaluator.rotate_columns_inplace(partials[perm+1][ct_idx],
+    //                                                      gal_keys);
+    //                 evaluator.add_inplace(result[out_idx], partials[perm+1][ct_idx]);
+    //                 rot_count += 1;
+    //                 additions += 1;
+    //             }
+    //         } else {
+    //             // Rotate the output ciphertexts by one and add
+    //             evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
+    //             additions += 1;
+    //             // If we're on a tight half we add both halves together and
+    //             // don't look at the column flip
+    //             if (half_repeats) {
+    //                 evaluator.rotate_columns_inplace(partials[perm][ct_idx],
+    //                                                      gal_keys);
+    //                 evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
+    //                 rot_count += 1;
+    //                 additions += 1;
+    //             } else if (data.half_perms > 1) {
+    //                 evaluator.rotate_columns_inplace(partials[perm+1][ct_idx],
+    //                                                      gal_keys);
+    //                 evaluator.add_inplace(result[out_idx], partials[perm+1][ct_idx]);
+    //                 rot_count += 1;
+    //                 additions += 1;
+    //             }
+    //         }
+    //     }
+    // }
     return result;
 }
-vector<Ciphertext> MPHE_output_rotations(vector<vector<Ciphertext>> convs,
+vector<Ciphertext> MPHE_output_rotations(vector<Ciphertext> convs,
         const Metadata &data, Evaluator &evaluator, GaloisKeys &gal_keys,
         Ciphertext &zero) {
-    vector<vector<Ciphertext>> partials(data.half_perms,
-                                        vector<Ciphertext>(data.inp_ct));
-    // Init the result vector to all 0
-    vector<Ciphertext> result(data.out_ct);
-    for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
-        result[ct_idx] = zero;
-    }
-    // For each half perm, add up all the inside channels of each half 
-    for (int perm = 0; perm < data.half_perms; perm+=2) {
-        int rot;
-        // Can save an addition or so by initially setting the partials vector
-        // to a convolution result if it's correctly aligned. Otherwise init to
-        // all 0s
-        if (data.inp_chans <= data.out_chans || data.out_chans == 1) {
-            for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
-                partials[perm][ct_idx] = convs[perm*data.half_rots][ct_idx];
-                if (data.half_perms > 1) 
-                    partials[perm+1][ct_idx] = convs[(perm+1)*data.half_rots][ct_idx];;
+            vector<Ciphertext> partials(data.half_perms);
+  Ciphertext zero_next_level = zero;
+  evaluator.mod_switch_to_next_inplace(zero_next_level);
+  // Init the result vector to all 0
+  vector<Ciphertext> result(data.out_ct);
+  for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
+    result[ct_idx] = zero_next_level;
+  }
+   cout<< "half perms"<<data.half_perms<<endl;
+  // For each half perm, add up all the inside channels of each half
+  #pragma omp parallel for num_threads(numThreads) schedule(static)
+  // cout<< "half perms"<<data.half_perms<<endl;
+  for (int perm = 0; perm < data.half_perms; perm += 2) {
+    partials[perm] = zero_next_level;
+    if (data.half_perms > 1)
+      partials[perm + 1] = zero_next_level;
+    // The output channel the current ct starts from
+    int total_rots = data.half_rots;
+    for (int in_rot = 0; in_rot < total_rots; in_rot++) {
+      int conv_idx = perm * data.half_rots + in_rot;
+      int rot_amt;
+      rot_amt =
+          -neg_mod(-in_rot, (int64_t)data.chans_per_half) * data.image_size;
+      cout << "rot_amt 1 "<<rot_amt<<endl;
+        int num_rot;
+        int steps;
+        int remainder;
+        if (abs(rot_amt)>1365 && abs(rot_amt)<2731){
+            int num_rot;
+            int steps;
+            int remainder;
+            if (rot_amt>0) {
+                steps = 1024;
+                num_rot = rot_amt/1024;
+                remainder = rot_amt%1024;
             }
-            rot = 1;
-        } else {
-            for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
-                partials[perm][ct_idx] = zero;
-                if (data.half_perms > 1) 
-                    partials[perm+1][ct_idx] = zero;
+            else{
+                steps = -1024;
+                num_rot = (-rot_amt)/1024;
+                remainder = rot_amt%(-1024);
             }
-            rot = 0;
+
+        // cout << "rot_amt 1 "<<rot_amt<<endl;
+        // cout << "steps "<<steps<<endl;
+        // cout << "remainder "<<remainder<<endl;
+
+        for (int i=0; i < num_rot; i++){
+            evaluator.rotate_rows_inplace(convs[conv_idx],
+                                            steps,
+                                            gal_keys);
         }
-        for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
-            // The output channel the current ct starts from
-            int out_base = ((perm/2+ct_idx)*2*data.chans_per_half) % data.out_mod;
-            // Whether we are on the last input half
-            bool last_in = (perm + ct_idx + 1) % (data.inp_ct) == 0;
-            // If we're on the last output half, the first and last halves aren't
-            // in the same ciphertext, and the last half has repeats, then do the
-            // rotations optimization when summing up 
-            bool last_out = ((out_base + data.out_in_last) == data.out_chans)
-                            && data.out_halves != 2;
-            bool half_repeats = last_out && data.last_repeats;
-            int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
-            for (int in_rot = rot; in_rot < total_rots; in_rot++) {
-                int conv_idx = perm * data.half_rots + in_rot;
-                int rot_amt;
-                // If we're on a repeating half the amount we rotate will be
-                // different
-                if (half_repeats)
-                    rot_amt = -neg_mod(-in_rot, data.repeat_chans) * data.image_size;
-                else 
-                    rot_amt = -neg_mod(-in_rot, data.chans_per_half) * data.image_size;
+        evaluator.rotate_rows_inplace(convs[conv_idx], remainder, gal_keys);
+        }
+        else{
+            // cout << "rot_amt else "<<rot_amt<<endl;
+            evaluator.rotate_rows_inplace(convs[conv_idx], rot_amt, gal_keys);
+            // cout << "rot -3072"<<rot_amt<<endl;
+        }
+    //   evaluator.rotate_rows_inplace(convs[conv_idx], rot_amt, gal_keys);
+        // cout << "rot_amt else 2 "<<rot_amt<<endl;
+      evaluator.add_inplace(partials[perm], convs[conv_idx]);
+      // Do the same for the column swap if it exists
+      if (data.half_perms > 1) {
+        // cout << "half perms "<<endl;
+        if (abs(rot_amt)>1365 && abs(rot_amt)<2731){
+            // int num_rot;
+            // int steps;
+            // int remainder;
+            // if (rot_amt>0) {
+            //     steps = 1024;
+            //     num_rot = rot_amt/1024;
+            //     remainder = rot_amt%1024;
+            // }
+            // else{
+            //     steps = -1024;
+            //     num_rot = (-rot_amt)/1024;
+            //     remainder = rot_amt%(-1024);
+            // }
 
-                // int num_rot;
-                // int steps;
-                // int remainder;
-                if (abs(rot_amt)>1365 && abs(rot_amt)<2731){
-                    int num_rot;
-                    int steps;
-                    int remainder;
-                    if (rot_amt>0) {
-                        steps = 1024;
-                        num_rot = rot_amt/1024;
-                        remainder = rot_amt%1024;
-                    }
-                    else{
-                        steps = -1024;
-                        num_rot = (-rot_amt)/1024;
-                        remainder = rot_amt%(-1024);
-                    }
-                
-                // cout << "rot_amt 1"<<rot_amt<<endl;
-                // cout << "steps "<<steps<<endl;
-                // cout << "remainder "<<remainder<<endl;
+        // cout << "rot_amt 1 "<<rot_amt<<endl;
+        // cout << "steps "<<steps<<endl;
+        // cout << "remainder "<<remainder<<endl;
 
-                for (int i=0; i < num_rot; i++){
-                    evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
-                                                  steps,
-                                                  gal_keys);
-                }
-                evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
-                                                  remainder,
-                                                  gal_keys);
-                }
-                else{
-                    evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
-                                                  rot_amt,
-                                                  gal_keys);
-                }
+        for (int i=0; i < num_rot; i++){
+            evaluator.rotate_rows_inplace(convs[conv_idx + data.half_rots],
+                                            steps,
+                                            gal_keys);
+        }
+        evaluator.rotate_rows_inplace(convs[conv_idx + data.half_rots], remainder, gal_keys);
+        }
+        else{
+            // cout << "rot_amt else "<<rot_amt<<endl;
+            evaluator.rotate_rows_inplace(convs[conv_idx + data.half_rots], rot_amt, gal_keys);
+            // cout << "rot -3072"<<rot_amt<<endl;
+        }
+        // evaluator.rotate_rows_inplace(convs[conv_idx + data.half_rots], rot_amt,
+        //                               gal_keys);
+        evaluator.add_inplace(partials[perm + 1],
+                              convs[conv_idx + data.half_rots]);
+      }
+    }
+    // The correct index for the correct ciphertext in the final output
+    // cout << "rot  3 "<<endl;
+    int out_idx = (perm / 2) % data.out_ct;
+    if (perm == 0) {
+      // The first set of convolutions is aligned correctly
+      evaluator.add_inplace(result[out_idx], partials[perm]);
+      ///*
+      if (data.out_halves == 1 && data.inp_halves > 1) {
+        // If the output fits in a single half but the input
+        // doesn't, add the two columns
+        evaluator.rotate_columns_inplace(partials[perm], gal_keys);
+        evaluator.add_inplace(result[out_idx], partials[perm]);
+      }
+      //*/
+      // Do the same for column swap if exists and we aren't on a repeat
+      if (data.half_perms > 1) {
+        evaluator.rotate_columns_inplace(partials[perm + 1], gal_keys);
+        evaluator.add_inplace(result[out_idx], partials[perm + 1]);
+      }
+    } else {
+      // Rotate the output ciphertexts by one and add
+      evaluator.add_inplace(result[out_idx], partials[perm]);
+      // If we're on a tight half we add both halves together and
+      // don't look at the column flip
+      if (data.half_perms > 1) {
+        evaluator.rotate_columns_inplace(partials[perm + 1], gal_keys);
+        evaluator.add_inplace(result[out_idx], partials[perm + 1]);
+      }
+    }
+  }
+    // vector<vector<Ciphertext>> partials(data.half_perms,
+    //                                     vector<Ciphertext>(data.inp_ct));
+    // // Init the result vector to all 0
+    // vector<Ciphertext> result(data.out_ct);
+    // for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
+    //     result[ct_idx] = zero;
+    // }
+    // // For each half perm, add up all the inside channels of each half 
+    // // #pragma omp parallel for num_threads(numThreads) schedule(static)
+    // for (int perm = 0; perm < data.half_perms; perm+=2) {
+    //     int rot;
+    //     // Can save an addition or so by initially setting the partials vector
+    //     // to a convolution result if it's correctly aligned. Otherwise init to
+    //     // all 0s
+    //     if (data.inp_chans <= data.out_chans || data.out_chans == 1) {
+    //         for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //             partials[perm][ct_idx] = convs[perm*data.half_rots][ct_idx];
+    //             if (data.half_perms > 1) 
+    //                 partials[perm+1][ct_idx] = convs[(perm+1)*data.half_rots][ct_idx];;
+    //         }
+    //         rot = 1;
+    //     } else {
+    //         for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //             partials[perm][ct_idx] = zero;
+    //             if (data.half_perms > 1) 
+    //                 partials[perm+1][ct_idx] = zero;
+    //         }
+    //         rot = 0;
+    //     }
+    //     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
+    //         // The output channel the current ct starts from
+    //         int out_base = ((perm/2+ct_idx)*2*data.chans_per_half) % data.out_mod;
+    //         // Whether we are on the last input half
+    //         bool last_in = (perm + ct_idx + 1) % (data.inp_ct) == 0;
+    //         // If we're on the last output half, the first and last halves aren't
+    //         // in the same ciphertext, and the last half has repeats, then do the
+    //         // rotations optimization when summing up 
+    //         bool last_out = ((out_base + data.out_in_last) == data.out_chans)
+    //                         && data.out_halves != 2;
+    //         bool half_repeats = last_out && data.last_repeats;
+    //         int total_rots = (half_repeats) ? data.last_rots : data.half_rots;
+    //         for (int in_rot = rot; in_rot < total_rots; in_rot++) {
+    //             int conv_idx = perm * data.half_rots + in_rot;
+    //             int rot_amt;
+    //             // If we're on a repeating half the amount we rotate will be
+    //             // different
+    //             if (half_repeats)
+    //                 rot_amt = -neg_mod(-in_rot, data.repeat_chans) * data.image_size;
+    //             else 
+    //                 rot_amt = -neg_mod(-in_rot, data.chans_per_half) * data.image_size;
+
+    //             // int num_rot;
+    //             // int steps;
+    //             // int remainder;
+    //             if (abs(rot_amt)>1365 && abs(rot_amt)<2731){
+    //                 int num_rot;
+    //                 int steps;
+    //                 int remainder;
+    //                 if (rot_amt>0) {
+    //                     steps = 1024;
+    //                     num_rot = rot_amt/1024;
+    //                     remainder = rot_amt%1024;
+    //                 }
+    //                 else{
+    //                     steps = -1024;
+    //                     num_rot = (-rot_amt)/1024;
+    //                     remainder = rot_amt%(-1024);
+    //                 }
+                
+    //             // cout << "rot_amt 1"<<rot_amt<<endl;
+    //             // cout << "steps "<<steps<<endl;
+    //             // cout << "remainder "<<remainder<<endl;
+
+    //             for (int i=0; i < num_rot; i++){
+    //                 evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
+    //                                               steps,
+    //                                               gal_keys);
+    //             }
+    //             evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
+    //                                               remainder,
+    //                                               gal_keys);
+    //             }
+    //             else{
+    //                 evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
+    //                                               rot_amt,
+    //                                               gal_keys);
+    //             }
                 
                 
-                // for (int i=0; i < num_rot; i++){
-                //     evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
-                //                                   steps,
-                //                                   gal_keys);
-                // }
-                // evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
-                //                                   rot_amt,
-                //                                   gal_keys);
-                evaluator.add_inplace(partials[perm][ct_idx],
-                                          convs[conv_idx][ct_idx]);
-                // Do the same for the column swap if it exists
-                if (data.half_perms > 1) {
-                    if (abs(rot_amt)>1365 && abs(rot_amt)<2731){
-                        int num_rot;
-                        int steps;
-                        int remainder;
-                        if (rot_amt>0) {
-                            steps = 1024;
-                            num_rot = rot_amt/1024;
-                            remainder = rot_amt%1024;
-                        }
-                        else{
-                            steps = -1024;
-                            num_rot = (-rot_amt)/1024;
-                            remainder = rot_amt%(-1024);
-                        }
+    //             // for (int i=0; i < num_rot; i++){
+    //             //     evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
+    //             //                                   steps,
+    //             //                                   gal_keys);
+    //             // }
+    //             // evaluator.rotate_rows_inplace(convs[conv_idx][ct_idx],
+    //             //                                   rot_amt,
+    //             //                                   gal_keys);
+    //             evaluator.add_inplace(partials[perm][ct_idx],
+    //                                       convs[conv_idx][ct_idx]);
+    //             // Do the same for the column swap if it exists
+    //             if (data.half_perms > 1) {
+    //                 if (abs(rot_amt)>1365 && abs(rot_amt)<2731){
+    //                     int num_rot;
+    //                     int steps;
+    //                     int remainder;
+    //                     if (rot_amt>0) {
+    //                         steps = 1024;
+    //                         num_rot = rot_amt/1024;
+    //                         remainder = rot_amt%1024;
+    //                     }
+    //                     else{
+    //                         steps = -1024;
+    //                         num_rot = (-rot_amt)/1024;
+    //                         remainder = rot_amt%(-1024);
+    //                     }
                     
 
-                    for (int i=0; i < num_rot; i++){
-                        evaluator.rotate_rows_inplace(convs[conv_idx+data.half_rots][ct_idx],
-                                                    steps,
-                                                    gal_keys);
-                    }
-                    evaluator.rotate_rows_inplace(convs[conv_idx+data.half_rots][ct_idx],
-                                                    remainder,
-                                                    gal_keys);
-                    }
-                    else{
-                        evaluator.rotate_rows_inplace(convs[conv_idx+data.half_rots][ct_idx],
-                                                    rot_amt,
-                                                    gal_keys);
-                    }
-                    evaluator.add_inplace(partials[perm+1][ct_idx],
-                                              convs[conv_idx+data.half_rots][ct_idx]);
-                    if (rot_amt != 0)
-                        rot_count += 1;
-                    additions += 1;
-                }
-                if (rot_amt != 0)
-                    rot_count += 1;
-                additions += 1;
-            }
-            // Add up a repeating half
-            if (half_repeats) {
-                // If we're on the last inp_half then we might be able to do
-                // less rotations. We may be able to find a power of 2 less
-                // than chans_per_half that contains all of our needed repeats
-                int size_to_reduce;
-                if (last_in) {
-                    int num_repeats = ceil((float) data.inp_in_last / data.repeat_chans);
-                    //  We round the repeats to the closest power of 2
-                    int effective_repeats;
-                    // When we rotated in the previous loop we cause a bit of overflow 
-                    // (one extra repeat_chans worth). If the extra overflow fits 
-                    // into the modulo of the last repeat_chan we can do one
-                    // less rotation
-                    if (data.repeat_chans*num_repeats % data.inp_in_last == data.repeat_chans - 1)
-                        effective_repeats = pow(2, ceil(log(num_repeats)/log(2)));
-                    else
-                        effective_repeats = pow(2, ceil(log(num_repeats+1)/log(2)));
-                    // If the overflow ended up wrapping around then we simply
-                    // want chans_per_half as our size
-                    size_to_reduce = min(effective_repeats*data.repeat_chans, data.chans_per_half);
-                } else 
-                    size_to_reduce = data.chans_per_half;
-                // Perform the actual rotations
-                for (int in_rot = size_to_reduce/2; in_rot >= data.repeat_chans; in_rot = in_rot/2) {
-                    int rot_amt = in_rot * data.image_size;
-                    Ciphertext tmp = partials[perm][ct_idx];
-                    if (abs(rot_amt)>1365 && abs(rot_amt)<2731){
-                        int num_rot;
-                        int steps;
-                        int remainder;
-                        if (rot_amt>0) {
-                            steps = 1024;
-                            num_rot = rot_amt/1024;
-                            remainder = rot_amt%1024;
-                        }
-                        else{
-                            steps = -1024;
-                            num_rot = (-rot_amt)/1024;
-                            remainder = rot_amt%(-1024);
-                        }
+    //                 for (int i=0; i < num_rot; i++){
+    //                     evaluator.rotate_rows_inplace(convs[conv_idx+data.half_rots][ct_idx],
+    //                                                 steps,
+    //                                                 gal_keys);
+    //                 }
+    //                 evaluator.rotate_rows_inplace(convs[conv_idx+data.half_rots][ct_idx],
+    //                                                 remainder,
+    //                                                 gal_keys);
+    //                 }
+    //                 else{
+    //                     evaluator.rotate_rows_inplace(convs[conv_idx+data.half_rots][ct_idx],
+    //                                                 rot_amt,
+    //                                                 gal_keys);
+    //                 }
+    //                 evaluator.add_inplace(partials[perm+1][ct_idx],
+    //                                           convs[conv_idx+data.half_rots][ct_idx]);
+    //                 if (rot_amt != 0)
+    //                     rot_count += 1;
+    //                 additions += 1;
+    //             }
+    //             if (rot_amt != 0)
+    //                 rot_count += 1;
+    //             additions += 1;
+    //         }
+    //         // Add up a repeating half
+    //         if (half_repeats) {
+    //             // If we're on the last inp_half then we might be able to do
+    //             // less rotations. We may be able to find a power of 2 less
+    //             // than chans_per_half that contains all of our needed repeats
+    //             int size_to_reduce;
+    //             if (last_in) {
+    //                 int num_repeats = ceil((float) data.inp_in_last / data.repeat_chans);
+    //                 //  We round the repeats to the closest power of 2
+    //                 int effective_repeats;
+    //                 // When we rotated in the previous loop we cause a bit of overflow 
+    //                 // (one extra repeat_chans worth). If the extra overflow fits 
+    //                 // into the modulo of the last repeat_chan we can do one
+    //                 // less rotation
+    //                 if (data.repeat_chans*num_repeats % data.inp_in_last == data.repeat_chans - 1)
+    //                     effective_repeats = pow(2, ceil(log(num_repeats)/log(2)));
+    //                 else
+    //                     effective_repeats = pow(2, ceil(log(num_repeats+1)/log(2)));
+    //                 // If the overflow ended up wrapping around then we simply
+    //                 // want chans_per_half as our size
+    //                 size_to_reduce = min(effective_repeats*data.repeat_chans, data.chans_per_half);
+    //             } else 
+    //                 size_to_reduce = data.chans_per_half;
+    //             // Perform the actual rotations
+    //             for (int in_rot = size_to_reduce/2; in_rot >= data.repeat_chans; in_rot = in_rot/2) {
+    //                 int rot_amt = in_rot * data.image_size;
+    //                 Ciphertext tmp = partials[perm][ct_idx];
+    //                 if (abs(rot_amt)>1365 && abs(rot_amt)<2731){
+    //                     int num_rot;
+    //                     int steps;
+    //                     int remainder;
+    //                     if (rot_amt>0) {
+    //                         steps = 1024;
+    //                         num_rot = rot_amt/1024;
+    //                         remainder = rot_amt%1024;
+    //                     }
+    //                     else{
+    //                         steps = -1024;
+    //                         num_rot = (-rot_amt)/1024;
+    //                         remainder = rot_amt%(-1024);
+    //                     }
                     
 
-                    for (int i=0; i < num_rot; i++){
-                        evaluator.rotate_rows_inplace(tmp,
-                                                    steps,
-                                                    gal_keys);
-                    }
-                    evaluator.rotate_rows_inplace(tmp,
-                                                    remainder,
-                                                    gal_keys);
-                    }
-                    else{
-                        evaluator.rotate_rows_inplace(tmp,
-                                                    rot_amt,
-                                                    gal_keys);
-                    }
-                    // cout << "rotamt 1  :" << rot_amt<<endl;
+    //                 for (int i=0; i < num_rot; i++){
+    //                     evaluator.rotate_rows_inplace(tmp,
+    //                                                 steps,
+    //                                                 gal_keys);
+    //                 }
+    //                 evaluator.rotate_rows_inplace(tmp,
+    //                                                 remainder,
+    //                                                 gal_keys);
+    //                 }
+    //                 else{
+    //                     evaluator.rotate_rows_inplace(tmp,
+    //                                                 rot_amt,
+    //                                                 gal_keys);
+    //                 }
+    //                 // cout << "rotamt 1  :" << rot_amt<<endl;
 
 
-                    // int steps;
-                    // int num_rot;
-                    // if (rot_amt > 0){
-                    //     steps = 1024;
-                    //     num_rot = rot_amt/1024;
-                    // }
-                    // else{
-                    //     steps = -1024;
-                    //     num_rot = (-rot_amt)/1024;
-                    // }
-                    // cout << "rotamt " << rot_amt<<endl;
+    //                 // int steps;
+    //                 // int num_rot;
+    //                 // if (rot_amt > 0){
+    //                 //     steps = 1024;
+    //                 //     num_rot = rot_amt/1024;
+    //                 // }
+    //                 // else{
+    //                 //     steps = -1024;
+    //                 //     num_rot = (-rot_amt)/1024;
+    //                 // }
+    //                 // cout << "rotamt " << rot_amt<<endl;
                     
-                    // for (int i=0; i < num_rot; i++){
-                    //     evaluator.rotate_rows_inplace(tmp,
-                    //                                 steps,
-                    //                                 gal_keys);
-                    // }
-                    // evaluator.rotate_rows_inplace(tmp, rot_amt, gal_keys);
-                    evaluator.add_inplace(partials[perm][ct_idx], tmp);
-                    // Do the same for column swap if exists
-                    if (data.half_perms > 1) {
-                        tmp = partials[perm+1][ct_idx];
-                        if (abs(rot_amt)>1365 && abs(rot_amt)<2731){
-                            int num_rot;
-                            int steps;
-                            int remainder;
-                            if (rot_amt>0) {
-                                steps = 1024;
-                                num_rot = rot_amt/1024;
-                                remainder = rot_amt%1024;
-                            }
-                            else{
-                                steps = -1024;
-                                num_rot = (-rot_amt)/1024;
-                                remainder = rot_amt%(-1024);
-                            }
+    //                 // for (int i=0; i < num_rot; i++){
+    //                 //     evaluator.rotate_rows_inplace(tmp,
+    //                 //                                 steps,
+    //                 //                                 gal_keys);
+    //                 // }
+    //                 // evaluator.rotate_rows_inplace(tmp, rot_amt, gal_keys);
+    //                 evaluator.add_inplace(partials[perm][ct_idx], tmp);
+    //                 // Do the same for column swap if exists
+    //                 if (data.half_perms > 1) {
+    //                     tmp = partials[perm+1][ct_idx];
+    //                     if (abs(rot_amt)>1365 && abs(rot_amt)<2731){
+    //                         int num_rot;
+    //                         int steps;
+    //                         int remainder;
+    //                         if (rot_amt>0) {
+    //                             steps = 1024;
+    //                             num_rot = rot_amt/1024;
+    //                             remainder = rot_amt%1024;
+    //                         }
+    //                         else{
+    //                             steps = -1024;
+    //                             num_rot = (-rot_amt)/1024;
+    //                             remainder = rot_amt%(-1024);
+    //                         }
                         
 
-                        for (int i=0; i < num_rot; i++){
-                            evaluator.rotate_rows_inplace(tmp,
-                                                        steps,
-                                                        gal_keys);
-                        }
-                        evaluator.rotate_rows_inplace(tmp,
-                                                        remainder,
-                                                        gal_keys);
-                        }
-                        else{
-                            evaluator.rotate_rows_inplace(tmp,
-                                                        rot_amt,
-                                                        gal_keys);
-                        }
-                        // evaluator.rotate_rows_inplace(tmp, rot_amt, gal_keys);
-                        evaluator.add_inplace(partials[perm+1][ct_idx], tmp);
-                        if (rot_amt != 0)
-                            rot_count += 1;
-                        additions += 1;
-                    }
-                    if (rot_amt != 0)
-                        rot_count += 1;
-                    additions += 1;
-                }
-            }
-            // The correct index for the correct ciphertext in the final output
-            int out_idx = (perm/2 + ct_idx) % data.out_ct;
-            if (perm == 0) {
-                // The first set of convolutions is aligned correctly
-                evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
-                if (data.out_halves == 1 && data.inp_halves > 1) {
-                    // If the output fits in a single half but the input
-                    // doesn't, add the two columns
-                    evaluator.rotate_columns_inplace(partials[perm][ct_idx],
-                                                         gal_keys);
-                    evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
-                    rot_count += 1;
-                    additions += 1;
-                } 
-                // Do the same for column swap if exists and we aren't on a repeat
-                if (data.half_perms > 1 && !half_repeats) {
-                    evaluator.rotate_columns_inplace(partials[perm+1][ct_idx],
-                                                         gal_keys);
-                    evaluator.add_inplace(result[out_idx], partials[perm+1][ct_idx]);
-                    rot_count += 1;
-                    additions += 1;
-                }
-            } else {
-                // Rotate the output ciphertexts by one and add
-                evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
-                additions += 1;
-                // If we're on a tight half we add both halves together and
-                // don't look at the column flip
-                if (half_repeats) {
-                    evaluator.rotate_columns_inplace(partials[perm][ct_idx],
-                                                         gal_keys);
-                    evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
-                    rot_count += 1;
-                    additions += 1;
-                } else if (data.half_perms > 1) {
-                    evaluator.rotate_columns_inplace(partials[perm+1][ct_idx],
-                                                         gal_keys);
-                    evaluator.add_inplace(result[out_idx], partials[perm+1][ct_idx]);
-                    rot_count += 1;
-                    additions += 1;
-                }
-            }
-        }
-    }
+    //                     for (int i=0; i < num_rot; i++){
+    //                         evaluator.rotate_rows_inplace(tmp,
+    //                                                     steps,
+    //                                                     gal_keys);
+    //                     }
+    //                     evaluator.rotate_rows_inplace(tmp,
+    //                                                     remainder,
+    //                                                     gal_keys);
+    //                     }
+    //                     else{
+    //                         evaluator.rotate_rows_inplace(tmp,
+    //                                                     rot_amt,
+    //                                                     gal_keys);
+    //                     }
+    //                     // evaluator.rotate_rows_inplace(tmp, rot_amt, gal_keys);
+    //                     evaluator.add_inplace(partials[perm+1][ct_idx], tmp);
+    //                     if (rot_amt != 0)
+    //                         rot_count += 1;
+    //                     additions += 1;
+    //                 }
+    //                 if (rot_amt != 0)
+    //                     rot_count += 1;
+    //                 additions += 1;
+    //             }
+    //         }
+    //         // The correct index for the correct ciphertext in the final output
+    //         int out_idx = (perm/2 + ct_idx) % data.out_ct;
+    //         if (perm == 0) {
+    //             // The first set of convolutions is aligned correctly
+    //             evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
+    //             if (data.out_halves == 1 && data.inp_halves > 1) {
+    //                 // If the output fits in a single half but the input
+    //                 // doesn't, add the two columns
+    //                 evaluator.rotate_columns_inplace(partials[perm][ct_idx],
+    //                                                      gal_keys);
+    //                 evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
+    //                 rot_count += 1;
+    //                 additions += 1;
+    //             } 
+    //             // Do the same for column swap if exists and we aren't on a repeat
+    //             if (data.half_perms > 1 && !half_repeats) {
+    //                 evaluator.rotate_columns_inplace(partials[perm+1][ct_idx],
+    //                                                      gal_keys);
+    //                 evaluator.add_inplace(result[out_idx], partials[perm+1][ct_idx]);
+    //                 rot_count += 1;
+    //                 additions += 1;
+    //             }
+    //         } else {
+    //             // Rotate the output ciphertexts by one and add
+    //             evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
+    //             additions += 1;
+    //             // If we're on a tight half we add both halves together and
+    //             // don't look at the column flip
+    //             if (half_repeats) {
+    //                 evaluator.rotate_columns_inplace(partials[perm][ct_idx],
+    //                                                      gal_keys);
+    //                 evaluator.add_inplace(result[out_idx], partials[perm][ct_idx]);
+    //                 rot_count += 1;
+    //                 additions += 1;
+    //             } else if (data.half_perms > 1) {
+    //                 evaluator.rotate_columns_inplace(partials[perm+1][ct_idx],
+    //                                                      gal_keys);
+    //                 evaluator.add_inplace(result[out_idx], partials[perm+1][ct_idx]);
+    //                 rot_count += 1;
+    //                 additions += 1;
+    //             }
+    //         }
+    //     }
+    // }
+    // cout << "end MPHE output rot"<<endl;
     return result;
 }
 
@@ -1200,6 +1660,7 @@ u64** HE_decrypt(vector<Ciphertext> &enc_result, const Metadata &data, Decryptor
         BatchEncoder &batch_encoder) {
     // Decrypt ciphertext 
     vector<vector<u64>> result(data.out_ct);
+
     for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
         Plaintext tmp;
         decryptor.decrypt(enc_result[ct_idx], tmp);

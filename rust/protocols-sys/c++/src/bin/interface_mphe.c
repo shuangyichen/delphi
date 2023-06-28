@@ -5,11 +5,14 @@
 #include <time.h>
 #include <string.h>
 
+
 typedef uint64_t u64;
+
+// using namespace std;
 
 void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServerMPHE* lsmphe_b,LeafServerMPHE* lsmphe_c,
     int image_h, int image_w, int filter_h, int filter_w,int inp_chans, int out_chans, int stride, bool pad_valid){
-    Metadata data = conv_metadata(rsmphe->encoder, image_h, image_w, filter_h, filter_w, inp_chans, 
+    Metadata data = conv_metadata(rsmphe->encoder, image_h, image_w, filter_h, filter_w, inp_chans,
         out_chans, stride, stride, pad_valid);
 
     printf("\nServer A Preprocessing: \n ");
@@ -21,18 +24,18 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
             input_a[chan][idx] = 1;//idx;
     }
 
-    for (int chan = 0; chan < data.inp_chans; chan++) {
-        int idx = 0;
-        for (int row = 0; row < data.image_h; row++) {
-            printf("[");
-            int col = 0;
-            for (; col < data.image_w-1; col++) {
-                printf("%d, " , input_a[chan][row*data.output_w + col]);
-            }
-            printf("%d ]\n" , input_a[chan][row*data.output_w + col]);
-        }
-        printf("\n");
-    }
+    // for (int chan = 0; chan < data.inp_chans; chan++) {
+    //     int idx = 0;
+    //     for (int row = 0; row < data.image_h; row++) {
+    //         printf("[");
+    //         int col = 0;
+    //         for (; col < data.image_w-1; col++) {
+    //             printf("%d, " , input_a[chan][row*data.output_w + col]);
+    //         }
+    //         printf("%d ]\n" , input_a[chan][row*data.output_w + col]);
+    //     }
+    //     printf("\n");
+    // }
 
     RootServerShares sa_share = server_a_conv_preprocess(lsmphe_a,&data,input_a);
 
@@ -44,20 +47,20 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
             input_b[chan][idx] = 1;//rand() % 10;
     }
 
-    printf("Server B input r: \n");
+    // printf("Server B input r: \n");
 
-    for (int chan = 0; chan < data.inp_chans; chan++) {
-        int idx = 0;
-        for (int row = 0; row < data.image_h; row++) {
-            printf("[");
-            int col = 0;
-            for (; col < data.image_w-1; col++) {
-                printf("%d, " , input_b[chan][row*data.output_w + col]);
-            }
-            printf("%d ]\n" , input_b[chan][row*data.output_w + col]);
-        }
-        printf("\n");
-    }
+    // for (int chan = 0; chan < data.inp_chans; chan++) {
+    //     int idx = 0;
+    //     for (int row = 0; row < data.image_h; row++) {
+    //         printf("[");
+    //         int col = 0;
+    //         for (; col < data.image_w-1; col++) {
+    //             printf("%d, " , input_b[chan][row*data.output_w + col]);
+    //         }
+    //         printf("%d ]\n" , input_b[chan][row*data.output_w + col]);
+    //     }
+    //     printf("\n");
+    // }
 
     u64** input_c = (u64**) malloc(sizeof(u64*)*data.inp_chans);
     for (int chan = 0; chan < data.inp_chans; chan++) {
@@ -66,20 +69,20 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
             input_c[chan][idx] = 1;//rand() % 10;
     }
 
-    printf("Server C input r: \n");
+    // printf("Server C input r: \n");
 
-    for (int chan = 0; chan < data.inp_chans; chan++) {
-        int idx = 0;
-        for (int row = 0; row < data.image_h; row++) {
-            printf("[");
-            int col = 0;
-            for (; col < data.image_w-1; col++) {
-                printf("%d, " , input_c[chan][row*data.output_w + col]);
-            }
-            printf("%d ]\n" , input_c[chan][row*data.output_w + col]);
-        }
-        printf("\n");
-    }
+    // for (int chan = 0; chan < data.inp_chans; chan++) {
+    //     int idx = 0;
+    //     for (int row = 0; row < data.image_h; row++) {
+    //         printf("[");
+    //         int col = 0;
+    //         for (; col < data.image_w-1; col++) {
+    //             printf("%d, " , input_c[chan][row*data.output_w + col]);
+    //         }
+    //         printf("%d ]\n" , input_c[chan][row*data.output_w + col]);
+    //     }
+    //     printf("\n");
+    // }
 
     // Server B creates filter
     u64*** filters_b = (u64***) malloc(sizeof(u64**)*data.out_chans);
@@ -121,12 +124,17 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
             linear_share_c[chan][idx] = 2;
         }
     }
+
+
     printf("Server b encrypting ... \n");
     LeafServerShares lfshares_b = server_bc_conv_preprocess(lsmphe_b,&data,input_b,filters_b,linear_share_b);
     printf("Server c encrypting ... \n");
     LeafServerShares lfshares_c = server_bc_conv_preprocess(lsmphe_c,&data,input_c,filters_c,linear_share_c);
 
     printf("Convolution... \n ");
+    double time_spent = 0.0;
+
+    clock_t begin = clock();
     // root_server_conv_online_test(rsmphe, &data, lfshares_b.masks, lfshares_b.r_ct,lfshares_b.s_ct,lfshares_c.masks, lfshares_c.r_ct,lfshares_c.s_ct,&sa_share);
     root_server_conv_online(rsmphe, &data, lfshares_b.weight_ct, lfshares_b.r_ct,lfshares_b.s_ct,lfshares_c.weight_ct, lfshares_c.r_ct,lfshares_c.s_ct,&sa_share);
     // leaf_server_conv_decrypt
@@ -150,19 +158,25 @@ void MPHE_test_conv(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServer
     leaf_server_conv_decrypt(lsmphe_c,&data,&lfshares_c);
     root_server_conv_decrypt(rsmphe, &data, &sa_share, &lfshares_a, lfshares_b.result_pd, lfshares_c.result_pd);
 
-    printf("RESULT: \n");
-    for (int chan = 0; chan < data.out_chans; chan++) {
-        int idx = 0;
-        for (int row = 0; row < data.output_h; row++) {
-            printf(" [");
-            int col = 0;
-            for (; col < data.output_w-1; col++) {
-                printf("%d, " , sa_share.result[chan][row*data.output_w + col]);
-            }
-            printf("%d ]\n" , sa_share.result[chan][row*data.output_w + col]);
-        }
-        printf("\n");
-    }
+    clock_t end = clock();
+
+    time_spent += (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("The conv time is %f seconds", time_spent);
+
+
+    // printf("RESULT: \n");
+    // for (int chan = 0; chan < data.out_chans; chan++) {
+    //     int idx = 0;
+    //     for (int row = 0; row < data.output_h; row++) {
+    //         printf(" [");
+    //         int col = 0;
+    //         for (; col < data.output_w-1; col++) {
+    //             printf("%d, " , sa_share.result[chan][row*data.output_w + col]);
+    //         }
+    //         printf("%d ]\n" , sa_share.result[chan][row*data.output_w + col]);
+    //     }
+    //     printf("\n");
+    // }
 }
 
 void MPHE_test_fc(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServerMPHE* lsmphe_b,LeafServerMPHE* lsmphe_c, int vector_len, int matrix_h){
@@ -236,11 +250,11 @@ void MPHE_test_fc(RootServerMPHE* rsmphe, LeafServerMPHE* lsmphe_a, LeafServerMP
     leaf_server_fc_decrypt(lsmphe_c, &data, &lfshares_c);
     printf("server_c dis decrypt... \n");
     root_server_fc_decrypt(rsmphe, &data, &sa_share, &leaf_a_share,lfshares_b.result_pd,lfshares_c.result_pd);
-    printf("result: [");
-    for (int idx = 0; idx < matrix_h; idx++) {
-        printf("%d, " , sa_share.result[0][idx]);
-    }
-    printf("] \n");
+    // printf("result: [");
+    // for (int idx = 0; idx < matrix_h; idx++) {
+    //     printf("%d, " , sa_share.result[0][idx]);
+    // }
+    // printf("] \n");
 
 
 
@@ -261,7 +275,7 @@ int main(int argc, char* argv[]) {
     LeafServerMPHE lsmphe1 = server_mphe_keygen(&key_share1);
     // printf("party 2 r1\n");
     LeafServerMPHE lsmphe2 = server_mphe_keygen(&key_share2);
-    // ServerFHE sfhe = server_keygen(key_share); 
+    // ServerFHE sfhe = server_keygen(key_share);
     // printf("server aggregating r1 \n");
     RootServerMPHE rsmphe = server_mphe_aggregation_r1(key_share0,key_share1,key_share2,&server_aggr);
     SerialCT key_share0_r2;
@@ -276,8 +290,21 @@ int main(int argc, char* argv[]) {
     // server_mphe_aggregation_r1(key_share0,key_share1,key_share2,&server_aggr);
     // printf("server aggregating r2 \n");
     RootServerMPHE rsmphe_ = server_mphe_aggregation_r2(&rsmphe,key_share0_r2,key_share1_r2,key_share2_r2);
+    // double time_spent = 0.0;
 
-    MPHE_test_conv(&rsmphe_, &lsmphe0_, &lsmphe1_, &lsmphe2_, 22, 22, 3, 3, 3, 3, 1, 0); 
+    // clock_t begin = clock();
+    // printf("    Conv time: \n ");
+
+    // time_start = chrono::high_resolution_clock::now();
+    // MPHE_test_conv(&rsmphe_, &lsmphe0_, &lsmphe1_, &lsmphe2_, 16, 16, 3, 3, 32, 32, 1, 0);
+    MPHE_test_conv(&rsmphe_, &lsmphe0_, &lsmphe1_, &lsmphe2_, 32, 32, 3, 3, 16, 32, 1, 0);
+    // MPHE_test_conv(&rsmphe_, &lsmphe0_, &lsmphe1_, &lsmphe2_, 32, 32, 3, 3, 16, 16, 1, 0);
+    // clock_t end = clock();
+
+    // time_spent += (double)(end - begin) / CLOCKS_PER_SEC;
+    // printf("The conv time is %f seconds", time_spent);
+
+    // std::cout << "[" << time_diff.count() << " microseconds]" << std::endl;
     // MPHE_test_conv(&rsmphe_, &lsmphe0_, &lsmphe1_, &lsmphe2_, 32, 32, 3, 3, 10, 10, 1, 0);  //ok
     // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 5, 5, 3, 3, 2, 2, 1, 1);//ok
     // MPHE_test_conv(&rsmphe, &lsmphe0, &lsmphe1, &lsmphe2, 28, 28, 3, 3, 1, 1, 1, 0); //ok

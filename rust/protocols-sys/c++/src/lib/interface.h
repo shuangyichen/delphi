@@ -12,7 +12,7 @@
 
 const uint64_t PLAINTEXT_MODULUS = 2061584302081;
 const uint64_t POLY_MOD_DEGREE = 8192;//8192;    
-const int numThreads = 4;
+const int numThreads = 2;
 
 
 /* This is ugly but very useful. */
@@ -108,6 +108,7 @@ extern "C" {
         void* keygenerator;
         void* encryptor;
         void* decryptor;
+        void* evaluator;
     } LeafServerMPHE;
 
     typedef struct SerialCT {

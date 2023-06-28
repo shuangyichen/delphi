@@ -28,7 +28,7 @@ find_package(OpenMP REQUIRED)
 target_link_libraries(DelphiOffline seal OpenMP::OpenMP_CXX)
 
 
-option(UNITTESTS "Build unittests" OFF)
+option(UNITTESTS "Build unittests" ON)
 if(UNITTESTS)
     include_directories(${CMAKE_SOURCE_DIR}/src/bin)
     add_executable(unittests ${BIN}/unittests.cpp ${LIB}/im2col.cpp)
@@ -46,7 +46,7 @@ if(UNITTESTS)
     target_link_libraries (benchmark DelphiOffline)
     target_link_libraries (unittests DelphiOffline)
     target_link_libraries (interface DelphiOffline)
-    target_link_libraries (interface_mphe DelphiOffline)
+    target_link_libraries (interface_mphe DelphiOffline OpenMP::OpenMP_CXX)
     target_link_libraries (testmphe DelphiOffline)
 endif()
 
