@@ -680,7 +680,10 @@ ClientShares client_conv_preprocess(const ClientFHE* cfhe, const Metadata* data,
     // Preprocess image
     auto pt = preprocess_image(*data, image);
     auto rotated_pt = filter_rotations(pt, *data);
+    // printf("pt rotatios\n");
     auto ct_rotations = HE_encrypt_rotations(rotated_pt, *data, *encryptor, *encoder);
+    // printf("encrypting rotatios\n");
+    //     } 
     // vector<vector<Ciphertext>> enc_rots(ct_rotations.size(),
     //                                     vector<Ciphertext>(ct_rotations[0].size()));
     // for (int ct_idx = 0; ct_idx < ct_rotations.size(); ct_idx++) {

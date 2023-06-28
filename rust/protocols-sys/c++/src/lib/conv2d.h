@@ -70,13 +70,15 @@ vector<vector<vector<Plaintext>>> HE_preprocess_filters(const u64* const* const*
 vector<vector<vector<Ciphertext>>> MPHE_preprocess_filters(const u64* const* const* filters,const Metadata &data, BatchEncoder &batch_encoder, Encryptor &encryptor);
 
 /* Performs convolution for an output packed image. Returns the intermediate rotation sets */
-// vector<vector<Ciphertext>> HE_conv(vector<vector<vector<Plaintext>>> &masks, vector<vector<Ciphertext>> &rotations,const Metadata &data, Evaluator &evaluator, RelinKeys &relin_keys, Ciphertext &zero);
-vector<Ciphertext> HE_conv(vector<vector<vector<Plaintext>>> &masks, vector<vector<Ciphertext>> &rotations,const Metadata &data, Evaluator &evaluator, RelinKeys &relin_keys, Ciphertext &zero);
+vector<vector<Ciphertext>> HE_conv(vector<vector<vector<Plaintext>>> &masks, vector<vector<Ciphertext>> &rotations,const Metadata &data, Evaluator &evaluator, RelinKeys &relin_keys, Ciphertext &zero);
+// vector<Ciphertext> HE_conv(vector<vector<vector<Plaintext>>> &masks, vector<vector<Ciphertext>> &rotations,const Metadata &data, Evaluator &evaluator, RelinKeys &relin_keys, Ciphertext &zero);
 vector<Ciphertext> MPHE_conv(vector<vector<vector<Ciphertext>>> &masks,vector<vector<Ciphertext>> &rotations, const Metadata &data, Evaluator &evaluator,RelinKeys &relin_keys, Ciphertext &zero); 
 // vector<vector<Ciphertext>> MPHE_conv(vector<vector<vector<Ciphertext>>> &masks,vector<vector<Ciphertext>> &rotations, const Metadata &data, Evaluator &evaluator,RelinKeys &relin_keys, Ciphertext &zero); 
 
 /* Rotates and adds an output packed convolution result to produce a final, tight output */
-vector<Ciphertext> HE_output_rotations(vector<Ciphertext> convs, const Metadata &data, Evaluator &evaluator,
+// vector<Ciphertext> HE_output_rotations(vector<Ciphertext> convs, const Metadata &data, Evaluator &evaluator,
+//         GaloisKeys &gal_keys, Ciphertext &zero);
+vector<Ciphertext> HE_output_rotations(vector<vector<Ciphertext>> convs, const Metadata &data, Evaluator &evaluator,
         GaloisKeys &gal_keys, Ciphertext &zero);
 vector<Ciphertext> MPHE_output_rotations(vector<Ciphertext> convs,
         const Metadata &data, Evaluator &evaluator, GaloisKeys &gal_keys,

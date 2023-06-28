@@ -28,24 +28,26 @@ void conv(ClientFHE* cfhe, ServerFHE* sfhe, int image_h, int image_w, int filter
             input[chan][idx] = 3;//rand() % 10;
     }
 
-    for (int chan = 0; chan < data.inp_chans; chan++) {
-        int idx = 0;
-        for (int row = 0; row < data.image_h; row++) {
-            printf(" [");
-            int col = 0;
-            for (; col < data.image_w-1; col++) {
-                printf("%d, " , input[chan][row*data.output_w + col]);
-            }
-            printf("%d ]\n" , input[chan][row*data.output_w + col]);
-        }
-        printf("\n");
-    }
+    // for (int chan = 0; chan < data.inp_chans; chan++) {
+    //     int idx = 0;
+    //     for (int row = 0; row < data.image_h; row++) {
+    //         printf(" [");
+    //         int col = 0;
+    //         for (; col < data.image_w-1; col++) {
+    //             printf("%d, " , input[chan][row*data.output_w + col]);
+    //         }
+    //         printf("%d ]\n" , input[chan][row*data.output_w + col]);
+    //     }
+    //     printf("\n");
+    // }
 
     ClientShares client_shares = client_conv_preprocess(cfhe, &data, input);
 
     float endTime = (float)clock()/CLOCKS_PER_SEC;
     float timeElapsed = endTime - origin;
     printf("[%f seconds]\n", timeElapsed);
+    // printf("Server Preprocessing: ");
+    // printf("Server starts\n", timeElapsed);
 
 
     printf("Server Preprocessing: ");
@@ -74,10 +76,11 @@ void conv(ClientFHE* cfhe, ServerFHE* sfhe, int image_h, int image_w, int filter
     }
     
     char**** masks = server_conv_preprocess(sfhe, &data, filters); 
+    // printf("Server Preprocessing conv \n ");
     ServerShares server_shares = server_conv_preprocess_shares(sfhe, &data, linear_share);
-
-    endTime = (float)clock()/CLOCKS_PER_SEC;
-    timeElapsed = endTime - startTime;
+    // printf("Server Preprocessing conv shares\n ");
+     endTime = (float)clock()/CLOCKS_PER_SEC;
+     timeElapsed = endTime - startTime;
     printf("[%f seconds]\n", timeElapsed);
 
     printf("Convolution: ");
@@ -106,18 +109,18 @@ void conv(ClientFHE* cfhe, ServerFHE* sfhe, int image_h, int image_w, int filter
     printf("Total [%f seconds]\n\n", timeElapsed);
 
     printf("RESULT: \n");
-    for (int chan = 0; chan < data.out_chans; chan++) {
-        int idx = 0;
-        for (int row = 0; row < data.output_h; row++) {
-            printf(" [");
-            int col = 0;
-            for (; col < data.output_w-1; col++) {
-                printf("%d, " , client_shares.linear[chan][row*data.output_w + col]);
-            }
-            printf("%d ]\n" , client_shares.linear[chan][row*data.output_w + col]);
-        }
-        printf("\n");
-    }
+    // for (int chan = 0; chan < data.out_chans; chan++) {
+    //     int idx = 0;
+    //     for (int row = 0; row < data.output_h; row++) {
+    //         printf(" [");
+    //         int col = 0;
+    //         for (; col < data.output_w-1; col++) {
+    //             printf("%d, " , client_shares.linear[chan][row*data.output_w + col]);
+    //         }
+    //         printf("%d ]\n" , client_shares.linear[chan][row*data.output_w + col]);
+    //     }
+    //     printf("\n");
+    // }
 
     // Free filters
     for (int out_c = 0; out_c < data.out_chans; out_c++) {
@@ -368,7 +371,7 @@ int main(int argc, char* argv[]) {
   timeElapsed = endTime - startTime;
   printf("[%f seconds]\n", timeElapsed);
 
-conv(&cfhe, &sfhe, 22, 22, 3, 3, 3, 3, 1, 0);
+conv(&cfhe, &sfhe, 32, 32, 3, 16, 32, 3, 1, 0);
 //   conv(&cfhe, &sfhe, 23, 23, 3, 3, 2, 2, 1, 0);
 //   conv(&cfhe, &sfhe, 64, 64, 3, 3, 128, 128, 1, 0);
   //conv(&cfhe, &sfhe, 16, 16, 3, 3, 32, 32, 1, 1);
