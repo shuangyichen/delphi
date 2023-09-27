@@ -88,11 +88,12 @@ pub struct ClientState {
 }
 
 pub struct ServerAState{
-    pub gc_s: Vec<GarbledCircuit>,
-    pub server_b_randomizer_labels: Vec<Wire>,
-    pub server_c_randomizer_labels: Option<Vec<Wire>>,
-    pub ra_labels: Vec<Wire>,
-    pub rb_garbler_wires: Option<Vec<Vec<Wire>>>,
+    // pub gc_s: Vec<GarbledCircuit>,
+    // pub server_b_randomizer_labels: Vec<Wire>,
+    // pub server_c_randomizer_labels: Option<Vec<Wire>>,
+    pub ra_labels: Vec<Wire>,  //F_i r_i - s_i
+    pub ra_labels_next: Vec<Wire>,   //r_a
+    // pub rb_garbler_wires: Option<Vec<Vec<Wire>>>,
 }
 
 pub struct ServerBState{
@@ -102,9 +103,12 @@ pub struct ServerBState{
 }
 
 pub struct ServerCState{
+    pub gc_s: Vec<GarbledCircuit>,
+    pub server_b_randomizer_labels: Vec<Wire>,
+    pub server_a_randomizer_labels: Option<Vec<Wire>>,
     pub server_c_randomizer_labels: Vec<Wire>,
     // pub output_randomizers: Vec<P::Field>,   
-    pub rc_labels: Option<Vec<Wire>>,
+    // pub rc_labels: Option<Vec<Wire>>,
 }
 
 impl<P: FixedPointParameters> ReluProtocol<P>
@@ -119,32 +123,65 @@ where
 
 
     // pub fn offline_server_a_protocol<R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>()
-    pub fn offline_server_a_protocol_2<R: Read + Send>(
+    // pub fn offline_server_a_protocol_2<R: Read + Send>(
+    //     reader: &mut IMuxSync<R>,
+    //     number_of_relus: usize,
+    //     // server_a_state: &mut ServerAState,
+    // )->Vec<Wire>{
+    //     let mut rc_next_wires = Vec::with_capacity(number_of_relus);
+
+    //     // let num_chunks = (number_of_relus as f64 / 8192.0).ceil() as usize;
+    //     // println!("num chunks {}", num_chunks);
+    //     // for i in 0..num_chunks {
+    //     //     println!("i num chunks {}", i);
+    //     let in_msg: ServerLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
+    //     // println!("Server A receive");
+    //     let r_wire_chunks = in_msg.msg();
+    //     // println!/"in msg length {}", r_wire_chunks.iter().count());
+    //     // if i < (num_chunks - 1) {
+    //     //     assert_eq!(gc_chunks.len(), 8192);
+    //     // }
+    //     rc_next_wires.extend(r_wire_chunks);
+    //     // }
+
+    //     rc_next_wires
+    //     // server_a_state.server_c_randomizer_labels = Some(rc_next_wires);
+    //     // println!("Server A receives labels from server C");
+
+    // }
+
+    //Receive labels from B
+    pub fn offline_server_c_protocol_2<R: Read + Send>(
         reader: &mut IMuxSync<R>,
         number_of_relus: usize,
         // server_a_state: &mut ServerAState,
-    )->Vec<Wire>{
-        let mut rc_next_wires = Vec::with_capacity(number_of_relus);
+    )->(Vec<Wire>,Vec<Wire>){
+        let mut ra_next_wires = Vec::with_capacity(number_of_relus);
+        let mut ra_wires = Vec::with_capacity(number_of_relus);
 
         // let num_chunks = (number_of_relus as f64 / 8192.0).ceil() as usize;
         // println!("num chunks {}", num_chunks);
         // for i in 0..num_chunks {
         //     println!("i num chunks {}", i);
         let in_msg: ServerLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
+        let in_msg2: ServerLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
         // println!("Server A receive");
         let r_wire_chunks = in_msg.msg();
+        let share_wire_chunks = in_msg2.msg();
         // println!/"in msg length {}", r_wire_chunks.iter().count());
         // if i < (num_chunks - 1) {
         //     assert_eq!(gc_chunks.len(), 8192);
         // }
-        rc_next_wires.extend(r_wire_chunks);
+        ra_next_wires.extend(r_wire_chunks);
+        ra_wires.extend(share_wire_chunks);
         // }
 
-        rc_next_wires
+        (ra_next_wires,ra_wires)
         // server_a_state.server_c_randomizer_labels = Some(rc_next_wires);
         // println!("Server A receives labels from server C");
 
     }
+
 
 
     // pub fn offline_server_a_protocol_2<R: Read + Send>(
@@ -180,9 +217,30 @@ where
     // }
 
 
-    pub fn offline_server_c_protocol_2<W: Write +Send>(
+    // pub fn offline_server_c_protocol_2<W: Write +Send>(
+    //     writer: &mut IMuxSync<W>,
+    //     server_c_randomizer_labels: &[Wire],
+    // ){
+    //     // let randomizer_label_per_relu = if number_of_relus == 0 {
+    //     //     8192
+    //     // } else {
+    //     //     randomizer_labels.len() / number_of_relus
+    //     // };
+    //     // server_c_randomizer_labels.chunks(randomizer_label_per_relu * 8192);
+    //     // for msg in server_c_randomizer_labels{
+    //     //     let sent_message = ServerLabelEvalSend::new(&server_c_randomizer_labels);
+    //     // }
+    //     let mut rc_next_labels: Vec<Wire> = Vec::new();
+    //     rc_next_labels.extend_from_slice(&server_c_randomizer_labels);
+    //     let sent_message = ServerLabelEvalSend::new(&rc_next_labels);
+    //     crate::bytes::serialize(writer, &sent_message).unwrap();
+    //     // println!("Server C sent");
+    // }
+
+    pub fn offline_server_a_protocol_2<W: Write +Send>(
         writer: &mut IMuxSync<W>,
-        server_c_randomizer_labels: &[Wire],
+        server_a_randomizer_labels: &[Wire],
+        server_a_r_next_labels: &[Wire],
     ){
         // let randomizer_label_per_relu = if number_of_relus == 0 {
         //     8192
@@ -193,10 +251,20 @@ where
         // for msg in server_c_randomizer_labels{
         //     let sent_message = ServerLabelEvalSend::new(&server_c_randomizer_labels);
         // }
-        let mut rc_next_labels: Vec<Wire> = Vec::new();
-        rc_next_labels.extend_from_slice(&server_c_randomizer_labels);
-        let sent_message = ServerLabelEvalSend::new(&rc_next_labels);
+    
+        //r_a
+        let mut ra_next_labels: Vec<Wire> = Vec::new();
+        ra_next_labels.extend_from_slice(&server_a_r_next_labels);
+        let sent_message = ServerLabelEvalSend::new(&ra_next_labels);
         crate::bytes::serialize(writer, &sent_message).unwrap();
+
+        //share
+        let mut share_a_labels: Vec<Wire> = Vec::new();
+        share_a_labels.extend_from_slice(&server_a_randomizer_labels);
+        let sent_message2 = ServerLabelEvalSend::new(&share_a_labels);
+        crate::bytes::serialize(writer, &sent_message2).unwrap();
+
+       
         // println!("Server C sent");
     }
 
@@ -237,14 +305,14 @@ where
         // .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
         // .map(|b| b == 1)
         // .collect::<Vec<_>>();
-        println!("r prime length {}",r_prime.len());
-        println!("num relu {}",number_of_relus);
+        // println!("r prime length {}",r_prime.len());
+        // println!("num relu {}",number_of_relus);
 
         let zero_inputs = vec![0u16; num_evaluator_inputs];
         let one_inputs = vec![1u16; num_evaluator_inputs];
         let mut labels_ra = Vec::with_capacity(number_of_relus * 42);
         let mut labels_rc = Vec::with_capacity(number_of_relus * 42);
-        let mut labels_rc_next = Vec::with_capacity(number_of_relus * 42);
+        let mut labels_ra_next = Vec::with_capacity(number_of_relus * 42);
         // let mut labels = Vec::with_capacity(number_of_relus * num_evaluator_inputs);
         let mut randomizer_labels = Vec::with_capacity(number_of_relus*42); //rb_next 
         // let mut output_randomizers = Vec::with_capacity(number_of_relus);   //rb_next for recover
@@ -276,7 +344,7 @@ where
                     labels_rc.push((all_zeros[i].as_block(), all_ones[i].as_block()));
                 }
                 else {
-                    labels_rc_next.push((all_zeros[i].as_block(), all_ones[i].as_block()));
+                    labels_ra_next.push((all_zeros[i].as_block(), all_ones[i].as_block())); 
                 }
             }
             // all_zeros
@@ -299,7 +367,7 @@ where
             .zip(randomizer_labels.chunks(randomizer_label_per_relu * 8192))
         {
             let sent_message = ServerGcMsgSend::new(&msg_contents);
-            crate::bytes::serialize(writer_a, &sent_message).unwrap();
+            crate::bytes::serialize(writer_c, &sent_message).unwrap();
         }
         // println!("Server B sending GC and rb_next");
 
@@ -307,21 +375,47 @@ where
         if number_of_relus != 0 {
             let r_a = reader_a.get_mut_ref().remove(0);
             let w_a = writer_a.get_mut_ref().remove(0);
-            let r_c = reader_c.get_mut_ref().remove(0);
-            let w_c = writer_c.get_mut_ref().remove(0);
+            // let r_c = reader_c.get_mut_ref().remove(0);
+            // let w_c = writer_c.get_mut_ref().remove(0);
 
             // let ot_time = timer_start!(|| "OTs");
             let mut channel_a = Channel::new(r_a, w_a);
-            let mut channel_c = Channel::new(r_c, w_c);
+            // let mut channel_c = Channel::new(r_c, w_c);
             let mut ot_a = OTSender::init(&mut channel_a, rng).unwrap();
             // println!("Ready to send to server A ");
             // println!("{}",labels_ra.len());
             ot_a.send(&mut channel_a, labels_ra.as_slice(), rng).unwrap();   //ra
+
+            
             // println!("OT to server A ");
-            let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
-            // println!("{}",labels_rc_next.len());
-            // println!("Ready to send to server C ");
-            ot_c.send(&mut channel_c, labels_rc_next.as_slice(), rng).unwrap();    //rc_next
+            // let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
+            // // println!("{}",labels_rc_next.len());
+            // // println!("Ready to send to server C ");
+            // ot_c.send(&mut channel_c, labels_rc_next.as_slice(), rng).unwrap();    //rc_next
+            
+            // println!("OT to server C ");
+            // timer_end!(ot_time);
+        }
+        if number_of_relus != 0 {
+            let r_a = reader_a.get_mut_ref().remove(0);
+            let w_a = writer_a.get_mut_ref().remove(0);
+            // let r_c = reader_c.get_mut_ref().remove(0);
+            // let w_c = writer_c.get_mut_ref().remove(0);
+
+            // let ot_time = timer_start!(|| "OTs");
+            let mut channel_a = Channel::new(r_a, w_a);
+            // let mut channel_c = Channel::new(r_c, w_c);
+            let mut ot_a = OTSender::init(&mut channel_a, rng).unwrap();
+            // println!("Ready to send to server A ");
+            // println!("{}",labels_ra.len());
+            ot_a.send(&mut channel_a, labels_ra_next.as_slice(), rng).unwrap();   //ra
+
+            
+            // println!("OT to server A ");
+            // let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
+            // // println!("{}",labels_rc_next.len());
+            // // println!("Ready to send to server C ");
+            // ot_c.send(&mut channel_c, labels_rc_next.as_slice(), rng).unwrap();    //rc_next
             
             // println!("OT to server C ");
             // timer_end!(ot_time);
@@ -330,7 +424,7 @@ where
         // println!("Server B sending GC and rb_next");
         Ok(ServerBState {
             encoders,
-            rc_labels: labels_rc,
+            rc_labels: labels_rc,  //For inference phase
         })
     }
 
@@ -339,7 +433,6 @@ where
         writer: &mut IMuxSync<W>,
         number_of_relus: usize,
         rng: &mut RNG,
-        r_prime: &[AdditiveShare<P>],
     )-> Result<ServerCState, bincode::Error>{
         use fancy_garbling::util::*;
         let p = u128::from(<<P::Field as PrimeField>::Params>::MODULUS.0);
@@ -362,53 +455,6 @@ where
 
         //     randomizers_labels.push(r_bit);
         // }
-
-
-        let bs = r_prime
-        .iter()
-        .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
-        .map(|b| b == 1)
-        .collect::<Vec<_>>();
-        //Receiving rc_next
-        let labels = if number_of_relus != 0 {
-            let r = reader.get_mut_ref().remove(0);
-            let w = writer.get_mut_ref().remove(0);
-
-            let mut channel = Channel::new(r, w);
-            let mut ot = OTReceiver::init(&mut channel, rng).expect("should work");
-            println!("{}", bs.len());
-            let labels = ot
-                .receive(&mut channel, bs.as_slice(), rng)
-                .expect("should work");
-            let labels = labels
-                .into_iter()
-                .map(|l| Wire::from_block(l, 2))
-                .collect::<Vec<_>>();
-            labels
-        } else {
-            Vec::new()
-        };
-        // println!("rc_next length {}", labels.iter().count());
-        // println!("rc_next labels length {}", labels[0].iter().count());
-        // println!("Server C receiving  rc_next labels via OT");
-        Ok(ServerCState{
-            server_c_randomizer_labels: labels,
-            rc_labels:None,
-        })
-
-    }
-
-    pub fn offline_server_a_protocol<R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
-        reader: &mut IMuxSync<R>,
-        writer: &mut IMuxSync<W>,
-        number_of_relus: usize,
-        shares: &[AdditiveShare<P>],
-        rng: &mut RNG,
-    )-> Result<ServerAState, bincode::Error>{
-        use fancy_garbling::util::*;
-        let p = u128::from(<<P::Field as PrimeField>::Params>::MODULUS.0);
-        let field_size = crypto_primitives::gc::num_bits(p);
-
         let mut gc_s = Vec::with_capacity(number_of_relus);
         let mut rb_wires = Vec::with_capacity(number_of_relus);
 
@@ -425,12 +471,84 @@ where
         }
         // println!("gc length {}",gc_s.len());
         // println!("rb_wires length {}",rb_wires.len());
+
+
+        // let bs = r_prime
+        // .iter()
+        // .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
+        // .map(|b| b == 1)
+        // .collect::<Vec<_>>();
+        // //Receiving rc_next
+        // let labels = if number_of_relus != 0 {
+        //     let r = reader.get_mut_ref().remove(0);
+        //     let w = writer.get_mut_ref().remove(0);
+
+        //     let mut channel = Channel::new(r, w);
+        //     let mut ot = OTReceiver::init(&mut channel, rng).expect("should work");
+        //     println!("{}", bs.len());
+        //     let labels = ot
+        //         .receive(&mut channel, bs.as_slice(), rng)
+        //         .expect("should work");
+        //     let labels = labels
+        //         .into_iter()
+        //         .map(|l| Wire::from_block(l, 2))
+        //         .collect::<Vec<_>>();
+        //     labels
+        // } else {
+        //     Vec::new()
+        // };
+        // println!("rc_next length {}", labels.iter().count());
+        // println!("rc_next labels length {}", labels[0].iter().count());
+        // println!("Server C receiving  rc_next labels via OT");
+        Ok(ServerCState{
+            gc_s,
+            server_b_randomizer_labels:rb_wires,
+            // server_c_randomizer_labels: labels,
+            // rc_labels:None,
+        })
+
+    }
+
+    pub fn offline_server_a_protocol<R: Read + Send, W: Write + Send, RNG: CryptoRng + RngCore>(
+        reader: &mut IMuxSync<R>,
+        writer: &mut IMuxSync<W>,
+        number_of_relus: usize,
+        shares: &[AdditiveShare<P>],
+        ra_next: &[AdditiveShare<P>],
+        rng: &mut RNG,
+    )-> Result<ServerAState, bincode::Error>{
+        use fancy_garbling::util::*;
+        let p = u128::from(<<P::Field as PrimeField>::Params>::MODULUS.0);
+        let field_size = crypto_primitives::gc::num_bits(p);
+
+        // let mut gc_s = Vec::with_capacity(number_of_relus);
+        // let mut rb_wires = Vec::with_capacity(number_of_relus);
+
+        //receving GC and rb_next
+        // let num_chunks = (number_of_relus as f64 / 8192.0).ceil() as usize;
+        // for i in 0..num_chunks {
+        //     let in_msg: ClientGcMsgRcv = crate::bytes::deserialize(reader).unwrap();
+        //     let (gc_chunks, r_wire_chunks) = in_msg.msg();
+        //     if i < (num_chunks - 1) {
+        //         assert_eq!(gc_chunks.len(), 8192);
+        //     }
+        //     gc_s.extend(gc_chunks);
+        //     rb_wires.extend(r_wire_chunks);
+        // }
+        // // println!("gc length {}",gc_s.len());
+        // // println!("rb_wires length {}",rb_wires.len());
         let bs = shares
         .iter()
         .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
         .map(|b| b == 1)
         .collect::<Vec<_>>();
 
+
+        let bs_next = ra_next
+        .iter()
+        .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
+        .map(|b| b == 1)
+        .collect::<Vec<_>>();
         // println!("Server A receiving GC and rb_next labels");
 
 
@@ -452,13 +570,33 @@ where
         } else {
             Vec::new()
         };
+
+        let labels_next = if number_of_relus != 0 {
+            let r = reader.get_mut_ref().remove(0);
+            let w = writer.get_mut_ref().remove(0);
+
+            let mut channel = Channel::new(r, w);
+            let mut ot = OTReceiver::init(&mut channel, rng).expect("should work");
+            // println!("{}",bs.len());
+            let labels = ot
+                .receive(&mut channel, bs_next.as_slice(), rng)
+                .expect("should work");
+            let labels = labels
+                .into_iter()
+                .map(|l| Wire::from_block(l, 2))
+                .collect::<Vec<_>>();
+            labels
+        } else {
+            Vec::new()
+        };
         // println!("total ra labels {}",labels.len());
         Ok(ServerAState{
-            gc_s,
-            server_b_randomizer_labels:rb_wires,
-            server_c_randomizer_labels:None,
+            // gc_s,
+            // server_b_randomizer_labels:rb_wires,
+            // server_c_randomizer_labels:None,
             ra_labels:labels,
-            rb_garbler_wires:None,
+            ra_labels_next:labels_next,
+            // rb_garbler_wires:None,
         })
     }
 
@@ -650,7 +788,6 @@ where
 
 
     pub fn online_server_b_protocol<R: Read + Send, W: Write + Send,RNG: RngCore + CryptoRng>(
-        writer_a: &mut IMuxSync<W>,
         reader_c: &mut IMuxSync<R>,
         writer_c: &mut IMuxSync<W>,
         shares: &[AdditiveShare<P>],
@@ -659,35 +796,7 @@ where
         number_of_relus: usize,
         rng: &mut RNG,
     ){
-        //encode rb share and send it to server a
-        // println!("b working");
 
-        // let num_garbler_inputs = 84;
-        // let mut rb_labels: Vec<Vec<Wire>> = Vec::with_capacity(number_of_relus); 
-        // let p = u128::from(u64::from(P::Field::characteristic()));
-        // let field_size = (p.next_power_of_two() * 2).trailing_zeros() as usize;
-        // // for (enc_index,rb_label) in rb_labels.iter().enumerate() {  
-        //     // let mut arr = Vec::with_capacity((num_garbler_inputs / 2)); 
-        // for (enc_index,enc) in encoders.iter().enumerate() {  
-        //     let mut arr = Vec::with_capacity(num_garbler_inputs / 2); 
-        //         let share = u128_from_share(shares[enc_index]);
-        //         let bits = fancy_garbling::util::u128_to_bits(share, field_size);
-        //         for (i,bit) in bits.iter().enumerate(){
-        //             let label = enc.encode_garbler_input(*bit, i);
-        //             arr.push(label);
-        //         }
-        //         rb_labels.push(arr);
-           
-        // }  
-
-
-        // println!("b sending");
-        // println!("{}",rc_labels.len());
-
-        // let sent_message = ServerLabelMsgSend::new(rb_labels.as_slice());
-        // crate::bytes::serialize(writer_a, &sent_message).unwrap();
-
-        // println!("Sending rb labels");
 
         if number_of_relus != 0 {
             // println!("OT to server C online");
@@ -725,40 +834,24 @@ where
 
 
         let sent_message = ServerLabelMsgSend::new(rb_labels.as_slice());
-        crate::bytes::serialize(writer_a, &sent_message).unwrap();
-
-        // println!("Sending rb labels");
-
-        // OT with server c 
-        // if number_of_relus != 0 {
-        //     let r_c = reader_c.get_mut_ref().remove(0);
-        //     let w_c = writer_c.get_mut_ref().remove(0);
-
-
-        //     let mut channel_c = Channel::new(r_c, w_c);
-        //     let mut ot_c = OTSender::init(&mut channel_c, rng).unwrap();
-        //     // println!("Ready to send to server C ");
-        //     // ot_c.send(&mut channel_c, rc_labels.as_slice(), rng).unwrap();    //rc_next
-        //     ot_c.send(&mut channel_c, rc_labels, rng).unwrap(); 
-        //     println!("OT to server C online");
-        //     // timer_end!(ot_time);
-        // }
-        // let mut flag: Vec<i8> = vec![0; 4];
-        // let sent_message = ServerMsgSend::new(&flag);
-        // crate::bytes::serialize(writer_a, &sent_message).unwrap();
-
+        crate::bytes::serialize(writer_c, &sent_message).unwrap();
     }
 
 
     pub fn online_server_c_protocol<'a, R: Read + Send,W: Write + Send,RNG: RngCore + CryptoRng>(
         writer: &mut IMuxSync<W>,
         reader: &mut IMuxSync<R>,
+        ra_labels:&[Wire], //Fr-s
+        rb_next_labels:&[Wire],
+        ra_next_labels:&[Wire], //r_a'
+        evaluators: &[GarbledCircuit],
         number_of_relus: usize,
-        shares: &[AdditiveShare<P>],
+        shares: &[AdditiveShare<P>],  //F_c(x-r)-s_c
         rng: &mut RNG,
+        next_layer_randomizers: &[P::Field],
         // server_c_state: &mut ServerCState<P>,
-    )->Vec<Wire>{
-        // println!("c num relu {}",number_of_relus);
+    )-> Result<Vec<AdditiveShare<P>>, bincode::Error>{
+        //Receive labels of F_c(x-r)-s_c
         let p = u128::from(u64::from(P::Field::characteristic()));
         let field_size = (p.next_power_of_two() * 2).trailing_zeros() as usize;
         let mut rc_labels: Vec<Wire>= Vec::with_capacity(number_of_relus); 
@@ -790,12 +883,65 @@ where
                 // println!("c OT finished");
             // }
             } //else {
-            //     rc_labels.push(Vec::new());
-            // }
-        //     server_c_state.rc_labels = Some(rc_labels);
-        // println!("Server C receive rc labels via OT");
-        // println!("rc labels {}", rc_labels.len());
-        rc_labels
+
+        //Receive labels of  F_b(x-r)-s_b
+        let in_msg: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
+        let mut rb_labels = in_msg.msg();   //Vec<Vec<Wire>>
+
+        let c = make_relu_3::<P>();
+        let num_evaluator_inputs = c.num_evaluator_inputs();
+        let num_garbler_inputs = c.num_garbler_inputs();
+
+        //Concatnate garbler input
+        rb_labels.iter_mut()
+            .zip(rb_next_labels.chunks(num_garbler_inputs / 2))
+            .for_each(|(w1, w2)| w1.extend_from_slice(w2));
+
+        assert_eq!(num_relus, rb_labels.len());
+
+        let mut ra_labels_ : Vec<Wire> = Vec::new();
+        ra_labels_.extend_from_slice(ra_labels);
+        let mut eval_labels : Vec<Vec<Wire>>= ra_labels_.chunks(num_evaluator_inputs / 3).map(|x| x.to_vec()).collect();
+        
+        eval_labels
+            .iter_mut()
+            .zip(rc_labels.chunks(num_evaluator_inputs / 3))
+            .zip(rc_next_labels.chunks(num_evaluator_inputs / 3))
+            .for_each(|((mut w1, w2),w3)| {
+                // println!("w2 len {}",w2.len());
+                // println!("w3 len {}",w3.len());
+                w1.extend_from_slice(w2);
+                w1.extend_from_slice(w3);
+                // println!("w1 len {}",w1.len());
+            });
+
+
+        let mut results = eval_labels
+            .iter()
+            // .par_chunks(num_evaluator_inputs)
+            .zip(rb_labels)
+            .zip(evaluators)
+            .map(|((eval_inps, garbler_inps), gc)| {
+                assert_eq!(126, eval_inps.len());
+                assert_eq!(84, garbler_inps.len());
+                // i += 1;
+                // println!("{}",i);
+                let mut c = c.clone();
+                let result = gc
+                    .eval(&mut c, &garbler_inps, eval_inps)
+                    .expect("evaluation failed");
+                let result = fancy_garbling::util::u128_from_bits(result.as_slice());
+                FixedPoint::new(P::Field::from_repr(u64::try_from(result).unwrap().into())).into()
+            })
+            .collect::<Vec<AdditiveShare<P>>>();
+
+        results
+            .iter_mut()
+            .zip(next_layer_randomizers)
+            .for_each(|(s, r)| *s = FixedPoint::<P>::randomize_local_share(s, r));
+
+            Ok(results)
+
     }
        
 

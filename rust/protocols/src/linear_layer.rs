@@ -906,6 +906,57 @@ where
         Ok(())
     }
 
+    pub fn online_server_c_a_protocol<R: Read + Send>(
+        readerc: &mut IMuxSync<R>,
+    )-> Result<Input<AdditiveShare<P>>, bincode::Error>{
+        let mut input: Input<AdditiveShare<P>> = {
+            let recv: MsgRcv<P> = crate::bytes::deserialize(readerc).unwrap();
+            recv.msg()
+        };
+        
+        Ok(input)
+    }
+
+    pub fn online_server_a_2_c_protocol<W: Write + Send>(
+        writerc: &mut IMuxSync<W>,
+        x_s: &Input<AdditiveShare<P>>,
+    ) -> Result<(), bincode::Error> {
+
+        let sent_message = MsgSend::new(x_s);
+        crate::bytes::serialize(writerc, &sent_message)?;
+
+        Ok(())
+    }
+
+    pub fn online_server_c_protocol(
+        input: &Input<AdditiveShare<P>>,
+        layer: &LinearLayerInfo<AdditiveShare<P>, FixedPoint<P>>,
+        output_rerandomizer: &Output<P::Field>,
+        output: &mut Output<AdditiveShare<P>>,
+    )-> Result<(), bincode::Error> {
+        *output = layer.evaluate(&input);
+        // println!("************************linear evaluation result***************************");
+        output.zip_mut_with(output_rerandomizer, |out, s| {
+            *out = FixedPoint::randomize_local_share(out, s);
+            // println!("{}",out.inner);
+        });
+        Ok(())
+    }
+
+
+
+
+    pub fn online_server_c_2_b_protocol<W: Write + Send>(
+        writerb: &mut IMuxSync<W>,
+        x_s: &Input<AdditiveShare<P>>,
+    ) -> Result<(), bincode::Error> {
+
+        let sent_message = MsgSend::new(x_s);
+        crate::bytes::serialize(writerb, &sent_message)?;
+
+        Ok(())
+    }
+
     pub fn online_server_a_protocol<W: Write + Send>(
         writer1: &mut IMuxSync<W>,
         writer2: &mut IMuxSync<W>,

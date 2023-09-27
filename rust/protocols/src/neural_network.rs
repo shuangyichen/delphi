@@ -88,10 +88,8 @@ pub struct ClientState<P: FixedPointParameters> {
 }
 pub struct ServerAState<P: FixedPointParameters> {
     pub gc_server_a_state:  Option<crate::gc::ServerAState>,
-    pub relu_circuits: Option<Vec<GarbledCircuit>>,
     pub relu_server_a_labels: Option<Vec<Wire>>,
-    pub relu_server_b_labels: Option<Vec<Wire>>,
-    pub relu_server_c_labels: Option<Vec<Wire>>,
+    pub relu_server_a_next_layer_randomizer: Option<Vec<Wire>>,
     pub relu_next_layer_randomizers: Vec<AdditiveShare<P>>,//Vec<P::Field>, //ra'
     pub relu_current_layer_output_shares: Vec<AdditiveShare<P>>,
     /// Randomizers for the input of a linear layer.
@@ -112,11 +110,16 @@ pub struct ServerBState<P: FixedPointParameters> {
 }
 
 pub struct ServerCState<P: FixedPointParameters> {
-    pub relu_next_layer_randomizers: Vec<AdditiveShare<P>>,
-    pub input_randomizer: BTreeMap<usize, Input<AdditiveShare<P>>>,
-    pub output_randomizer: BTreeMap<usize, Output<P::Field>>,
+    pub relu_circuits: Option<Vec<GarbledCircuit>>,
+    pub relu_server_a_labels: Option<Vec<Wire>>, //share_a
+    pub relu_server_b_labels: Option<Vec<Wire>>,//share_b
+    pub relu_server_b_labels: Option<Vec<Wire>>,//share_c
+    pub relu_server_a_next_layer_randomizer: Option<Vec<Wire>>, //r_a
+    pub relu_server_b_next_layer_randomizer: Option<Vec<Wire>>, //r_b
+    pub relu_next_layer_randomizers: Vec<AdditiveShare<P>>, //r_c
+    pub input_randomizer: BTreeMap<usize, Input<AdditiveShare<P>>>,  //r_c
+    pub output_randomizer: BTreeMap<usize, Output<P::Field>>, //s_c
     pub gc_server_c_state: Option<crate::gc::ServerCState>,
-    pub rc_prime_labels: Option<Vec<Wire>>,
     pub num_relu: usize,
 }
 
@@ -800,10 +803,8 @@ where
         // println!("A B C num relu {}", num_relu);
         Ok((ServerAState {
             gc_server_a_state:None,
-            relu_circuits:None,
             relu_server_a_labels:None,
-            relu_server_b_labels:None,
-            relu_server_c_labels:None,
+            relu_server_a_next_layer_randomizer:None,
             relu_next_layer_randomizers:relu_next_layer_randomizers,
             relu_current_layer_output_shares:current_layer_shares,
             linear_randomizer: in_shares, //r'
@@ -1097,7 +1098,12 @@ where
             input_randomizer:r_vec,
             output_randomizer:s_vec,
             gc_server_c_state:None,
-            rc_prime_labels:None,
+            relu_circuits:None,
+            relu_server_a_labels:None,
+            relu_server_b_labels:None,
+            relu_server_c_labels:None,
+            relu_server_a_next_layer_randomizer:None,
+            relu_server_b_next_layer_randomizer:None,
             num_relu:num_relu,
         },lsmphe))
 
@@ -1111,47 +1117,22 @@ where
         num_relu: usize,
         server_a_state: &mut ServerAState<P>,
     ){
-        // let (relu_circuits, rb_prime_labels, ra_prime_labels) = crate::gc::ServerAState {
-        //     gc_s: relu_circuits,
-        //     server_b_randomizer_labels: rb_prime_labels,
-        //     server_c_randomizer_labels:None, 
-        //     ra_labels: ra_prime_labels,
-        //     rb_garbler_wires: None,
-        // } 
-        let current_layer_shares = &server_a_state.relu_current_layer_output_shares.as_slice();
+
+        let current_layer_shares = &server_a_state.relu_current_layer_output_shares.as_slice();  //Fr-s
+        let ra_next = &server_a_state.relu_next_layer_randomizers.as_slice();  //r_a
         let gc_server_a_state = ReluProtocol::<P>::offline_server_a_protocol(
             reader_b,
             writer_b,
             num_relu,
             current_layer_shares,//.as_slice(),
+            ra_next,
             rng,
         ).unwrap();
-        // let (relu_share_a_labels, relu_rb_labels) = if num_relu != 0 {
-        //     let size_of_a_input = gc_server_a_state.ra_labels.len() / num_relu;
-        //     let size_of_rb_input = gc_server_a_state.server_b_randomizer_labels.len() / num_relu;
-
-        //     let a_labels = gc_server_a_state.ra_labels
-        //         .chunks(size_of_a_input)
-        //         .map(|chunk| chunk.to_vec())
-        //         .collect();
-        //     let b_labels = gc_server_a_state.server_b_randomizer_labels
-        //         .chunks(size_of_rb_input)
-        //         .map(|chunk| chunk.to_vec())
-        //         .collect();
-        //     (a_labels, b_labels)
-        // }else {
-        //     (vec![], vec![])
-        // };
 
 
-        server_a_state.relu_circuits = Some(gc_server_a_state.gc_s);
-        server_a_state.relu_server_a_labels = Some(gc_server_a_state.ra_labels);
-        server_a_state.relu_server_b_labels = Some(gc_server_a_state.server_b_randomizer_labels);
+        server_a_state.relu_server_a_labels = Some(gc_server_a_state.ra_labels); //label of Fr-s
+        server_a_state.relu_server_a_next_layer_randomizer = Some(gc_server_a_state.ra_labels_next); //label of r_a
 
-        // server_a_state.relu_server_a_labels = ;
-        // server_a_state.relu_server_b_labels = ;
-        // server_a_state.relu_circuits = 
-        // server_a_state.gc_server_a_state =Some(gc_server_a_state);
 
     }
 
@@ -1191,65 +1172,44 @@ where
             writer_b,
             num_relu,
             rng,
-            &server_c_state.relu_next_layer_randomizers,
         ).unwrap();
         // server_c_state.gc_server_c_state = Some(gc_server_c_state);
-        server_c_state.rc_prime_labels = Some(gc_server_c_state.server_c_randomizer_labels);
+        // server_c_state.relu_server_b_labels = Some(gc_server_c_state.server_c_randomizer_labels);
+        server_c_state.relu_server_b_next_layer_randomizer = Some(gc_server_c_state.server_b_randomizer_labels);
+        server_c_state.relu_circuits = Some(gc_server_c_state.gc_s);
 
 
     }
 
-    pub fn offline_server_a_protocol_r3<R: Read + Send>(
-        reader_c: &mut IMuxSync<R>,
+    pub fn offline_server_a_protocol_r3<W: Write + Send>(
+        writer_c: &mut IMuxSync<W>,
         num_relu: usize,
         server_a_state: &mut ServerAState<P>,
     ){
         // let mut gc_server_a_state  = server_a_state.gc_server_a_state.as_ref().unwrap();
-        let rc_wires = ReluProtocol::<P>::offline_server_a_protocol_2(
-            reader_c,
-            num_relu,
+        ReluProtocol::<P>::offline_server_a_protocol_2(
+            writer_c,
+            &server_a_state.relu_server_a_next_layer_randomizer.as_ref().unwrap(),
+            &server_a_state.relu_server_a_labels.as_ref().unwrap(),
             // server_a_state.gc_server_a_state.as_ref().unwrap(),
             // &mut gc_server_a_state,
         );
 
-        
-            // let size_of_c_input = rc_wires.len() / num_relu;
-
-            // let c_labels = rc_wires
-            //     .chunks(size_of_c_input)
-            //     .map(|chunk| chunk.to_vec())
-            //     .collect();
-           
-
-
-        server_a_state.relu_server_c_labels = Some(rc_wires);
-        // println!("relu_server_c_labels len {}",server_a_state.relu_server_c_labels.as_ref().unwrap().len());
-        // println!("relu_server_a_labels len {}",server_a_state.relu_server_a_labels.as_ref().unwrap().len());
-        // println!("relu_server_b_labels len {}",server_a_state.relu_server_b_labels.as_ref().unwrap().len());
-        // println!("relu circuits len {}",server_a_state.relu_circuits.as_ref().unwrap().len());
-        // println!("relu_next_layer_randomizers len {}",server_a_state.relu_next_layer_randomizers.len());
-        // println!("relu_next_layer_randomizers len {}",server_a_state.relu_current_layer_output_shares.len());
-        // println!("linear_randomizer len {}",server_a_state.linear_randomizer.len());
-        // println!("linear_post_application_share {}",server_a_state.linear_post_application_share.len());
-        // println!("num relu {}",server_a_state.num_relu);
-
-        // for (idx, _) in &server_a_state.linear_randomizer{
-        //     println!("linear_randomizer {}", idx);
-        // }
-        // for (idx, _) in &server_a_state.linear_post_application_share{
-        //     println!("linear_post_application_share {}", idx);
-        // }
     }
 
-    pub fn offline_server_c_protocol_r3<W: Write +Send>(
-        writer_a: &mut IMuxSync<W>,
+    pub fn offline_server_c_protocol_r3<R: Read +Send>(
+        reader_a: &mut IMuxSync<R>,
+        num_relu: usize,
         server_c_state: &mut ServerCState<P>,
     ){
         // let gc_server_c_state = server_c_state.gc_server_c_state.as_ref().unwrap();
-        ReluProtocol::<P>::offline_server_c_protocol_2(
-            writer_a,
-            &server_c_state.rc_prime_labels.as_ref().unwrap(),
+        let result = ReluProtocol::<P>::offline_server_c_protocol_2(
+            reader_a,
+            num_relu,
         );
+
+        server_c_state.relu_server_a_next_layer_randomizer  = result.0;
+        server_c_state.relu_server_a_labels  = result.1;
     }
 
     // pub fn online_server_a_protocol<R: Read + Send, W: Write + Send>(
@@ -1484,11 +1444,13 @@ where
         // let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
     
 
-    // pub fn online_server_b_protocol<R: Read + Send, W: Write + Send,RNG: CryptoRng + RngCore>(
-    pub fn online_server_b_protocol<RNG: CryptoRng + RngCore>(
-        server_a_addr: &str,
-        server_b_addr: &str,
-        server_c_addr: &str,
+
+
+            
+    pub fn online_server_b_protocol<R: Read + Send, W: Write + Send,RNG: CryptoRng + RngCore>(
+        // reader_a: &mut IMuxSync<R>,
+        reader_c: &mut IMuxSync<R>,
+        writer_c: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerBState<P>,
         rng: &mut RNG,
@@ -1503,6 +1465,10 @@ where
             );
             (layer.input_dimensions(), layer.output_dimensions())
         };
+
+        let mut input = LinearProtocol::online_server_b_a_protocol(&mut reader_a).unwrap();
+
+        let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
         let mut total_bc = 0;
 
         let mut num_consumed_relus = 0;
@@ -1518,10 +1484,6 @@ where
                 println!("ReLU {}", i);
                 assert_eq!(dims.input_dimensions(), next_layer_input.dim());
 
-                let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
-                // println!("b connected");
-                let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-                
                 let output_dims = dims.output_dimensions();
                 let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;
                 let layer_encoders =
@@ -1529,27 +1491,26 @@ where
                 // println!("r 01 labels {}",&state.rc_01_labels.as_ref().unwrap().len());
                 let rc_01_labels = &state.rc_01_labels.as_ref().unwrap()[42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
                 ReluProtocol::<P>::online_server_b_protocol(
-                                &mut writer_b,
                                 &mut reader_c,
                                 &mut writer_c,
-                                &next_layer_input.as_slice().unwrap(),
-                                layer_encoders,
-                                &rc_01_labels,
+                                &next_layer_input.as_slice().unwrap(),   //F_b(x-r)-s_b
+                                layer_encoders,                          // encoder for F_b(x-r)-s_b
+                                &rc_01_labels,                           // labels for F_c(x-r)-s_c
                                 layer_size,
                                 rng,
                             );
                 num_consumed_relus += layer_size;
-                let reader_c_cost = reader_c.count();
-                let writer_c_cost = writer_c.count();
-                total_bc = total_bc+ reader_c_cost + writer_c_cost;
-                println!("BC relu {}", reader_c_cost + writer_c_cost);
+
             }
             Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
+
+
+            ///Linear !!
             Layer::LL(layer) => {
                 println!("Linear {}", i);
                 let start = Instant::now();
-                let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
-                let layer_randomizer = state.output_randomizer.get(&i).unwrap(); //s
+                // println!("Linear");
+                let layer_randomizer = state.output_randomizer.get(&i).unwrap();
                 // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
                 //     println!("Linear but not conv FC{}", i);
                 //     next_layer_derandomizer
@@ -1562,24 +1523,60 @@ where
                 let input_dim = layer.input_dimensions();
                 // println!("input dimension {} {} {} {}",b,c,h,w);
                 next_layer_input = Output::zeros(layer.output_dimensions());
-                // for stream in serverb_listener.incoming() {
-                    // let mut read_stream =
-                    // IMuxSync::new(vec![stream.expect("server connection failed!")]);
+                // for stream in serverc_listener.incoming() {
+                //     let mut read_stream =
+                //     IMuxSync::new(vec![stream.expect("server connection failed!")]);
+
                     LinearProtocol::online_leaf_server_protocol(
-                        &mut reader_b,       // we only receive here, no messages to client
+                        &mut reader_c,       // we only receive here, no messages to client
                         &layer, // layer parameters
                         layer_randomizer,       // this is our `s` from above.
                         input_dim,
                         &mut next_layer_input, // this is where the result will go.
                     ).unwrap();
-                    // println!("next layer input length b {}", next_layer_input.len());
+                    // println!("next layer input length c {}", next_layer_input.len());
                     // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
 
                     for share in next_layer_input.iter_mut() {
                         share.inner.signed_reduce_in_place();
                     }
                     let duration = start.elapsed();
-                            println!("Time : {:?}", duration);
+                    println!("Time : {:?}", duration);
+                //********handle pooling layer 
+
+
+
+
+                // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
+                //     println!("Linear but not conv FC{}", i);
+                //     next_layer_derandomizer
+                //         .iter_mut()
+                //         .zip(&next_layer_input)
+                //         .for_each(|(l_r, inp)| {
+                //             *l_r += &inp.inner.inner;
+                //         });
+                // }
+                // let input_dim = layer.input_dimensions();
+                // // println!("input dimension {} {} {} {}",b,c,h,w);
+                // next_layer_input = Output::zeros(layer.output_dimensions());
+                // // for stream in serverb_listener.incoming() {
+                //     // let mut read_stream =
+                //     // IMuxSync::new(vec![stream.expect("server connection failed!")]);
+                //     LinearProtocol::online_leaf_server_protocol(
+                //         &mut reader_b,       // we only receive here, no messages to client
+                //         &layer, // layer parameters
+                //         layer_randomizer,       // this is our `s` from above.
+                //         input_dim,
+                //         &mut next_layer_input, // this is where the result will go.
+                //     ).unwrap();
+                //     // println!("next layer input length b {}", next_layer_input.len());
+                //     // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
+
+                //     for share in next_layer_input.iter_mut() {
+                //         share.inner.signed_reduce_in_place();
+                //     }
+                //     let duration = start.elapsed();
+                //             println!("Time : {:?}", duration);
                     // break; //?
             // }
             }
@@ -1600,10 +1597,10 @@ where
 }
 
     // pub fn online_server_c_protocol<'a,R: Read + Send, W: Write + Send,RNG: RngCore + CryptoRng>(
-    pub fn online_server_c_protocol<'a,RNG: RngCore + CryptoRng>(
-        server_a_addr: &str,
-        server_b_addr: &str,
-        server_c_addr: &str,
+    pub fn online_server_c_protocol<R: Read + Send, W: Write + Send,RNG: RngCore + CryptoRng>(
+        reader_a: &mut IMuxSync<R>,
+        reader_c: &mut IMuxSync<R>,
+        writer_c: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         state: &ServerCState<P>,
         rng: &mut RNG,
@@ -1619,6 +1616,10 @@ where
                 (layer.input_dimensions(), layer.output_dimensions())
             };
 
+            let mut input = LinearProtocol::online_server_c_a_protocol(&mut reader_a).unwrap();
+
+            let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
+
             let mut num_consumed_relus = 0;
 
             let mut next_layer_input = Output::zeros(first_layer_out_dims);
@@ -1630,74 +1631,81 @@ where
                 match layer {
                 Layer::NLL(NonLinearLayer::ReLU(dims)) => {
                     println!("ReLU");
-                    // for stream in serverc_listener.incoming() {
-                    //     let stream = stream.expect("server connection failed!");
-                    //     let mut read_stream = IMuxSync::new(vec![stream.try_clone().unwrap()]);
-                    //     let mut write_stream = IMuxSync::new(vec![stream]);
-                    let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
-                    // let layer_size = next_layer_input.len();
+
+                    let layer_ra_labels = &state.relu_server_a_labels.as_ref().unwrap()
+                                [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
+                    let relu_server_a_next_layer_randomizer = &state.relu_server_a_next_layer_randomizer.as_ref().unwrap()
+                        [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
+                    let relu_server_b_next_layer_randomizer = &state.relu_server_b_next_layer_randomizer.as_ref().unwrap()
+                        [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
+                    // let next_layer_randomizers = &state.relu_next_layer_randomizers
+                    //     [num_consumed_relus..(num_consumed_relus + layer_size)];
+                    let next_layer_randomizers = state.input_randomizer.get(&(i+1)).unwrap().as_slice().unwrap(); //which one to use?
+                    let relu_circuits = &state.relu_circuits.as_ref().unwrap()
+                        [num_consumed_relus..(num_consumed_relus + layer_size)];
+
+                    num_consumed_relus += layer_size;
                     let output_dims = dims.output_dimensions();
-                            let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;
+                    let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;
                     // println!("{}",layer_size);
-                    let share_c_labels = 
+                    let output = 
                         ReluProtocol::<P>::online_server_c_protocol(
                             &mut writer_c,
                             &mut reader_c,
+                            &layer_ra_labels,
+                            &relu_server_b_next_layer_randomizer,
+                            &relu_server_a_next_layer_randomizer,
+                            &relu_circuits,
                             layer_size,
-                            &next_layer_input.as_slice().unwrap(),
+                            &next_layer_input.as_slice().unwrap(),  
                             rng,
+                            &next_layer_randomizers,
                             // &mut server_c_offline,
-                        );
-                        let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
-                        // println!("ReLU r2");
-                    // let stream_a =
-                    //     TcpStream::connect(server_a_addr).expect("connecting to server failed");
-                    // let mut reader_b = IMuxSync::new(vec![stream_a.try_clone().unwrap()]);
-                    // let mut writer_a = IMuxSync::new(vec![stream_a]);
-                        ReluProtocol::<P>::eval_server_c_protocol(
-                                            &mut writer_c,
-                                            &Some(share_c_labels),
-                                        );
+                        ).unwrap();
+                    next_layer_input=  ndarray::Array1::from_iter(output)
+                    .into_shape(dims.output_dimensions())
+                    .expect("shape should be correct")
+                    .into();
+
+
                     
 
                 }
                 Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {} 
                 Layer::LL(layer) => {
-                    println!("Linear {}", i);
-                    let start = Instant::now();
-                    let (mut reader_c, mut writer_c) = server_connect(server_c_addr);
-                    // println!("Linear");
-                    let layer_randomizer = state.output_randomizer.get(&i).unwrap();
-                    // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
-                    //     println!("Linear but not conv FC{}", i);
-                    //     next_layer_derandomizer
-                    //         .iter_mut()
-                    //         .zip(&next_layer_input)
-                    //         .for_each(|(l_r, inp)| {
-                    //             *l_r += &inp.inner.inner;
-                    //         });
-                    // }
-                    let input_dim = layer.input_dimensions();
-                    // println!("input dimension {} {} {} {}",b,c,h,w);
-                    next_layer_input = Output::zeros(layer.output_dimensions());
-                    // for stream in serverc_listener.incoming() {
-                    //     let mut read_stream =
-                    //     IMuxSync::new(vec![stream.expect("server connection failed!")]);
-                        LinearProtocol::online_leaf_server_protocol(
-                            &mut reader_c,       // we only receive here, no messages to client
-                            &layer, // layer parameters
-                            layer_randomizer,       // this is our `s` from above.
-                            input_dim,
-                            &mut next_layer_input, // this is where the result will go.
-                        ).unwrap();
-                        // println!("next layer input length c {}", next_layer_input.len());
-                        // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
 
-                        for share in next_layer_input.iter_mut() {
-                            share.inner.signed_reduce_in_place();
-                        }
-                        let duration = start.elapsed();
-                        println!("Time : {:?}", duration);
+                    println!("Linear {}", i);
+                    let input_dim = layer.input_dimensions();
+                    let start = Instant::now();
+                    // let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
+                    let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
+                            next_layer_input.iter_mut().zip(input.iter_mut())
+                            .for_each(|(a,b)|{
+                                *b = AdditiveShare::new(*a)
+                            });
+                    let layer_randomizer = state.output_randomizer.get(&i).unwrap(); //s
+    
+    
+                    // Send to server C
+                    LinearProtocol::online_server_c_2_b_protocol(&mut writer_c, &input).unwrap();
+                    //Linear evaluation on server B
+                    next_layer_input = Output::zeros(layer.output_dimensions());
+                    
+    
+                    //linear function 
+                    LinearProtocol::online_server_c_protocol(
+                        &input,
+                        &layer,
+                        layer_randomizer,
+                        input_dim,
+                        &mut next_layer_input,
+                    ).unwrap();
+    
+                    // next_layer_input is F_b(x-r)-s_b
+                    for share in next_layer_input.iter_mut() {
+                        share.inner.signed_reduce_in_place();
+                    }
+                    
                 }
                 }
             // }
@@ -2409,9 +2417,11 @@ where
     pub fn online_root_server_protocol<R: Read + Send, W: Write + Send + Send>(
         reader: &mut IMuxSync<R>,
         writer: &mut IMuxSync<W>,
+        writer_c: &mut IMuxSync<W>,
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
+        architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         state: &RootServerState<P>,
-    ) -> Result<Input<AdditiveShare<P>>, bincode::Error> {
+    ) -> Result<Output<AdditiveShare<P>>, bincode::Error> {
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
             assert!(
@@ -2518,17 +2528,18 @@ where
         for share in next_input.iter_mut() {
             share.inner.signed_reduce_in_place();
         }
-        // println!("********************receiving intermeidate result from user*********");
-        // for (i,inp) in next_input.iter().enumerate(){
-        //     if i <10{
-        //         println!("{}", inp.inner);
-        //     }
-        // }
-        // let sent_message = MsgSend::new(&next_layer_input);
-        // crate::bytes::serialize(writer, &sent_message)?;
-        // timer_end!(start_time);
-        Ok(next_input)
-        // Ok(next_layer_input)
+
+        //Send to server B
+
+        LinearProtocol::online_server_a_2_c_protocol(
+            &mut wirter_c,
+            &next_input,
+        ).unwrap();
+
+        // Return the share of the last layer
+        let total_layers = architecture.layers.len();
+        Ok(state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone())
+
     }
 
     /// Outputs shares for the next round's input.
