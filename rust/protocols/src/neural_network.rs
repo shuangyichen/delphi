@@ -1704,7 +1704,7 @@ where
                     //linear function 
                     LinearProtocol::online_server_c_protocol(
                         &mut input,
-                        layer,
+                        &layer,
                         layer_randomizer,
                         &mut next_layer_input_as,
                     ).unwrap();
@@ -2461,7 +2461,7 @@ where
                         writer,
                         &next_layer_input.as_slice().unwrap(),
                         layer_encoders,
-                    )?;
+                    ).unwrap();
                     let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
                         [num_consumed_relus..(num_consumed_relus + layer_size)]
                         .to_vec(); //OTP
@@ -2501,7 +2501,7 @@ where
                         layer_randomizer,
                         &next_layer_derandomizer,
                         &mut next_layer_input,
-                    )?;
+                    ).unwrap();
                     next_layer_derandomizer = Output::zeros(layer.output_dimensions());
                     // Since linear operations involve multiplications
                     // by fixed-point constants, we want to truncate here to

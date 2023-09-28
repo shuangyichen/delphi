@@ -930,7 +930,7 @@ where
 
     pub fn online_server_c_protocol(
         input: &mut Input<AdditiveShare<P>>,
-        layer: &LinearLayerInfo<AdditiveShare<P>, FixedPoint<P>>,
+        layer: &LinearLayer<AdditiveShare<P>, FixedPoint<P>>,
         output_rerandomizer: &Output<P::Field>,
         output: &mut Output<AdditiveShare<P>>,
     )-> Result<(), bincode::Error> {
