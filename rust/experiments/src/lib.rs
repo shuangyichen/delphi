@@ -319,7 +319,7 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     );
     let duration_relu_abc = start_relu_abc.elapsed();
     // thread::sleep(time::Duration::from_millis(3000));
-    let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+    // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
 
     let start_relu_abc_2 = Instant::now();
     NNProtocol::offline_server_a_protocol_r3(
@@ -565,6 +565,7 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
         let mut reader_cost = reader_c.count();
         let mut writer_cost = writer_c.count();
         let mut total_cost = reader_cost+writer_cost;
+        thread::sleep(time::Duration::from_millis(2000));
         let (mut reader_b, mut writer_b) = client_connect(server_b_addr);   // C-->B
         NNProtocol::offline_server_c_protocol_r2(
             &mut reader_b,
