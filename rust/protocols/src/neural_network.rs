@@ -2430,7 +2430,6 @@ where
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         state: &RootServerState<P>,
-        sstate: &ServerAState<P>,
     ){
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();

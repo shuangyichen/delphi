@@ -348,9 +348,9 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // let start_a_online_1 = Instant::now();
     // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
     let start_user_a = Instant::now();
-    NNProtocol::online_root_server_protocol(&mut reader_u, &mut writer_u, &mut writer_c, &nn1, &architecture2, &sa_split1).unwrap();
+    NNProtocol::online_root_server_protocol(&mut reader_u, &mut writer_u, &mut writer_c, &nn1, &architecture2, &sa_split1);
     let total_layers = architecture2.layers.len();
-    let last_share = sa_state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
+    let last_share = sa_state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
     // let duration_inf_ua = start_user_a.elapsed();
     // println!("Online Time ua : {:?}", duration_inf_ua);
     // // //A----B----C online
@@ -504,11 +504,11 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
         // let reader_cost = reader_b.count();
         // let writer_cost = writer_b.count();
         // let ab_total_cost = reader_cost+writer_cost;
-        println!("A B preprocessing total cost {} bytes", ab_total_cost);
+        // println!("A B preprocessing total cost {} bytes", ab_total_cost);
         // let reader_c_cost = reader_c.count();
         // let writer_c_cost = writer_c.count();
         // let bc_total_cost = reader_c_cost+writer_c_cost;
-        println!("B C relu preprocessing total cost {} bytes", bc_total_cost);
+        // println!("B C relu preprocessing total cost {} bytes", bc_total_cost);
         // sb_state
     // };
     
