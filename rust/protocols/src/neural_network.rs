@@ -1468,7 +1468,7 @@ where
 
         // let mut input = LinearProtocol::online_server_b_a_protocol(&mut reader_a).unwrap();
 
-        let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
+        // let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
         let mut total_bc = 0;
 
         let mut num_consumed_relus = 0;
@@ -1651,6 +1651,11 @@ where
                     let output_dims = dims.output_dimensions();
                     let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;
                     // println!("{}",layer_size);
+                    let mut input:Input<AdditiveShare<P>>  = Input::zeros(layer.input_dimensions()); 
+                    next_layer_input.iter_mut().zip(input.iter_mut())
+                    .for_each(|(a,b)|{
+                        *b = AdditiveShare::new(*a)
+                    });
                     let output = 
                         ReluProtocol::<P>::online_server_c_protocol(
                             &mut writer_c,
@@ -1660,7 +1665,7 @@ where
                             &relu_server_a_next_layer_randomizer,
                             &relu_circuits,
                             layer_size,
-                            &next_layer_input.as_slice().unwrap(),  
+                            &input.as_slice().unwrap(),  
                             rng,
                             &next_layer_randomizers,
                             // &mut server_c_offline,
@@ -1691,22 +1696,24 @@ where
     
                     // Send to server C
                     LinearProtocol::online_server_c_2_b_protocol(&mut writer_c, &input).unwrap();
+                    let mut next_layer_input_as = Output::zeros(dims.output_dimensions());
                     //Linear evaluation on server B
                     next_layer_input = Output::zeros(layer.output_dimensions());
                     
     
                     //linear function 
                     LinearProtocol::online_server_c_protocol(
-                        &input,
-                        &layer,
+                        &mut input,
+                        layer,
                         layer_randomizer,
-                        &mut next_layer_input,
+                        &mut next_layer_input_as,
                     ).unwrap();
+                    next_layer_input = NNProtocol::transform_fp(&next_layer_input_as,dims.output_dimensions());
     
                     // next_layer_input is F_b(x-r)-s_b
-                    for share in next_layer_input.iter_mut() {
-                        share.inner.signed_reduce_in_place();
-                    }
+                    // for share in next_layer_input_as.iter_mut() {
+                    //     share.inner.signed_reduce_in_place();
+                    // }
                     
                 }
                 }
@@ -2424,7 +2431,7 @@ where
         architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         state: &RootServerState<P>,
         sstate: &ServerAState<P>,
-    ) -> Result<Output<AdditiveShare<P>>, bincode::Error> {
+    ){
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
             assert!(
@@ -2541,7 +2548,7 @@ where
 
         // Return the share of the last layer
         let total_layers = architecture.layers.len();
-        Ok(sstate.linear_post_application_share.get(&(total_layers-1)).unwrap().clone())
+        // Ok(sstate.linear_post_application_share.get(&(total_layers-1)).unwrap().clone())
 
     }
 

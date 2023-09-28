@@ -105,8 +105,8 @@ pub struct ServerBState{
 pub struct ServerCState{
     pub gc_s: Vec<GarbledCircuit>,
     pub server_b_randomizer_labels: Vec<Wire>,
-    pub server_a_randomizer_labels: Option<Vec<Wire>>,
-    pub server_c_randomizer_labels: Vec<Wire>,
+    // pub server_a_randomizer_labels: Option<Vec<Wire>>,
+    // pub server_c_randomizer_labels: Vec<Wire>,
     // pub output_randomizers: Vec<P::Field>,   
     // pub rc_labels: Option<Vec<Wire>>,
 }
@@ -503,8 +503,6 @@ where
         Ok(ServerCState{
             gc_s,
             server_b_randomizer_labels:rb_wires,
-            server_a_randomizer_labels:None,
-            server_c_randomizer_labels:None,
             // server_c_randomizer_labels: labels,
             // rc_labels:None,
         })
