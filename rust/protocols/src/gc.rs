@@ -897,7 +897,7 @@ where
             .zip(rb_next_labels.chunks(num_garbler_inputs / 2))
             .for_each(|(w1, w2)| w1.extend_from_slice(w2));
 
-        assert_eq!(num_relus, rb_labels.len());
+        assert_eq!(number_of_relus, rb_labels.len());
 
         let mut ra_labels_ : Vec<Wire> = Vec::new();
         ra_labels_.extend_from_slice(ra_labels);
@@ -906,7 +906,7 @@ where
         eval_labels
             .iter_mut()
             .zip(rc_labels.chunks(num_evaluator_inputs / 3))
-            .zip(rc_next_labels.chunks(num_evaluator_inputs / 3))
+            .zip(ra_next_labels.chunks(num_evaluator_inputs / 3))
             .for_each(|((mut w1, w2),w3)| {
                 // println!("w2 len {}",w2.len());
                 // println!("w3 len {}",w3.len());

@@ -113,7 +113,7 @@ pub struct ServerCState<P: FixedPointParameters> {
     pub relu_circuits: Option<Vec<GarbledCircuit>>,
     pub relu_server_a_labels: Option<Vec<Wire>>, //share_a
     pub relu_server_b_labels: Option<Vec<Wire>>,//share_b
-    pub relu_server_b_labels: Option<Vec<Wire>>,//share_c
+    pub relu_server_c_labels: Option<Vec<Wire>>,//share_c
     pub relu_server_a_next_layer_randomizer: Option<Vec<Wire>>, //r_a
     pub relu_server_b_next_layer_randomizer: Option<Vec<Wire>>, //r_b
     pub relu_next_layer_randomizers: Vec<AdditiveShare<P>>, //r_c
@@ -1466,7 +1466,7 @@ where
             (layer.input_dimensions(), layer.output_dimensions())
         };
 
-        let mut input = LinearProtocol::online_server_b_a_protocol(&mut reader_a).unwrap();
+        // let mut input = LinearProtocol::online_server_b_a_protocol(&mut reader_a).unwrap();
 
         let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
         let mut total_bc = 0;
@@ -1631,6 +1631,8 @@ where
                 match layer {
                 Layer::NLL(NonLinearLayer::ReLU(dims)) => {
                     println!("ReLU");
+                    let output_dims = dims.output_dimensions();
+                    let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;
 
                     let layer_ra_labels = &state.relu_server_a_labels.as_ref().unwrap()
                                 [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
@@ -1678,7 +1680,7 @@ where
                     let input_dim = layer.input_dimensions();
                     let start = Instant::now();
                     // let (mut reader_b, mut writer_b) = server_connect(server_b_addr);
-                    let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
+                    let mut input:Input<AdditiveShare<P>>  = Input::zeros(layer.input_dimensions()); 
                             next_layer_input.iter_mut().zip(input.iter_mut())
                             .for_each(|(a,b)|{
                                 *b = AdditiveShare::new(*a)
@@ -2532,7 +2534,7 @@ where
         //Send to server B
 
         LinearProtocol::online_server_a_2_c_protocol(
-            &mut wirter_c,
+            &mut writer_c,
             &next_input,
         ).unwrap();
 
