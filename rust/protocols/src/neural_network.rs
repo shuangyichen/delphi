@@ -1622,7 +1622,7 @@ where
 
             let mut num_consumed_relus = 0;
 
-            // let mut next_layer_input = Output::zeros(first_layer_out_dims);
+            let mut next_layer_input_as = Output::zeros(first_layer_out_dims);
             // let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
             // let serverc_listener = TcpListener::bind(server_c_addr).unwrap();
 
@@ -1696,7 +1696,7 @@ where
     
                     // Send to server C
                     LinearProtocol::online_server_c_2_b_protocol(&mut writer_c, &input).unwrap();
-                    let mut next_layer_input_as = Output::zeros(layer.output_dimensions());
+                    next_layer_input_as = Output::zeros(layer.output_dimensions());
                     //Linear evaluation on server B
                     next_layer_input = Output::zeros(layer.output_dimensions());
                     
