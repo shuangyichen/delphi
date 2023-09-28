@@ -348,7 +348,9 @@ pub fn nn_root_server<R: RngCore + CryptoRng>(
     // let start_a_online_1 = Instant::now();
     // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
     let start_user_a = Instant::now();
-    let last_share = NNProtocol::online_root_server_protocol(&mut reader_u, &mut writer_u, &mut writer_c, &nn1, &architecture2, &sa_split1).unwrap();
+    NNProtocol::online_root_server_protocol(&mut reader_u, &mut writer_u, &mut writer_c, &nn1, &architecture2, &sa_split1).unwrap();
+    let total_layers = architecture2.layers.len();
+    let last_share = sa_state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
     // let duration_inf_ua = start_user_a.elapsed();
     // println!("Online Time ua : {:?}", duration_inf_ua);
     // // //A----B----C online

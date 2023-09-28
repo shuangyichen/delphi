@@ -929,12 +929,12 @@ where
     }
 
     pub fn online_server_c_protocol(
-        input: &Input<AdditiveShare<P>>,
+        input: &mut Input<AdditiveShare<P>>,
         layer: &LinearLayerInfo<AdditiveShare<P>, FixedPoint<P>>,
         output_rerandomizer: &Output<P::Field>,
         output: &mut Output<AdditiveShare<P>>,
     )-> Result<(), bincode::Error> {
-        *output = layer.evaluate(&input);
+        *output = layer.evaluate(input);
         // println!("************************linear evaluation result***************************");
         output.zip_mut_with(output_rerandomizer, |out, s| {
             *out = FixedPoint::randomize_local_share(out, s);

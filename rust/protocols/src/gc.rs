@@ -503,6 +503,8 @@ where
         Ok(ServerCState{
             gc_s,
             server_b_randomizer_labels:rb_wires,
+            server_a_randomizer_labels:None,
+            server_c_randomizer_labels:None,
             // server_c_randomizer_labels: labels,
             // rc_labels:None,
         })

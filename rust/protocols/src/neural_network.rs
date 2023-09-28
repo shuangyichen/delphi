@@ -1208,238 +1208,238 @@ where
             num_relu,
         );
 
-        server_c_state.relu_server_a_next_layer_randomizer  = result.0;
-        server_c_state.relu_server_a_labels  = result.1;
+        server_c_state.relu_server_a_next_layer_randomizer  = Some(result.0);
+        server_c_state.relu_server_a_labels  = Some(result.1);
     }
 
     // pub fn online_server_a_protocol<R: Read + Send, W: Write + Send>(
-    pub fn online_server_a_protocol(
-        server_a_addr: &str,
-        server_b_addr: &str,
-        server_c_addr: &str,
-        input: &Input<AdditiveShare<P>>,
-        architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
-        state: &ServerAState<P>,
-        // num_relus: usize,
-    )->Output<AdditiveShare<P>>{
-        let start_a_online_1 = Instant::now();
-        // let num_relus = state.num_relu;
-        let first_layer_in_dims = {
-            let layer = architecture.layers.first().unwrap();
-            assert!(
-                layer.is_linear(),
-                "first layer of the network should always be linear."
-            );
-            assert_eq!(layer.input_dimensions(), input.dim());
-            layer.input_dimensions()
-        };
-        assert_eq!(first_layer_in_dims, input.dim());
-        // let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
-        let mut num_consumed_relus = 0;
-        let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
-        let mut duration = start_a_online_1.elapsed();
-        let mut total_ab_count = 0;
-        let mut total_ac_count = 0;
-        // let last_share :Output<AdditiveShare<P>> = 
-        // let next_layer_input = input;
+    // pub fn online_server_a_protocol(
+    //     server_a_addr: &str,
+    //     server_b_addr: &str,
+    //     server_c_addr: &str,
+    //     input: &Input<AdditiveShare<P>>,
+    //     architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
+    //     state: &ServerAState<P>,
+    //     // num_relus: usize,
+    // )->Output<AdditiveShare<P>>{
+        // let start_a_online_1 = Instant::now();
+        // // let num_relus = state.num_relu;
+        // let first_layer_in_dims = {
+        //     let layer = architecture.layers.first().unwrap();
+        //     assert!(
+        //         layer.is_linear(),
+        //         "first layer of the network should always be linear."
+        //     );
+        //     assert_eq!(layer.input_dimensions(), input.dim());
+        //     layer.input_dimensions()
+        // };
+        // assert_eq!(first_layer_in_dims, input.dim());
+        // // let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
+        // let mut num_consumed_relus = 0;
+        // let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
+        // let mut duration = start_a_online_1.elapsed();
+        // let mut total_ab_count = 0;
+        // let mut total_ac_count = 0;
+        // // let last_share :Output<AdditiveShare<P>> = 
+        // // let next_layer_input = input;
         
-        for (i, layer) in architecture.layers.iter().enumerate() {
-            thread::sleep(time::Duration::from_millis(2500));
-            // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
-            // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-            // if i<2{
-            let start_a_online_2 = Instant::now();
-            match layer {
-                LayerInfo::NLL(dims, nll_info) => {
-                    match nll_info {
-                        NonLinearLayerInfo::ReLU => {
-                            println!("ReLU {}",i);
-                            // thread::sleep(time::Duration::from_millis(3000));
-                            let start = Instant::now();
-                            let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
-                            // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
-                            let output_dims = dims.output_dimensions();
-                            let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;//next_layer_input.len();
-                            // println!("ReLU size {}", layer_size);
-                            let mut rb_garbler_wires : Vec<Vec<Wire>>  = Vec::with_capacity(layer_size);
+        // for (i, layer) in architecture.layers.iter().enumerate() {
+        //     thread::sleep(time::Duration::from_millis(2500));
+        //     // let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+        //     // let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+        //     // if i<2{
+        //     let start_a_online_2 = Instant::now();
+        //     match layer {
+        //         LayerInfo::NLL(dims, nll_info) => {
+        //             match nll_info {
+        //                 NonLinearLayerInfo::ReLU => {
+        //                     println!("ReLU {}",i);
+        //                     // thread::sleep(time::Duration::from_millis(3000));
+        //                     let start = Instant::now();
+        //                     let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+        //                     // let (mut reader_a, mut writer_a) = server_connect(server_a_addr);
+        //                     let output_dims = dims.output_dimensions();
+        //                     let layer_size = output_dims.0*output_dims.1*output_dims.2*output_dims.3;//next_layer_input.len();
+        //                     // println!("ReLU size {}", layer_size);
+        //                     let mut rb_garbler_wires : Vec<Vec<Wire>>  = Vec::with_capacity(layer_size);
                          
-                            rb_garbler_wires =  ReluProtocol::<P>::online_server_a_protocol(&mut reader_b);
+        //                     rb_garbler_wires =  ReluProtocol::<P>::online_server_a_protocol(&mut reader_b);
 
 
-                            //AC interaction + final evaluation
+        //                     //AC interaction + final evaluation
                            
-                            let layer_ra_labels = &state.relu_server_a_labels.as_ref().unwrap()
-                                [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
-                            let layer_rb_labels = &state.relu_server_b_labels.as_ref().unwrap()
-                                [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
-                            let layer_rc_labels = &state.relu_server_c_labels.as_ref().unwrap()
-                                [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
-                            // let next_layer_randomizers = &state.relu_next_layer_randomizers
-                            //     [num_consumed_relus..(num_consumed_relus + layer_size)];
-                            let next_layer_randomizers = state.linear_randomizer.get(&(i+1)).unwrap().as_slice().unwrap();
-                            let relu_circuits = &state.relu_circuits.as_ref().unwrap()
-                                [num_consumed_relus..(num_consumed_relus + layer_size)];
+        //                     let layer_ra_labels = &state.relu_server_a_labels.as_ref().unwrap()
+        //                         [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
+        //                     let layer_rb_labels = &state.relu_server_b_labels.as_ref().unwrap()
+        //                         [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
+        //                     let layer_rc_labels = &state.relu_server_c_labels.as_ref().unwrap()
+        //                         [42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
+        //                     // let next_layer_randomizers = &state.relu_next_layer_randomizers
+        //                     //     [num_consumed_relus..(num_consumed_relus + layer_size)];
+        //                     let next_layer_randomizers = state.linear_randomizer.get(&(i+1)).unwrap().as_slice().unwrap();
+        //                     let relu_circuits = &state.relu_circuits.as_ref().unwrap()
+        //                         [num_consumed_relus..(num_consumed_relus + layer_size)];
 
-                            num_consumed_relus += layer_size;
-                            // let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
-                            let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
-                            let reader_b_cost = reader_b.count();
-                            let writer_b_cost = writer_b.count();
-                            total_ab_count = total_ab_count + reader_b_cost +writer_b_cost;
-                            let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
-                            // println!("ReLU r2");
-                            let output =ReluProtocol::eval_server_a_protocol(
-                                                &mut reader_c,
-                                                &mut rb_garbler_wires,
-                                                &layer_ra_labels,
-                                                &layer_rb_labels,
-                                                &layer_rc_labels,
-                                                &relu_circuits,
-                                                &next_layer_randomizers,
-                                                layer_size,
-                                            ).unwrap();
-                            // let mut next_layer_input:Input<FixedPoint<P>> =  ndarray::Array1::from_iter(output)
-                            next_layer_input=  ndarray::Array1::from_iter(output)
-                            .into_shape(dims.output_dimensions())
-                            .expect("shape should be correct")
-                            .into();
-                            let duration = start.elapsed();
-                            println!("Time : {:?}", duration);
-                            let avg_relu = duration/layer_size.try_into().unwrap();;
-                            // println!("Single ReLU Time : {:?}", duration);
-                            let reader_c_cost = reader_c.count();
-                            // let writer_b_cost = writer_b.count();
-                            total_ac_count = total_ac_count+ reader_c_cost;
-                            // println!("ReLU output value");
-                            // for (i,inp) in next_layer_input.iter().enumerate(){
-                            //     if i <10{
-                            //         println!("{}", inp);
-                            //     }
-                            // }
-                            // println!("AB AC relu {} bytes",reader_c_cost+reader_b_cost +writer_b_cost);
+        //                     num_consumed_relus += layer_size;
+        //                     // let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
+        //                     let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
+        //                     let reader_b_cost = reader_b.count();
+        //                     let writer_b_cost = writer_b.count();
+        //                     total_ab_count = total_ab_count + reader_b_cost +writer_b_cost;
+        //                     let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+        //                     // println!("ReLU r2");
+        //                     let output =ReluProtocol::eval_server_a_protocol(
+        //                                         &mut reader_c,
+        //                                         &mut rb_garbler_wires,
+        //                                         &layer_ra_labels,
+        //                                         &layer_rb_labels,
+        //                                         &layer_rc_labels,
+        //                                         &relu_circuits,
+        //                                         &next_layer_randomizers,
+        //                                         layer_size,
+        //                                     ).unwrap();
+        //                     // let mut next_layer_input:Input<FixedPoint<P>> =  ndarray::Array1::from_iter(output)
+        //                     next_layer_input=  ndarray::Array1::from_iter(output)
+        //                     .into_shape(dims.output_dimensions())
+        //                     .expect("shape should be correct")
+        //                     .into();
+        //                     let duration = start.elapsed();
+        //                     println!("Time : {:?}", duration);
+        //                     let avg_relu = duration/layer_size.try_into().unwrap();;
+        //                     // println!("Single ReLU Time : {:?}", duration);
+        //                     let reader_c_cost = reader_c.count();
+        //                     // let writer_b_cost = writer_b.count();
+        //                     total_ac_count = total_ac_count+ reader_c_cost;
+        //                     // println!("ReLU output value");
+        //                     // for (i,inp) in next_layer_input.iter().enumerate(){
+        //                     //     if i <10{
+        //                     //         println!("{}", inp);
+        //                     //     }
+        //                     // }
+        //                     // println!("AB AC relu {} bytes",reader_c_cost+reader_b_cost +writer_b_cost);
                            
-                        }
-                        NonLinearLayerInfo::PolyApprox { poly, .. } => {}
-                    }
-                }
+        //                 }
+        //                 NonLinearLayerInfo::PolyApprox { poly, .. } => {}
+        //             }
+        //         }
 
-                LayerInfo::LL(dims, layer_info) => {
-                    println!("Linear {}", i);
-                    // thread::sleep(time::Duration::from_millis(500));
-                    let start = Instant::now();
+        //         LayerInfo::LL(dims, layer_info) => {
+        //             println!("Linear {}", i);
+        //             // thread::sleep(time::Duration::from_millis(500));
+        //             let start = Instant::now();
     
     
-                    // println!("Linear {}",i);
-                    let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
-                    let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
+        //             // println!("Linear {}",i);
+        //             let (mut reader_b, mut writer_b) = client_connect(server_b_addr);
+        //             let (mut reader_c, mut writer_c) = client_connect(server_c_addr);
 
-                    // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
-                    //     next_layer_derandomizer
-                    //         .iter_mut()
-                    //         .zip(&next_layer_input)
-                    //         .for_each(|(l_r, inp)| {
-                    //             *l_r += &inp.inner.inner;
-                    //         });
-                    // }
-                    // println!("Linear input value");
-                    //         for (i,inp) in next_layer_input.iter().enumerate(){
-                    //             if i <10{
-                    //                 println!("{}", inp);
-                    //             }
-                    //         }
+        //             // if i != 0 && neural_network.layers.get(i - 1).unwrap().is_linear() {
+        //             //     next_layer_derandomizer
+        //             //         .iter_mut()
+        //             //         .zip(&next_layer_input)
+        //             //         .for_each(|(l_r, inp)| {
+        //             //             *l_r += &inp.inner.inner;
+        //             //         });
+        //             // }
+        //             // println!("Linear input value");
+        //             //         for (i,inp) in next_layer_input.iter().enumerate(){
+        //             //             if i <10{
+        //             //                 println!("{}", inp);
+        //             //             }
+        //             //         }
 
-                    let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
-                            next_layer_input.iter_mut().zip(input.iter_mut())
-                            .for_each(|(a,b)|{
-                                *b = AdditiveShare::new(*a)
-                            });
+        //             let mut input:Input<AdditiveShare<P>>  = Input::zeros(dims.input_dimensions()); 
+        //                     next_layer_input.iter_mut().zip(input.iter_mut())
+        //                     .for_each(|(a,b)|{
+        //                         *b = AdditiveShare::new(*a)
+        //                     });
 
-                            // println!("Copied Linear input value");
-                            // for (i,inp) in input.iter().enumerate(){
-                            //     if i <10{
-                            //         println!("{}", inp.inner);
-                            //     }
-                            // }
-                        // }
-                    let mut next_layer_input_as = Output::zeros(dims.output_dimensions()); //state.linear_post_application_share[&i].clone();  //Fr-s
+        //                     // println!("Copied Linear input value");
+        //                     // for (i,inp) in input.iter().enumerate(){
+        //                     //     if i <10{
+        //                     //         println!("{}", inp.inner);
+        //                     //     }
+        //                     // }
+        //                 // }
+        //             let mut next_layer_input_as = Output::zeros(dims.output_dimensions()); //state.linear_post_application_share[&i].clone();  //Fr-s
                     
-                    let (b, c, h, w) = dims.input_dimensions();
-                    println!("Input dimension: {} {} {} {}", b,c,h,w);
-                    let (b2, c2, h2, w2) = dims.output_dimensions();
-                    println!("Ouput dimension: {} {} {} {}", b2,c2,h2,w2);
-                    assert_eq!(dims.input_dimensions(), input.dim());
-                    // let input = next_layer_input;
-                    LinearProtocol::online_server_a_protocol(
-                        &mut writer_b,
-                        &mut writer_c,
-                        &input,
-                        &layer_info,
-                        &mut next_layer_input_as,
-                    ).unwrap();
+        //             let (b, c, h, w) = dims.input_dimensions();
+        //             println!("Input dimension: {} {} {} {}", b,c,h,w);
+        //             let (b2, c2, h2, w2) = dims.output_dimensions();
+        //             println!("Ouput dimension: {} {} {} {}", b2,c2,h2,w2);
+        //             assert_eq!(dims.input_dimensions(), input.dim());
+        //             // let input = next_layer_input;
+        //             LinearProtocol::online_server_a_protocol(
+        //                 &mut writer_b,
+        //                 &mut writer_c,
+        //                 &input,
+        //                 &layer_info,
+        //                 &mut next_layer_input_as,
+        //             ).unwrap();
 
-                    // for share in next_layer_input.iter_mut() {
-                    //     share.inner.signed_reduce_in_place();
-                    // }
-                    let duration = start.elapsed();
-                    println!("Time : {:?}", duration);
-                    if i != (architecture.layers.len() - 1)
-                        && architecture.layers[i + 1].is_linear()
-                    {
-                    next_layer_input = NNProtocol::transform_fp(&next_layer_input_as,dims.output_dimensions());
-                        // println!("Conv output value");
-                        //     for (i,inp) in next_layer_input.iter().enumerate(){
-                        //         if i <10{
-                        //             println!("{}", inp);
-                        //         }
-                        //     }
-                            for share in next_layer_input.iter_mut() {
-                                share.signed_reduce_in_place();
-                            }
-                        }
-                        let reader_b_cost = reader_b.count();
-                        let writer_b_cost = writer_b.count();
-                        let reader_c_cost = reader_c.count();
-                        let writer_c_cost = writer_c.count();
-                        total_ac_count = total_ac_count+ reader_c_cost +writer_c_cost;
-                        total_ab_count = total_ab_count+reader_b_cost+writer_b_cost;
+        //             // for share in next_layer_input.iter_mut() {
+        //             //     share.inner.signed_reduce_in_place();
+        //             // }
+        //             let duration = start.elapsed();
+        //             println!("Time : {:?}", duration);
+        //             if i != (architecture.layers.len() - 1)
+        //                 && architecture.layers[i + 1].is_linear()
+        //             {
+        //             next_layer_input = NNProtocol::transform_fp(&next_layer_input_as,dims.output_dimensions());
+        //                 // println!("Conv output value");
+        //                 //     for (i,inp) in next_layer_input.iter().enumerate(){
+        //                 //         if i <10{
+        //                 //             println!("{}", inp);
+        //                 //         }
+        //                 //     }
+        //                     for share in next_layer_input.iter_mut() {
+        //                         share.signed_reduce_in_place();
+        //                     }
+        //                 }
+        //                 let reader_b_cost = reader_b.count();
+        //                 let writer_b_cost = writer_b.count();
+        //                 let reader_c_cost = reader_c.count();
+        //                 let writer_c_cost = writer_c.count();
+        //                 total_ac_count = total_ac_count+ reader_c_cost +writer_c_cost;
+        //                 total_ab_count = total_ab_count+reader_b_cost+writer_b_cost;
                     
-                    // if i != (architecture.layers.len() - 1)
-                    //     && architecture.layers[i + 1].is_linear()
-                    // {
-                    //     let share = &state.linear_randomizer[&(i + 1)];
-                    //     let share_fp = NNProtocol::transform(share,dims.output_dimensions());
-                    //     next_layer_input.randomize_local_share(&share_fp);
-                    // }
-                    // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
-                    // if i != (architecture.layers.len() - 1)
-                    //     && architecture.layers[i + 1].is_linear()
-                    // {
-                    //     let randomizer = NNProtocol::transform(&state.linear_randomizer[&(i + 1)],dims.input_dimensions());
-                    //     next_layer_input.randomize_local_share(&randomizer);
-                    // }
-                    // let input = next_layer_input;
+        //             // if i != (architecture.layers.len() - 1)
+        //             //     && architecture.layers[i + 1].is_linear()
+        //             // {
+        //             //     let share = &state.linear_randomizer[&(i + 1)];
+        //             //     let share_fp = NNProtocol::transform(share,dims.output_dimensions());
+        //             //     next_layer_input.randomize_local_share(&share_fp);
+        //             // }
+        //             // next_layer_derandomizer = Output::zeros(layer.output_dimensions());
+        //             // if i != (architecture.layers.len() - 1)
+        //             //     && architecture.layers[i + 1].is_linear()
+        //             // {
+        //             //     let randomizer = NNProtocol::transform(&state.linear_randomizer[&(i + 1)],dims.input_dimensions());
+        //             //     next_layer_input.randomize_local_share(&randomizer);
+        //             // }
+        //             // let input = next_layer_input;
 
-                    }
-                }
-                // let input = next_layer_input;
-            // }
-            let tmp_duration = start_a_online_2.elapsed();
-            duration = duration + tmp_duration;
-        }
-            let total_layers = architecture.layers.len();
-            println!("A B online total cost {} bytes", total_ab_count);
-            println!("A C online total cost {} bytes", total_ac_count);
-            // let last_share = state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
-            // println!("Last layer index {}",total_layers-1);
-            // for (i, op) in last_share.iter().enumerate(){
-            //     if i<10{
-            //         println!("{}",op.inner);
-            //     }
-            // }
-            // let duration = start_a_online.elapsed();
-            // println!("Split 2 Online Time ABC: {:?}", duration);
-            state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
-        }
+        //             }
+        //         }
+        //         // let input = next_layer_input;
+        //     // }
+        //     let tmp_duration = start_a_online_2.elapsed();
+        //     duration = duration + tmp_duration;
+        // }
+        //     let total_layers = architecture.layers.len();
+        //     println!("A B online total cost {} bytes", total_ab_count);
+        //     println!("A C online total cost {} bytes", total_ac_count);
+        //     // let last_share = state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone();
+        //     // println!("Last layer index {}",total_layers-1);
+        //     // for (i, op) in last_share.iter().enumerate(){
+        //     //     if i<10{
+        //     //         println!("{}",op.inner);
+        //     //     }
+        //     // }
+        //     // let duration = start_a_online.elapsed();
+        //     // println!("Split 2 Online Time ABC: {:?}", duration);
+        //     state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone()
+        // }
 
         // let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
     
@@ -1618,11 +1618,11 @@ where
 
             let mut input = LinearProtocol::online_server_c_a_protocol(&mut reader_a).unwrap();
 
-            let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
+            let mut next_layer_input = NNProtocol::transform_fp(&input,first_layer_in_dims);
 
             let mut num_consumed_relus = 0;
 
-            let mut next_layer_input = Output::zeros(first_layer_out_dims);
+            // let mut next_layer_input = Output::zeros(first_layer_out_dims);
             // let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
             // let serverc_listener = TcpListener::bind(server_c_addr).unwrap();
 
@@ -1643,6 +1643,7 @@ where
                     // let next_layer_randomizers = &state.relu_next_layer_randomizers
                     //     [num_consumed_relus..(num_consumed_relus + layer_size)];
                     let next_layer_randomizers = state.input_randomizer.get(&(i+1)).unwrap().as_slice().unwrap(); //which one to use?
+                    let next_layer_randomizers = NNProtocol::transform_additive_share(next_layer_randomizers,dims.output_dimensions());
                     let relu_circuits = &state.relu_circuits.as_ref().unwrap()
                         [num_consumed_relus..(num_consumed_relus + layer_size)];
 
@@ -1699,7 +1700,6 @@ where
                         &input,
                         &layer,
                         layer_randomizer,
-                        input_dim,
                         &mut next_layer_input,
                     ).unwrap();
     
@@ -2423,6 +2423,7 @@ where
         neural_network: &NeuralNetwork<AdditiveShare<P>, FixedPoint<P>>,
         architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         state: &RootServerState<P>,
+        sstate: &ServerAState<P>,
     ) -> Result<Output<AdditiveShare<P>>, bincode::Error> {
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
@@ -2540,7 +2541,7 @@ where
 
         // Return the share of the last layer
         let total_layers = architecture.layers.len();
-        Ok(state.linear_post_application_share.get(&(total_layers-1)).unwrap().clone())
+        Ok(sstate.linear_post_application_share.get(&(total_layers-1)).unwrap().clone())
 
     }
 
