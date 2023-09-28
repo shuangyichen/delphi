@@ -1696,7 +1696,7 @@ where
     
                     // Send to server C
                     LinearProtocol::online_server_c_2_b_protocol(&mut writer_c, &input).unwrap();
-                    let mut next_layer_input_as = Output::zeros(dims.output_dimensions());
+                    let mut next_layer_input_as = Output::zeros(layer.output_dimensions());
                     //Linear evaluation on server B
                     next_layer_input = Output::zeros(layer.output_dimensions());
                     
@@ -1708,7 +1708,7 @@ where
                         layer_randomizer,
                         &mut next_layer_input_as,
                     ).unwrap();
-                    next_layer_input = NNProtocol::transform_fp(&next_layer_input_as,dims.output_dimensions());
+                    next_layer_input = NNProtocol::transform_fp(&next_layer_input_as,layer.output_dimensions());
     
                     // next_layer_input is F_b(x-r)-s_b
                     // for share in next_layer_input_as.iter_mut() {
@@ -1728,7 +1728,7 @@ where
     // }
     let duration = start_c_online.elapsed();
     println!("Split 2 Online Time from Server C: {:?}", duration);
-    next_layer_input
+    next_layer_input_as
     }
 
     // pub fn online_server_a_protocol_r2
