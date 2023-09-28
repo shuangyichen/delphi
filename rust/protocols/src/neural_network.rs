@@ -2518,7 +2518,7 @@ where
         timer_end!(start_time);
         let layer = neural_network.layers.last().unwrap();
         let input_dims = layer.input_dimensions();
-        let mut next_input = LinearProtocol::online_server_receive_intermediate(reader).unwrap();
+        let mut next_input = LinearProtocol::<P>::online_server_receive_intermediate(reader).unwrap();
         let layer_size = next_input.len();
         // let total_num = state.relu_output_randomizers.as_ref().unwrap().iter().count();
         let relu_output_randomizers = state.relu_output_randomizers.as_ref().unwrap()
@@ -2547,7 +2547,7 @@ where
         ).unwrap();
 
         // Return the share of the last layer
-        let total_layers = architecture.layers.len();
+        // let total_layers = architecture.layers.len();
         // Ok(sstate.linear_post_application_share.get(&(total_layers-1)).unwrap().clone())
 
     }
