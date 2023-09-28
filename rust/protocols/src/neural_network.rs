@@ -1491,8 +1491,8 @@ where
                 // println!("r 01 labels {}",&state.rc_01_labels.as_ref().unwrap().len());
                 let rc_01_labels = &state.rc_01_labels.as_ref().unwrap()[42*num_consumed_relus..42*(num_consumed_relus + layer_size)];
                 ReluProtocol::<P>::online_server_b_protocol(
-                                &mut reader_c,
-                                &mut writer_c,
+                                reader_c,
+                                writer_c,
                                 &next_layer_input.as_slice().unwrap(),   //F_b(x-r)-s_b
                                 layer_encoders,                          // encoder for F_b(x-r)-s_b
                                 &rc_01_labels,                           // labels for F_c(x-r)-s_c
@@ -1528,7 +1528,7 @@ where
                 //     IMuxSync::new(vec![stream.expect("server connection failed!")]);
 
                     LinearProtocol::online_leaf_server_protocol(
-                        &mut reader_c,       // we only receive here, no messages to client
+                        reader_c,       // we only receive here, no messages to client
                         &layer, // layer parameters
                         layer_randomizer,       // this is our `s` from above.
                         input_dim,
@@ -1616,7 +1616,7 @@ where
                 (layer.input_dimensions(), layer.output_dimensions())
             };
 
-            let mut input = LinearProtocol::online_server_c_a_protocol(&mut reader_a).unwrap();
+            let mut input = LinearProtocol::online_server_c_a_protocol(reader_a).unwrap();
 
             let mut next_layer_input = NNProtocol::transform_fp(&input,first_layer_in_dims);
 
@@ -1658,8 +1658,8 @@ where
                     });
                     let output = 
                         ReluProtocol::<P>::online_server_c_protocol(
-                            &mut writer_c,
-                            &mut reader_c,
+                            writer_c,
+                            reader_c,
                             &layer_ra_labels,
                             &relu_server_b_next_layer_randomizer,
                             &relu_server_a_next_layer_randomizer,
@@ -1695,7 +1695,7 @@ where
     
     
                     // Send to server C
-                    LinearProtocol::online_server_c_2_b_protocol(&mut writer_c, &input).unwrap();
+                    LinearProtocol::online_server_c_2_b_protocol(writer_c, &input).unwrap();
                     next_layer_input_as = Output::zeros(layer.output_dimensions());
                     //Linear evaluation on server B
                     next_layer_input = Output::zeros(layer.output_dimensions());
@@ -2542,7 +2542,7 @@ where
         //Send to server B
 
         LinearProtocol::online_server_a_2_c_protocol(
-            &mut writer_c,
+            writer_c,
             &next_input,
         ).unwrap();
 
