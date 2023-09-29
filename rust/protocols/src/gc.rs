@@ -915,7 +915,7 @@ where
                 // println!("w1 len {}",w1.len());
             });
 
-
+        let c = make_relu_3::<P>();
         let mut results = eval_labels
             .iter()
             // .par_chunks(num_evaluator_inputs)
