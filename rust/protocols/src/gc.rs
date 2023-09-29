@@ -886,7 +886,7 @@ where
 
         //Receive labels of  F_b(x-r)-s_b
         let in_msg: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
-        let mut rb_labels = in_msg.msg();   //Vec<Vec<Wire>>
+        let mut rb_labels : Vec<Vec<Wire>>   = in_msg.msg();   //Vec<Vec<Wire>>
 
         let c = make_relu_3::<P>();
         let num_evaluator_inputs = c.num_evaluator_inputs();
