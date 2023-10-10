@@ -956,9 +956,9 @@ where
         let sent_message = MsgSend::new(x_s);
         crate::bytes::serialize(writerb, &sent_message)?;
         }
-        _ => Input::zeros(input_dim),
+        // _ => Input::zeros(input_dim),
         };
-        
+
         Ok(())
     }
 
