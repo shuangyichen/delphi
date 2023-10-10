@@ -239,8 +239,8 @@ where
 
     pub fn offline_server_a_protocol_2<W: Write +Send>(
         writer: &mut IMuxSync<W>,
-        server_a_randomizer_labels: &[Wire],
-        server_a_r_next_labels: &[Wire],
+        server_a_randomizer_labels: &[Wire],   //share
+        server_a_r_next_labels: &[Wire],       //r_a
     ){
         // let randomizer_label_per_relu = if number_of_relus == 0 {
         //     8192
@@ -252,11 +252,11 @@ where
         //     let sent_message = ServerLabelEvalSend::new(&server_c_randomizer_labels);
         // }
 
-        //share
-        let mut share_a_labels: Vec<Wire> = Vec::new();
-        share_a_labels.extend_from_slice(&server_a_randomizer_labels);
-        let sent_message2 = ServerLabelEvalSend::new(&share_a_labels);
-        crate::bytes::serialize(writer, &sent_message2).unwrap();
+        // //share
+        // let mut share_a_labels: Vec<Wire> = Vec::new();
+        // share_a_labels.extend_from_slice(&server_a_randomizer_labels);
+        // let sent_message2 = ServerLabelEvalSend::new(&share_a_labels);
+        // crate::bytes::serialize(writer, &sent_message2).unwrap();
     
         //r_a
         let mut ra_next_labels: Vec<Wire> = Vec::new();
@@ -264,11 +264,11 @@ where
         let sent_message = ServerLabelEvalSend::new(&ra_next_labels);
         crate::bytes::serialize(writer, &sent_message).unwrap();
 
-        // //share
-        // let mut share_a_labels: Vec<Wire> = Vec::new();
-        // share_a_labels.extend_from_slice(&server_a_randomizer_labels);
-        // let sent_message2 = ServerLabelEvalSend::new(&share_a_labels);
-        // crate::bytes::serialize(writer, &sent_message2).unwrap();
+        //share
+        let mut share_a_labels: Vec<Wire> = Vec::new();
+        share_a_labels.extend_from_slice(&server_a_randomizer_labels);
+        let sent_message2 = ServerLabelEvalSend::new(&share_a_labels);
+        crate::bytes::serialize(writer, &sent_message2).unwrap();
 
        
         // println!("Server C sent");
@@ -402,7 +402,18 @@ where
             // println!("OT to server C ");
             // timer_end!(ot_time);
         }
-
+        let randomizer_label_per_relu = if number_of_relus == 0 {
+            8192
+        } else {
+            randomizer_labels.len() / number_of_relus
+        };
+        for msg_contents in gc_s
+            .chunks(8192)
+            .zip(randomizer_labels.chunks(randomizer_label_per_relu * 8192))
+        {
+            let sent_message = ServerGcMsgSend::new(&msg_contents);
+            crate::bytes::serialize(writer_c, &sent_message).unwrap();
+        }
         //Sending r_A (r_a_next)
         if number_of_relus != 0 {
             let r_a = reader_a.get_mut_ref().remove(0);
@@ -552,14 +563,6 @@ where
         .collect::<Vec<_>>();
 
 
-        let bs_next = ra_next
-        .iter()
-        .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
-        .map(|b| b == 1)
-        .collect::<Vec<_>>();
-        // println!("Server A receiving GC and rb_next labels");
-
-
         let labels = if number_of_relus != 0 {
             let r = reader.get_mut_ref().remove(0);
             let w = writer.get_mut_ref().remove(0);
@@ -578,6 +581,13 @@ where
         } else {
             Vec::new()
         };
+
+
+        let bs_next = ra_next
+        .iter()
+        .flat_map(|s| u128_to_bits(u128_from_share(*s), field_size))
+        .map(|b| b == 1)
+        .collect::<Vec<_>>();
 
         let labels_next = if number_of_relus != 0 {
             let r = reader.get_mut_ref().remove(0);

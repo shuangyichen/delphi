@@ -1189,8 +1189,9 @@ where
         // let mut gc_server_a_state  = server_a_state.gc_server_a_state.as_ref().unwrap();
         ReluProtocol::<P>::offline_server_a_protocol_2(
             writer_c,
-            &server_a_state.relu_server_a_next_layer_randomizer.as_ref().unwrap(),
             &server_a_state.relu_server_a_labels.as_ref().unwrap(),
+            &server_a_state.relu_server_a_next_layer_randomizer.as_ref().unwrap(),
+            // &server_a_state.relu_server_a_labels.as_ref().unwrap(),
             // server_a_state.gc_server_a_state.as_ref().unwrap(),
             // &mut gc_server_a_state,
         );
