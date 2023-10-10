@@ -513,8 +513,8 @@ where
         reader: &mut IMuxSync<R>,
         writer: &mut IMuxSync<W>,
         number_of_relus: usize,
-        shares: &[AdditiveShare<P>],
-        ra_next: &[AdditiveShare<P>],
+        shares: &[AdditiveShare<P>],   //F*r-s
+        ra_next: &[AdditiveShare<P>],   //r_a
         rng: &mut RNG,
     )-> Result<ServerAState, bincode::Error>{
         use fancy_garbling::util::*;
