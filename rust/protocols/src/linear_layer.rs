@@ -956,7 +956,7 @@ where
         let sent_message = MsgSend::new(x_s);
         crate::bytes::serialize(writerb, &sent_message)?;
         }
-        _ => todo!();
+        _ => todo!()
         };
 
         Ok(())
