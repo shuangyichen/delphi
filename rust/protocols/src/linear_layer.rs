@@ -949,11 +949,16 @@ where
     pub fn online_server_c_2_b_protocol<W: Write + Send>(
         writerb: &mut IMuxSync<W>,
         x_s: &Input<AdditiveShare<P>>,
+        layer: &LinearLayer<AdditiveShare<P>, FixedPoint<P>>,
     ) -> Result<(), bincode::Error> {
-
+        match &layer {
+            LinearLayer::Conv2d { .. } | LinearLayer::FullyConnected { .. } => {
         let sent_message = MsgSend::new(x_s);
         crate::bytes::serialize(writerb, &sent_message)?;
-
+        }
+        _ => Input::zeros(input_dim),
+        };
+        
         Ok(())
     }
 
