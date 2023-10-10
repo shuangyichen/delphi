@@ -251,6 +251,12 @@ where
         // for msg in server_c_randomizer_labels{
         //     let sent_message = ServerLabelEvalSend::new(&server_c_randomizer_labels);
         // }
+
+        //share
+        let mut share_a_labels: Vec<Wire> = Vec::new();
+        share_a_labels.extend_from_slice(&server_a_randomizer_labels);
+        let sent_message2 = ServerLabelEvalSend::new(&share_a_labels);
+        crate::bytes::serialize(writer, &sent_message2).unwrap();
     
         //r_a
         let mut ra_next_labels: Vec<Wire> = Vec::new();
@@ -258,11 +264,11 @@ where
         let sent_message = ServerLabelEvalSend::new(&ra_next_labels);
         crate::bytes::serialize(writer, &sent_message).unwrap();
 
-        //share
-        let mut share_a_labels: Vec<Wire> = Vec::new();
-        share_a_labels.extend_from_slice(&server_a_randomizer_labels);
-        let sent_message2 = ServerLabelEvalSend::new(&share_a_labels);
-        crate::bytes::serialize(writer, &sent_message2).unwrap();
+        // //share
+        // let mut share_a_labels: Vec<Wire> = Vec::new();
+        // share_a_labels.extend_from_slice(&server_a_randomizer_labels);
+        // let sent_message2 = ServerLabelEvalSend::new(&share_a_labels);
+        // crate::bytes::serialize(writer, &sent_message2).unwrap();
 
        
         // println!("Server C sent");
@@ -371,7 +377,7 @@ where
         }
         // println!("Server B sending GC and rb_next");
 
-
+        //Sending share_A (r_a)
         if number_of_relus != 0 {
             let r_a = reader_a.get_mut_ref().remove(0);
             let w_a = writer_a.get_mut_ref().remove(0);
@@ -396,6 +402,8 @@ where
             // println!("OT to server C ");
             // timer_end!(ot_time);
         }
+
+        //Sending r_A (r_a_next)
         if number_of_relus != 0 {
             let r_a = reader_a.get_mut_ref().remove(0);
             let w_a = writer_a.get_mut_ref().remove(0);
@@ -879,20 +887,20 @@ where
                         .collect::<Vec<_>>();
                     labels
                 };
-                rc_labels.extend(labels);
+                rc_labels.extend(labels); //F_c(x-r)-s_c
                 // println!("c OT finished");
             // }
             } //else {
 
         //Receive labels of  F_b(x-r)-s_b
         let in_msg: ClientLabelMsgRcv = crate::bytes::deserialize(reader).unwrap();
-        let mut rb_labels : Vec<Vec<Wire>>   = in_msg.msg();   //Vec<Vec<Wire>>
+        let mut rb_labels : Vec<Vec<Wire>>   = in_msg.msg();   //Vec<Vec<Wire>>  r_b
 
         let c = make_relu_3::<P>();
         let num_evaluator_inputs = c.num_evaluator_inputs();
         let num_garbler_inputs = c.num_garbler_inputs();
 
-        //Concatnate garbler input
+        //Concatnate garbler input   r_b||r_b_next
         rb_labels.iter_mut()
             .zip(rb_next_labels.chunks(num_garbler_inputs / 2))
             .for_each(|(w1, w2)| w1.extend_from_slice(w2));
@@ -903,6 +911,7 @@ where
         ra_labels_.extend_from_slice(ra_labels);
         let mut eval_labels : Vec<Vec<Wire>>= ra_labels_.chunks(num_evaluator_inputs / 3).map(|x| x.to_vec()).collect();
         
+        // r_a||r_c||r_a_next    eval_labels||rc_labels||ra_next_labels
         eval_labels
             .iter_mut()
             .zip(rc_labels.chunks(num_evaluator_inputs / 3))
