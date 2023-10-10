@@ -216,7 +216,7 @@ pub fn nn_user<R: RngCore + CryptoRng>(
 
 
     //Output
-    let (mut reader_a, mut writer_a) = server_connect(user_addr);
+    // let (mut reader_a, mut writer_a) = server_connect(user_addr);
     // let start_output = Instant::now();
     let mut output:Output<TenBitExpFP> = Output::zeros((1,output_size,0,0));
     output = NNProtocol::user_decrypt(
