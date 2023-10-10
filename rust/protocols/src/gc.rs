@@ -402,18 +402,18 @@ where
             // println!("OT to server C ");
             // timer_end!(ot_time);
         }
-        let randomizer_label_per_relu = if number_of_relus == 0 {
-            8192
-        } else {
-            randomizer_labels.len() / number_of_relus
-        };
-        for msg_contents in gc_s
-            .chunks(8192)
-            .zip(randomizer_labels.chunks(randomizer_label_per_relu * 8192))
-        {
-            let sent_message = ServerGcMsgSend::new(&msg_contents);
-            crate::bytes::serialize(writer_c, &sent_message).unwrap();
-        }
+        // let randomizer_label_per_relu = if number_of_relus == 0 {
+        //     8192
+        // } else {
+        //     randomizer_labels.len() / number_of_relus
+        // };
+        // for msg_contents in gc_s
+        //     .chunks(8192)
+        //     .zip(randomizer_labels.chunks(randomizer_label_per_relu * 8192))
+        // {
+        //     let sent_message = ServerGcMsgSend::new(&msg_contents);
+        //     crate::bytes::serialize(writer_c, &sent_message).unwrap();
+        // }
         //Sending r_A (r_a_next)
         if number_of_relus != 0 {
             let r_a = reader_a.get_mut_ref().remove(0);
