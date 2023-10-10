@@ -1696,7 +1696,7 @@ where
     
     
                     // Send to server C
-                    LinearProtocol::online_server_c_2_b_protocol(writer_c, &input).unwrap();
+                    LinearProtocol::online_server_c_2_b_protocol(writer_c, &input, &layer).unwrap();
                     next_layer_input_as = Output::zeros(layer.output_dimensions());
                     //Linear evaluation on server B
                     next_layer_input = Output::zeros(layer.output_dimensions());
@@ -1710,6 +1710,7 @@ where
                         &mut next_layer_input_as,
                     ).unwrap();
                     next_layer_input = NNProtocol::transform_fp(&next_layer_input_as,layer.output_dimensions());
+                    // LinearProtocol::online_server_c_2_b_protocol(writer_c, &input).unwrap();
     
                     // next_layer_input is F_b(x-r)-s_b
                     // for share in next_layer_input_as.iter_mut() {
