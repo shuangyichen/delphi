@@ -573,7 +573,7 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
         // let mut reader_cost = reader_c.count();
         // let mut writer_cost = writer_c.count();
         // let mut total_cost = reader_cost+writer_cost;
-        thread::sleep(time::Duration::from_millis(2000));
+        thread::sleep(time::Duration::from_millis(4000));
         let (mut reader_b, mut writer_b) = client_connect(server_b_addr);   // C-->B
         NNProtocol::offline_server_c_protocol_r2(
             &mut reader_b,
