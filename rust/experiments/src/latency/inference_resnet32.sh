@@ -24,7 +24,7 @@ PORT_U="8000"
 PORT_A="8000"
 PORT_B="8000"
 PORT_C="8000"
-SPLIT=2
+SPLIT=6
 IMAGE="image_100.npy"
 CLASS="class_100.npy"
 # python3 ../../../../python/extract_keras_weights.py 0 --weights_path  ../../../../python/minionn/pretrained/relu/model --split_layer $SPLIT
