@@ -175,7 +175,7 @@ pub fn nn_user<R: RngCore + CryptoRng>(
     output_size: usize,
 )-> Output<TenBitExpFP>{
     let (mut reader_a, mut writer_a) = server_connect(user_addr);
-    // let start_user = Instant::now();
+    let start_user = Instant::now();
     let (mut client_state,cfhe) = NNProtocol::offline_client_linear_protocol(&mut reader_a, &mut writer_a, &architecture1, rng)
                 .unwrap();
     // let duration1 = start_user.elapsed();
@@ -195,11 +195,14 @@ pub fn nn_user<R: RngCore + CryptoRng>(
         rng,
         &mut client_state,
     );
+    let duration1 = start_user.elapsed();
+    println!("Preprocessing Time UA : {:?}", duration1);
     let reader_cost = reader_a.count();
     let writer_cost = writer_a.count();
     let ua_total_cost = reader_cost+writer_cost;
     println!("U A preprocessing total cost {} bytes", ua_total_cost);
-    // let duration1 = start_user.elapsed();
+
+    let start_user_inf = Instant::now();
     NNProtocol::online_user_protocol(
         &mut reader_a, 
         &mut writer_a,
@@ -207,6 +210,8 @@ pub fn nn_user<R: RngCore + CryptoRng>(
         &architecture1,
         &client_state
     );
+    let duration_user_2 = start_user_inf.elapsed();
+    println!("Inference Time UA : {:?}", duration_user_2);
     let reader_cost_ = reader_a.count();
     let writer_cost_ = writer_a.count();
     println!("U A online total cost {} bytes", reader_cost_-reader_cost+writer_cost_-writer_cost);
@@ -501,14 +506,14 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
             &mut server_b_state,
         );
 
-        // let reader_cost = reader_b.count();
-        // let writer_cost = writer_b.count();
-        // let ab_total_cost = reader_cost+writer_cost;
+        let reader_cost = reader_b.count();
+        let writer_cost = writer_b.count();
+        let ab_total_cost = reader_cost+writer_cost;
         // println!("A B preprocessing total cost {} bytes", ab_total_cost);
-        // let reader_c_cost = reader_c.count();
-        // let writer_c_cost = writer_c.count();
-        // let bc_total_cost = reader_c_cost+writer_c_cost;
-        // println!("B C relu preprocessing total cost {} bytes", bc_total_cost);
+        let reader_c_cost = reader_c.count();
+        let writer_c_cost = writer_c.count();
+        let bc_total_cost = reader_c_cost+writer_c_cost;
+        println!("AB AC preprocessing total cost {} bytes", bc_total_cost+ab_total_cost);
         // sb_state
     // };
     
@@ -562,9 +567,9 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
             rng,
             &mut server_c_state,
         );
-        let mut reader_cost = reader_c.count();
-        let mut writer_cost = writer_c.count();
-        let mut total_cost = reader_cost+writer_cost;
+        // let mut reader_cost = reader_c.count();
+        // let mut writer_cost = writer_c.count();
+        // let mut total_cost = reader_cost+writer_cost;
         thread::sleep(time::Duration::from_millis(2000));
         let (mut reader_b, mut writer_b) = client_connect(server_b_addr);   // C-->B
         NNProtocol::offline_server_c_protocol_r2(

@@ -1470,7 +1470,7 @@ where
         // let mut input = LinearProtocol::online_server_b_a_protocol(&mut reader_a).unwrap();
 
         // let mut next_layer_input = NNProtocol::transform_fp(input,first_layer_in_dims);
-        let mut total_bc = 0;
+        let mut pre_bc = reader_c.count()+writer_c.count();
 
         let mut num_consumed_relus = 0;
 
@@ -1584,8 +1584,9 @@ where
         }
     }
     let duration = start_b_online.elapsed();
+    let mut total_bc = reader_c.count()+writer_c.count();
     println!("Split 2 Online Time ABC {:?}", duration);
-    println!("BC online total cost {} bytes", total_bc);
+    println!("BC online total cost {} bytes", total_bc-pre_bc);
     // println!("final output");
     // println!("final output {}",next_layer_input.iter().count());
     // for (i,out) in next_layer_input.iter().enumerate(){
