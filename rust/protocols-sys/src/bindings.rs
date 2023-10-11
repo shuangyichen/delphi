@@ -203,7 +203,7 @@ pub type intmax_t = __intmax_t;
 pub type uintmax_t = __uintmax_t;
 pub const PLAINTEXT_MODULUS: u64 = 2061584302081;
 pub const POLY_MOD_DEGREE: u64 = 8192;
-pub const numThreads: ::std::os::raw::c_int = 4;
+pub const numThreads: ::std::os::raw::c_int = 2;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Metadata {
@@ -841,12 +841,13 @@ pub struct LeafServerMPHE {
     pub keygenerator: *mut ::std::os::raw::c_void,
     pub encryptor:    *mut ::std::os::raw::c_void,
     pub decryptor:    *mut ::std::os::raw::c_void,
+    pub evaluator:    *mut ::std::os::raw::c_void,
 }
 #[test]
 fn bindgen_test_layout_LeafServerMPHE() {
     assert_eq!(
         ::std::mem::size_of::<LeafServerMPHE>(),
-        40usize,
+        48usize,
         concat!("Size of: ", stringify!(LeafServerMPHE))
     );
     assert_eq!(
@@ -902,6 +903,16 @@ fn bindgen_test_layout_LeafServerMPHE() {
             stringify!(LeafServerMPHE),
             "::",
             stringify!(decryptor)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<LeafServerMPHE>())).evaluator as *const _ as usize },
+        40usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(LeafServerMPHE),
+            "::",
+            stringify!(evaluator)
         )
     );
 }

@@ -433,6 +433,7 @@ LeafServerMPHE server_mphe_r2(LeafServerMPHE* lsmphe,SerialCT *send, SerialCT re
     (r1_share).save(os);
     *send = serialize(os);
     Encryptor *encryptor = new Encryptor(*context, CPK);
+    Evaluator *evaluator = new Evaluator(*context);
     void* void_context = static_cast<void*>(context);
     LeafServerMPHE lsmphe_;
     lsmphe_.context = lsmphe->context;
@@ -440,6 +441,7 @@ LeafServerMPHE server_mphe_r2(LeafServerMPHE* lsmphe,SerialCT *send, SerialCT re
     // lsmphe_.keygenerator = keygen;
     lsmphe_.decryptor = lsmphe->decryptor;
     lsmphe_.encryptor = encryptor;
+    lsmphe_.evaluator = evaluator;
     return lsmphe_;
 }
 
@@ -678,7 +680,10 @@ ClientShares client_conv_preprocess(const ClientFHE* cfhe, const Metadata* data,
     // Preprocess image
     auto pt = preprocess_image(*data, image);
     auto rotated_pt = filter_rotations(pt, *data);
+    // printf("pt rotatios\n");
     auto ct_rotations = HE_encrypt_rotations(rotated_pt, *data, *encryptor, *encoder);
+    // printf("encrypting rotatios\n");
+    //     } 
     // vector<vector<Ciphertext>> enc_rots(ct_rotations.size(),
     //                                     vector<Ciphertext>(ct_rotations[0].size()));
     // for (int ct_idx = 0; ct_idx < ct_rotations.size(); ct_idx++) {
@@ -764,6 +769,7 @@ LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const M
     // Recast the needed fhe helpers
     Encryptor *encryptor = reinterpret_cast<Encryptor*>(lsmphe->encryptor);
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(lsmphe->encoder);
+    Evaluator *evaluator = reinterpret_cast<Evaluator*>(lsmphe->evaluator);
     
  
     auto pt = preprocess_image(*data, image);
@@ -810,7 +816,7 @@ LeafServerShares server_bc_conv_preprocess(const LeafServerMPHE* lsmphe, const M
 
     //Preprocess share
     // printf("Preprocess share\n");
-    vector<Ciphertext> linear = MPHE_preprocess_noise(linear_share, *data, *encoder,*encryptor);
+    vector<Ciphertext> linear = MPHE_preprocess_noise(linear_share, *data, *encoder,*encryptor,*evaluator);
 
    
 
@@ -828,6 +834,7 @@ LeafServerShares server_bc_l_conv_preprocess(const LeafServerMPHE* lsmphe, const
     // Recast the needed fhe helpers
     Encryptor *encryptor = reinterpret_cast<Encryptor*>(lsmphe->encryptor);
     BatchEncoder *encoder = reinterpret_cast<BatchEncoder*>(lsmphe->encoder);
+    Evaluator *evaluator = reinterpret_cast<Evaluator*>(lsmphe->evaluator);
 
     auto masks_vec = MPHE_preprocess_filters(filters, *data, *encoder,*encryptor);
 
@@ -842,7 +849,7 @@ LeafServerShares server_bc_l_conv_preprocess(const LeafServerMPHE* lsmphe, const
 
     //Preprocess share
     // printf("Preprocess share\n");
-    vector<Ciphertext> linear = MPHE_preprocess_noise(linear_share, *data, *encoder,*encryptor);
+    vector<Ciphertext> linear = MPHE_preprocess_noise(linear_share, *data, *encoder,*encryptor,*evaluator);
 
    
 
@@ -1122,7 +1129,10 @@ RootServerShares root_server_l_conv_online(const RootServerMPHE* rsmphe, const M
         ct_sc[ct_idx].load(*context, is_sc);
 
         evaluator->add_inplace(ct_sb[ct_idx],ct_sc[ct_idx]);
+        // evaluator->mod_switch_to_next_inplace(ct_sb[ct_idx]);
+        // evaluator->mod_switch_to_next_inplace(ct_sb[ct_idx]);
     }
+    // evaluator->mod_switch_to_next_inplace(ct_sb[ct_idx]);
     //output ct_sb
 
     //server b wb
@@ -1522,7 +1532,7 @@ void test_conv(const RootServerMPHE* rsmphe, const Metadata* data, SerialCT serv
             linear_share_b[chan][idx] = 640;
         }
     }
-    vector<Ciphertext> linear = MPHE_preprocess_noise(linear_share_b, *data, *encoder,*encryptor);
+    vector<Ciphertext> linear = MPHE_preprocess_noise(linear_share_b, *data, *encoder,*encryptor,*evaluator);
     
     //output ct_sb
 
