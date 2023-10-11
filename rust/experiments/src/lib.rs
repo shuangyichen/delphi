@@ -531,6 +531,9 @@ pub fn nn_server_b<R: RngCore + CryptoRng>(
         rng,
     );
 
+    let mut total_bc = reader_c.count()+writer_c.count();
+    println!("BC online total cost {} bytes", total_bc-bc_total_cost);
+
     //Output
 
     NNProtocol::leaf_server_output(
@@ -585,9 +588,9 @@ pub fn nn_server_c<R: RngCore + CryptoRng>(
             server_c_state.num_relu,
             &mut server_c_state,
         );
-        reader_cost = reader_c.count();
-        writer_cost = writer_c.count();
-        total_cost = total_cost+reader_cost+writer_cost;
+        let reader_cost = reader_c.count();
+        let writer_cost = writer_c.count();
+        let total_cost = reader_cost+writer_cost;
         println!("A C preprocessing total cost {} bytes", total_cost);
         // sc_state
     // };
