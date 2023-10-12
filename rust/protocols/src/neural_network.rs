@@ -2325,6 +2325,7 @@ where
         let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
         let start_time = timer_start!(|| "Server online phase");
         for (i, layer) in neural_network.layers.iter().enumerate() {
+            println!("layer : {}", i);
             match layer {
                 Layer::NLL(NonLinearLayer::ReLU(dims)) => {
                     let start_time = timer_start!(|| "ReLU layer");
@@ -2347,7 +2348,10 @@ where
                         .into_shape(dims.output_dimensions())
                         .expect("shape should be correct")
                         .into();
+                    let proc_time = start_time.elapsed();
+                    println!("Time : {:?}", proc_time);
                     timer_end!(start_time);
+                    
                 }
                 Layer::NLL(NonLinearLayer::PolyApprox { dims, poly, .. }) => {
                     let start_time = timer_start!(|| "Approx layer");
