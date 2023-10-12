@@ -2588,6 +2588,7 @@ where
         let (mut next_layer_input, _) = input.share_with_randomness(&state.linear_randomizer[&0]);
 
         for (i, layer) in architecture.layers.iter().enumerate() {
+            println!("layer : {}", i);
             match layer {
                 LayerInfo::NLL(dims, nll_info) => {
                     match nll_info {
