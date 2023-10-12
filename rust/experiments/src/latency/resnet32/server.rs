@@ -1,5 +1,5 @@
 use clap::{App, Arg, ArgMatches};
-use experiments::resnet32::construct_resnet_32;
+use experiments::resnet32::{construct_resnet_32,construct_resnet_32_user};
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
 
@@ -10,11 +10,19 @@ const RANDOMNESS: [u8; 32] = [
 
 fn get_args() -> ArgMatches<'static> {
     App::new("resnet32-server")
+        .arg(
+            Arg::with_name("split")
+                .short("s")
+                .long("split")
+                .takes_value(true)
+                .help("Split layer index")
+                .required(true),
+        )
         // .arg(
         //     Arg::with_name("weights")
         //         .short("w")
         //         .long("weights")
-        //         .takes_value(true)
+        //         // .takes_value(true)
         //         .help("Path to weights")
         //         .required(true),
         // )
@@ -40,8 +48,10 @@ fn main() {
     // let server_addr = format!("0.0.0.0:{}", port);
     let server_addr = "10.30.8.11:8000";
     let layers:usize = 0; 
+    let split_layer:usize = args.value_of("split").unwrap().parse().unwrap();
 
-    let mut network = construct_resnet_32(None, 1, layers, &mut rng);
+    // let mut network = construct_resnet_32(None, 1, layers, &mut rng);
+    let mut network = construct_resnet_32_user(None, split_layer, &mut rng);
     // network.from_numpy(&weights).unwrap();
 
     experiments::nn_server(&server_addr, &network, &mut rng);

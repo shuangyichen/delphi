@@ -1763,6 +1763,7 @@ where
         let start_time = timer_start!(|| "Server offline phase");
         let linear_time = timer_start!(|| "Linear layers offline phase");
         for (i, layer) in neural_network.layers.iter().enumerate() {
+            println!("layer : {}", i);
             match layer {
                 Layer::NLL(NonLinearLayer::ReLU(dims)) => {
                     println!("ReLU");
@@ -2324,6 +2325,7 @@ where
         let mut next_layer_input = Output::zeros(first_layer_out_dims);
         let mut next_layer_derandomizer = Input::zeros(first_layer_in_dims);
         let start_time = timer_start!(|| "Server online phase");
+        let start_time_ = Instant::now();
         for (i, layer) in neural_network.layers.iter().enumerate() {
             println!("layer : {}", i);
             match layer {
@@ -2348,7 +2350,7 @@ where
                         .into_shape(dims.output_dimensions())
                         .expect("shape should be correct")
                         .into();
-                    let proc_time = start_time.elapsed();
+                    let proc_time = start_time_.elapsed();
                     println!("Time : {:?}", proc_time);
                     timer_end!(start_time);
                     
@@ -2406,6 +2408,8 @@ where
                     for share in next_layer_input.iter_mut() {
                         share.inner.signed_reduce_in_place();
                     }
+                    let proc_time = start_time_.elapsed();
+                    println!("Time : {:?}", proc_time);
                     timer_end!(start_time);
                 }
             }

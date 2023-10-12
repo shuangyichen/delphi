@@ -1,6 +1,6 @@
 
 use clap::{App, Arg, ArgMatches};
-use experiments::resnet32::construct_resnet_32;
+use experiments::resnet32::{construct_resnet_32,construct_resnet_32_user};
 use neural_network::{ndarray::Array4,npy::NpyData};
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
@@ -14,6 +14,14 @@ const RANDOMNESS: [u8; 32] = [
 
 fn get_args() -> ArgMatches<'static> {
     App::new("resnet32-client")
+        .arg(
+            Arg::with_name("split")
+                .short("s")
+                .long("split")
+                .takes_value(true)
+                .help("Split layer index")
+                .required(true),
+        )
         // .arg(
         //     Arg::with_name("ip")
         //         .short("i")
@@ -44,16 +52,17 @@ fn get_args() -> ArgMatches<'static> {
 fn main() {
     // let vs = tch::nn::VarStore::new(tch::Device::cuda_if_available());
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
-    // let args = get_args();
+    let args = get_args();
 
     // let ip = args.value_of("ip").unwrap();
     // let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
     // let port = args.value_of("port").unwrap_or("8000");
     // let server_addr = format!("{}:{}", ip, port);
     let layers:usize = 0;
+    let split_layer:usize = args.value_of("split").unwrap().parse().unwrap();
 
-
-    let network = construct_resnet_32(None, 1, layers, &mut rng);
+    // let network = construct_resnet_32_user(None, 1, layers, &mut rng);
+    let network = construct_resnet_32_user(None, split_layer, &mut rng);
     let architecture = (&network).into();
 
     let mut buf = vec![];
