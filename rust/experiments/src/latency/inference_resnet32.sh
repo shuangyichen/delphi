@@ -16,15 +16,15 @@
 #Split layer for minionn model can be 2,6,10,14,18,22,26,30,34,38,42,46,50,54,58
 
 INDEX=$1
-IP_U="10.30.8.5" 
-IP_A="10.30.8.15"
-IP_B="10.30.8.11"
+IP_U="52.65.230.208" 
+IP_A="10.30.8.11"
+IP_B="10.30.8.15"
 IP_C="10.30.8.7"
-PORT_U="8000"
+PORT_U="22"
 PORT_A="8000"
 PORT_B="8000"
 PORT_C="8000"
-SPLIT=6
+SPLIT=2
 IMAGE="image_100.npy"
 CLASS="class_100.npy"
 # python3 ../../../../python/extract_keras_weights.py 0 --weights_path  ../../../../python/minionn/pretrained/relu/model --split_layer $SPLIT

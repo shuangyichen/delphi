@@ -10,14 +10,14 @@ const RANDOMNESS: [u8; 32] = [
 
 fn get_args() -> ArgMatches<'static> {
     App::new("resnet32-server")
-        .arg(
-            Arg::with_name("weights")
-                .short("w")
-                .long("weights")
-                .takes_value(true)
-                .help("Path to weights")
-                .required(true),
-        )
+        // .arg(
+        //     Arg::with_name("weights")
+        //         .short("w")
+        //         .long("weights")
+        //         .takes_value(true)
+        //         .help("Path to weights")
+        //         .required(true),
+        // )
         // .arg(
         //     Arg::with_name("port")
         //         .short("p")
