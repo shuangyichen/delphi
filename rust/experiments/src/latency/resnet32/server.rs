@@ -41,6 +41,7 @@ fn main() {
     // let vs = tch::nn::VarStore::new(tch::Device::cuda_if_available());
     let mut rng = ChaChaRng::from_seed(RANDOMNESS);
     let args = get_args();
+    let batch_size:usize = 16;
     // let mut weights = args.value_of("weights").unwrap();
 
     // let layers = clap::value_t!(args.value_of("layers"), usize).unwrap();
@@ -51,7 +52,7 @@ fn main() {
     let split_layer:usize = args.value_of("split").unwrap().parse().unwrap();
 
     // let mut network = construct_resnet_32(None, 1, layers, &mut rng);
-    let mut network = construct_resnet_32_user(None, split_layer, &mut rng);
+    let mut network = construct_resnet_32_user(None, split_layer,batch_size, &mut rng);
     // network.from_numpy(&weights).unwrap();
 
     experiments::nn_server(&server_addr, &network, &mut rng);

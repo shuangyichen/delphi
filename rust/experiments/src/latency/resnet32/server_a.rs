@@ -127,7 +127,8 @@ fn main() {
     let out_channel:usize = 1;
 
     //split 1
-    let mut network1 = construct_resnet_32_gateway(None, split_layer, &mut rng);
+    let batch_size:usize = 16;
+    let mut network1 = construct_resnet_32_gateway(None, split_layer,batch_size, &mut rng);
     // let network = construct_minionn_test(None, 1, layers, &mut rng);
     // let architecture1 = (&network1).into();
     // network1.from_numpy(&weights_1).unwrap();

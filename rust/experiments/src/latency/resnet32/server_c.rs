@@ -88,7 +88,8 @@ fn main(){
     let args = get_args();
     let split_layer:usize = args.value_of("split").unwrap().parse().unwrap();
     // let weights_c = args.value_of("weights").unwrap();
-    let mut network_c = construct_resnet_32_remote(None, split_layer, &mut rng);
+    let batch_size:usize = 16;
+    let mut network_c = construct_resnet_32_remote(None, split_layer,batch_size, &mut rng);
     // let mut network_c = construct_resnet_32_second_split(None, 1, layers, &mut rng,layers);
     // let mut network_c = construct_minionn_test(None, 1, layers, &mut rng);
     // network_c.from_numpy(&weights_c).unwrap();
