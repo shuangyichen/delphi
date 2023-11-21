@@ -13,7 +13,8 @@ pub fn construct_resnet_32_user<R: RngCore + CryptoRng>(
     split_layer: usize,
     rng: &mut R,
 )-> NeuralNetwork<TenBitAS, TenBitExpFP>{
-    let mut nn = construct_resnet_32(None,1,0,rng);
+    let batch_size:usize = 16;
+    let mut nn = construct_resnet_32(None,batch_size,0,rng);
     let layers = nn.layers.len();
     // println!("Full network {} layers", layers);
     let out_layers = layers-split_layer;
@@ -47,7 +48,8 @@ pub fn construct_resnet_32_gateway<R: RngCore + CryptoRng>(
     split_layer: usize,
     rng: &mut R,
 )-> NeuralNetwork<TenBitAS, TenBitExpFP>{
-    let mut nn = construct_resnet_32(None,1,0,rng);
+    let batch_size:usize = 16;
+    let mut nn = construct_resnet_32(None,batch_size,0,rng);
     let layers = nn.layers.len();
     // println!("Full network {} layers", layers);
     let out_layers = layers-split_layer;

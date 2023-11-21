@@ -62,7 +62,7 @@ fn main() {
     let split_layer:usize = args.value_of("split").unwrap().parse().unwrap();
     let batch_size:usize = 16;
     // let network = construct_resnet_32_user(None, 1, layers, &mut rng);
-    let network = construct_resnet_32_user(None, split_layer, batch_size, &mut rng);
+    let network = construct_resnet_32_user(None, split_layer,  &mut rng);
     let architecture = (&network).into();
 
     let mut buf = vec![];
