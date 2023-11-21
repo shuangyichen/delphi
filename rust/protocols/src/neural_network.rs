@@ -2589,7 +2589,6 @@ where
 
         for (i, layer) in architecture.layers.iter().enumerate() {
             println!("layer : {}", i);
-            if i==0{
             match layer {
                 LayerInfo::NLL(dims, nll_info) => {
                     match nll_info {
@@ -2687,7 +2686,6 @@ where
                     timer_end!(start_time);
                 }
             }
-        }
         }
         let result = crate::bytes::deserialize(reader).map(|output: MsgRcv<P>| {
             let server_output_share = output.msg();
