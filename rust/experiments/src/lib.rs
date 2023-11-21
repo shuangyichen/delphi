@@ -113,6 +113,7 @@ pub fn nn_client<R: RngCore + CryptoRng>(
             writer.count(),
         )
     };
+    println!("Client writes {} bytes",online_write);
     let duration2 = start_inf.elapsed();
     println!("Inference Time : {:?}",duration2);
     add_to_trace!(|| "Offline Communication", || format!(

@@ -2563,7 +2563,7 @@ where
     }
 
     /// Outputs shares for the next round's input.
-    pub fn online_client_protocol<R: Read + Send, W: Write + Send + Send>(
+    pub fn online_client_protocol<R: Read + Send, W: Write + Send >(
         reader: &mut IMuxSync<R>,
         writer: &mut IMuxSync<W>,
         input: &Input<FixedPoint<P>>,
@@ -2589,6 +2589,7 @@ where
 
         for (i, layer) in architecture.layers.iter().enumerate() {
             println!("layer : {}", i);
+            if i==0{
             match layer {
                 LayerInfo::NLL(dims, nll_info) => {
                     match nll_info {
@@ -2675,6 +2676,7 @@ where
                         &layer_info,
                         &mut next_layer_input,
                     )?;
+                    // println!("Client writes {} bytes",writer.iter().count());
                     // If this is not the last layer, and if the next layer
                     // is also linear, randomize the output correctly.
                     if i != (architecture.layers.len() - 1)
@@ -2685,6 +2687,7 @@ where
                     timer_end!(start_time);
                 }
             }
+        }
         }
         let result = crate::bytes::deserialize(reader).map(|output: MsgRcv<P>| {
             let server_output_share = output.msg();
