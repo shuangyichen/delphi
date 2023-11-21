@@ -78,7 +78,8 @@ fn main() {
         .read_to_end(&mut buf)
         .unwrap();
     let image_vec: Vec<f64> = NpyData::from_bytes(&buf).unwrap().to_vec();
-    let mut image = Array4::from_shape_vec((1, 3, 32, 32), image_vec).unwrap();
+    let v3 = vec!(1;16*3*32*32); 
+    let mut image = Array4::from_shape_vec((16, 3, 32, 32), v3).unwrap();
     // network.from_numpy(&weights).unwrap();
     let server_addr = "10.30.8.11:8000";
     let output_size :usize = 10;
