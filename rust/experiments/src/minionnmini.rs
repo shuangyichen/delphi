@@ -173,10 +173,12 @@ pub fn construct_minionnmini<R: RngCore + CryptoRng>(
     let fc_input_dims = network.layers.last().unwrap().output_dimensions();
     let (fc, _) = sample_fc_layer(vs, fc_input_dims, 100, rng);
     network.layers.push(Layer::LL(fc));
+    add_activation_layer(&mut network, &relu_layers);
     //9 10
     let fc_input_dims = network.layers.last().unwrap().output_dimensions();
     let (fc, _) = sample_fc_layer(vs, fc_input_dims, 10, rng);
     network.layers.push(Layer::LL(fc));
+    add_activation_layer(&mut network, &relu_layers);
     assert!(network.validate());
 
     network
