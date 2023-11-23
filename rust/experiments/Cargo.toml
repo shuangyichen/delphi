@@ -128,5 +128,21 @@ path = "src/latency/resnet32/server_b.rs"
 name = "resnet32-server-c"
 path = "src/latency/resnet32/server_c.rs"
 
+[[bin]]
+name = "minionnmini-user"
+path = "src/latency/minionnmini/user.rs"
+
+[[bin]]
+name = "minionnmini-server-a"
+path = "src/latency/minionnmini/server_a.rs"
+
+[[bin]]
+name = "minionnmini-server-b"
+path = "src/latency/minionnmini/server_b.rs"
+
+[[bin]]
+name = "minionnmini-server-c"
+path = "src/latency/minionnmini/server_c.rs"
+
 [features]
 timer = ["protocols/timer"]
