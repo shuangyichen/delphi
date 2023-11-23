@@ -79,9 +79,10 @@ pub fn construct_minionnmini_remote<R: RngCore + CryptoRng>(
     // nn: &mut NeuralNetwork<TenBitAS, TenBitExpFP>,
     vs: Option<&tch::nn::Path>,
     split_layer: usize,
+    batch_size: usize,
     rng: &mut R,
 )-> NeuralNetwork<TenBitAS, TenBitExpFP>{
-    let mut nn = construct_minionnmini(None,1,0,rng);
+    let mut nn = construct_minionnmini(None,batch_size,0,rng);
     let layers = nn.layers.len();
     // println!("Full network {} layers", layers);
     let out_layers = layers-split_layer;

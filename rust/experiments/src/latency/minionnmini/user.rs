@@ -127,7 +127,7 @@ fn main() {
         .read_to_end(&mut buf)
         .unwrap();
     let image_vec: Vec<f64> = NpyData::from_bytes(&buf).unwrap().to_vec();
-    let v3 = vec!(1.0;1*3*18*18); 
+    let v3 = vec!(1.0;1*3*28*28); 
     let mut image = Array4::from_shape_vec((1, 3, 28, 28), v3).unwrap();
 
     // let mut input = experiments::inference::inference::image_transform(&mut image);
