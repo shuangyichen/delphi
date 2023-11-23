@@ -2442,6 +2442,7 @@ where
         architecture: &NeuralArchitecture<AdditiveShare<P>, FixedPoint<P>>,
         state: &RootServerState<P>,
     ){
+        if neural_network.layers.len()!=0{
         let (first_layer_in_dims, first_layer_out_dims) = {
             let layer = neural_network.layers.first().unwrap();
             assert!(
@@ -2525,7 +2526,10 @@ where
         }
         // let sent_message = MsgSend::new(&next_layer_input);
         // crate::bytes::serialize(writer, &sent_message)?;
-        timer_end!(start_time);
+        timer_end!(start_time);}
+        let mut next_input = LinearProtocol::<P>::online_server_receive_intermediate(reader).unwrap();
+
+        if neural_network.layers.len()!=0{
         let layer = neural_network.layers.last().unwrap();
         let input_dims = layer.input_dimensions();
         let mut next_input = LinearProtocol::<P>::online_server_receive_intermediate(reader).unwrap();
@@ -2547,7 +2551,7 @@ where
 
         for share in next_input.iter_mut() {
             share.inner.signed_reduce_in_place();
-        }
+        }}
 
         //Send to server B
 

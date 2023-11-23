@@ -16,14 +16,14 @@
 #Split layer for minionn model can be 2,6,10,14,18,22,26,30,34,38,42,46,50,54,58
 
 INDEX=$1
-IP_U="10.30.8.5" 
-IP_A="10.30.8.11"
-IP_B="10.30.8.15"
-IP_C="10.30.8.7"
-PORT_U="8000"
-PORT_A="8000"
-PORT_B="8000"
-PORT_C="8000"
+IP_U="142.1.174.152" 
+IP_A="3.99.128.189"
+IP_B="13.210.196.77"
+IP_C="52.62.230.68"
+PORT_U="22"
+PORT_A="5000"
+PORT_B="5000"
+PORT_C="5000"
 SPLIT=0
 IMAGE="image_100.npy"
 CLASS="class_100.npy"
