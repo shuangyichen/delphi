@@ -167,7 +167,7 @@ pub fn construct_lenet<R: RngCore + CryptoRng>(
     //5 6
     let input_dims = network.layers.last().unwrap().output_dimensions();
     let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
-    add_activation_layer(&mut network, &relu_layers);
+    // add_activation_layer(&mut network, &relu_layers);
 
     // 7 8
     // let fc_input_dims = network.layers.last().unwrap().output_dimensions();
