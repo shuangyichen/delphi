@@ -170,16 +170,16 @@ pub fn construct_lenet<R: RngCore + CryptoRng>(
     add_activation_layer(&mut network, &relu_layers);
 
     // 7 8
-    let fc_input_dims = network.layers.last().unwrap().output_dimensions();
-    let (fc, _) = sample_fc_layer(vs, fc_input_dims, 500, rng);
-    network.layers.push(Layer::LL(fc));
-    add_activation_layer(&mut network, &relu_layers);
-    //9 10
-    let fc_input_dims = network.layers.last().unwrap().output_dimensions();
-    let (fc, _) = sample_fc_layer(vs, fc_input_dims, 10, rng);
-    network.layers.push(Layer::LL(fc));
+    // let fc_input_dims = network.layers.last().unwrap().output_dimensions();
+    // let (fc, _) = sample_fc_layer(vs, fc_input_dims, 500, rng);
+    // network.layers.push(Layer::LL(fc));
     // add_activation_layer(&mut network, &relu_layers);
-    assert!(network.validate());
+    // //9 10
+    // let fc_input_dims = network.layers.last().unwrap().output_dimensions();
+    // let (fc, _) = sample_fc_layer(vs, fc_input_dims, 10, rng);
+    // network.layers.push(Layer::LL(fc));
+    // // add_activation_layer(&mut network, &relu_layers);
+    // assert!(network.validate());
 
     network
 }
