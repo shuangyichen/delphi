@@ -147,39 +147,39 @@ pub fn construct_lenet<R: RngCore + CryptoRng>(
         },
     };
     // Dimensions of input image.
-    let input_dims = (batch_size, 3, 28, 28);
-
+    // let input_dims = (batch_size, 1, 28, 28);
+    let input_dims = (batch_size, 1, 12, 12);
     // 1
-    let kernel_dims = (20, 3, 5, 5);
-    let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Valid, rng).0;
-    network.layers.push(Layer::LL(conv));
+    // let kernel_dims = (20, 3, 5, 5);
+    // let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Valid, rng).0;
+    // network.layers.push(Layer::LL(conv));
 
-    //2 3
-    let input_dims = network.layers.last().unwrap().output_dimensions();
-    let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
-    add_activation_layer(&mut network, &relu_layers);
-    // 4
-    let input_dims = network.layers.last().unwrap().output_dimensions();
-    let kernel_dims = (50, 20, 5, 5);
-    let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Valid, rng).0;
-    network.layers.push(Layer::LL(conv));
-
-    //5 6
-    let input_dims = network.layers.last().unwrap().output_dimensions();
-    let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
+    // //2 3
+    // let input_dims = network.layers.last().unwrap().output_dimensions();
+    // let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
     // add_activation_layer(&mut network, &relu_layers);
+    // // 4
+    // let input_dims = network.layers.last().unwrap().output_dimensions();
+    let kernel_dims = (50, 1, 5, 5);
+    let conv = sample_conv_layer(vs, input_dims, kernel_dims, 1, Padding::Valid, rng).0;
+    network.layers.push(Layer::LL(conv));
+
+    // //5 6
+    // let input_dims = network.layers.last().unwrap().output_dimensions();
+    // let pool = sample_avg_pool_layer(input_dims, (2, 2), 2);
+    add_activation_layer(&mut network, &relu_layers);
 
     // 7 8
-    // let fc_input_dims = network.layers.last().unwrap().output_dimensions();
-    // let (fc, _) = sample_fc_layer(vs, fc_input_dims, 500, rng);
-    // network.layers.push(Layer::LL(fc));
+    let fc_input_dims = network.layers.last().unwrap().output_dimensions();
+    let (fc, _) = sample_fc_layer(vs, fc_input_dims, 500, rng);
+    network.layers.push(Layer::LL(fc));
+    add_activation_layer(&mut network, &relu_layers);
+    //9 10
+    let fc_input_dims = network.layers.last().unwrap().output_dimensions();
+    let (fc, _) = sample_fc_layer(vs, fc_input_dims, 10, rng);
+    network.layers.push(Layer::LL(fc));
     // add_activation_layer(&mut network, &relu_layers);
-    // //9 10
-    // let fc_input_dims = network.layers.last().unwrap().output_dimensions();
-    // let (fc, _) = sample_fc_layer(vs, fc_input_dims, 10, rng);
-    // network.layers.push(Layer::LL(fc));
-    // // add_activation_layer(&mut network, &relu_layers);
-    // assert!(network.validate());
+    assert!(network.validate());
 
     network
 }
