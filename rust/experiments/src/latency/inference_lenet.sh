@@ -18,8 +18,8 @@
 INDEX=$1
 IP_U="35.183.40.237" 
 IP_A="3.98.143.255"
-IP_B="13.211.139.42"
-IP_C="3.25.57.136"
+IP_B="13.239.3.219"
+IP_C="3.25.65.12"
 PORT_U="5000"
 PORT_A="5000"
 PORT_B="5000"
@@ -31,17 +31,17 @@ CLASS="class_100.npy"
 
 if [ $INDEX -eq 0 ]
 then
-    cargo +nightly run --release --bin minionnmini-user -- --class $CLASS --image $IMAGE --ip_a $IP_A --port_a $PORT_A --ip_u $IP_U --port_u $PORT_U --split $SPLIT
+    cargo +nightly run --release --bin lenet-user -- --class $CLASS --image $IMAGE --ip_a $IP_A --port_a $PORT_A --ip_u $IP_U --port_u $PORT_U --split $SPLIT
 fi
 if [ $INDEX -eq 1 ]
 then
-    cargo +nightly run --release --bin minionnmini-server-a --  --ip_a $IP_A  --port_a $PORT_A --ip_b $IP_B --port_b $PORT_B --ip_c $IP_C --port_c $PORT_C --ip_u $IP_U --port_u $PORT_U --split $SPLIT
+    cargo +nightly run --release --bin lenet-server-a --  --ip_a $IP_A  --port_a $PORT_A --ip_b $IP_B --port_b $PORT_B --ip_c $IP_C --port_c $PORT_C --ip_u $IP_U --port_u $PORT_U --split $SPLIT
 fi
 if [ $INDEX -eq 2 ]
 then
-    cargo +nightly run --release --bin minionnmini-server-b  --  --ip_a $IP_A --port_a $PORT_A  --ip_b $IP_B --port_b $PORT_B  --ip_c $IP_C --port_c $PORT_C --split $SPLIT
+    cargo +nightly run --release --bin lenet-server-b  --  --ip_a $IP_A --port_a $PORT_A  --ip_b $IP_B --port_b $PORT_B  --ip_c $IP_C --port_c $PORT_C --split $SPLIT
 fi
 if [ $INDEX -eq 3 ]
 then
-    cargo +nightly run --release --bin minionnmini-server-c --  --ip_a $IP_A --port_a $PORT_A --ip_b $IP_B --port_b $PORT_B --ip_c $IP_C --port_c $PORT_C --split $SPLIT
+    cargo +nightly run --release --bin lenet-server-c --  --ip_a $IP_A --port_a $PORT_A --ip_b $IP_B --port_b $PORT_B --ip_c $IP_C --port_c $PORT_C --split $SPLIT
 fi
