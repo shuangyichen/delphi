@@ -144,5 +144,21 @@ path = "src/latency/minionnmini/server_b.rs"
 name = "minionnmini-server-c"
 path = "src/latency/minionnmini/server_c.rs"
 
+[[bin]]
+name = "lenet-user"
+path = "src/latency/lenet/user.rs"
+
+[[bin]]
+name = "lenet-server-a"
+path = "src/latency/lenet/server_a.rs"
+
+[[bin]]
+name = "lenet-server-b"
+path = "src/latency/lenet/server_b.rs"
+
+[[bin]]
+name = "lenet-server-c"
+path = "src/latency/lenet/server_c.rs"
+
 [features]
 timer = ["protocols/timer"]
